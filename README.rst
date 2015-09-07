@@ -6,8 +6,8 @@ Quick simulations of spectrograph response.
 Status reports for developers
 -----------------------------
 
-.. image:: https://travis-ci.org/dkirkby/specsim.png?branch=master
-    :target: https://travis-ci.org/dkirkby/specsim
+.. image:: https://travis-ci.org/desihub/specsim.png?branch=master
+    :target: https://travis-ci.org/desihub/specsim
     :alt: Test Status
 
 .. image:: https://readthedocs.org/projects/specsim/badge/?version=latest

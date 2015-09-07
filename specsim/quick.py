@@ -30,10 +30,13 @@ class QuickCamera(object):
 
     def setWavelengthGrid(self,wavelengthGrid,photonRatePerBin,skyPhotonRate):
         """
-        Initializes for the specified wavelength grid which is guaranteed to be linearly spaced.
-        The mean rate of expected photons per wavelength bin corresponding to a unit flux
-        (assuming 100% throughput) is provided via photonRatePerBin. The mean sky photon rate
-        per wavelength bin is provided via skyPhotonRate.
+        setWavelengthGrid
+
+        Initializes for the specified wavelength grid which is guaranteed to be
+        linearly spaced. The mean rate of expected photons per wavelength bin
+        corresponding to a unit flux (assuming 100%% throughput) is provided via
+        photonRatePerBin. The mean sky photon rate per wavelength bin is
+        provided via skyPhotonRate.
         """
         # Resample our throughput on this grid.
         self.throughput = self.throughputModel.getResampledValues(wavelengthGrid)
@@ -125,13 +128,12 @@ class QuickCamera(object):
 class Quick(object):
     """
     A class for quick simulations of DESI observations.
+
+    Initializes a Quick simulation for the specified atmosphere and instrument.
+    If either of these is None, they are initialized to their default state
+    using the specified base path.
     """
     def __init__(self,atmosphere=None,instrument=None,basePath=''):
-        """
-        Initializes a Quick simulation for the specified atmosphere and instrument.
-        If either of these is None, they are initialized to their default state
-        using the specified base path.
-        """
         self.atmosphere = atmosphere if atmosphere else Atmosphere(basePath=basePath)
         self.instrument = instrument if instrument else Instrument(basePath=basePath)
 
@@ -167,8 +169,11 @@ class Quick(object):
 
     def setWavelengthGrid(self,wavelengthMin,wavelengthMax,wavelengthStep):
         """
-        Sets the linearly spaced wavelength grid that will be used to generate spectra for
-        subsequent calls to simulate(). Parameter values should be in Angstroms.
+        setWavelengthGrid
+
+        Sets the linearly spaced wavelength grid that will be used to generate
+        spectra for subsequent calls to simulate(). Parameter values should be
+        in Angstroms.
         """
         nwave = 1+int(math.floor((wavelengthMax-wavelengthMin)/wavelengthStep))
         if nwave <= 0:
@@ -213,6 +218,8 @@ class Quick(object):
 
     def simulate(self,sourceType,sourceSpectrum,airmass=1.,nread=1.,expTime=None,downsampling=5):
         """
+        simulate
+
         Simulates an observation of the specified source type and spectrum and at the specified
         air mass. The source type must be supported by the instrument model (as specified by
         Instrument.getSourceTypes). The source spectrum should either be a SpectralFluxDensity
@@ -229,6 +236,7 @@ class Quick(object):
 
         Returns a numpy array of results with one row per downsampled wavelength bin containing
         the following named columns in a numpy.recarray:
+
          - wave: wavelength in Angstroms
          - srcflux: source flux in 1e-17 erg/s/cm^2/Ang
          - obsflux: estimate of observed co-added flux in 1e-17 erg/s/cm^2/Ang
@@ -239,22 +247,27 @@ class Quick(object):
          - rdnoise[j]: RMS read noise in electrons in camera j
          - dknoise[j]: RMS dark current shot noise in electrons in camera j
          - snr[j]: signal-to-noise ratio in camera j
+
         Note that the number of cameras (indexed by j) in the returned results is not hard coded
         but determined by the instrument we were initialized with. Cameras are indexed in order
         of increasing wavelength.
 
         After calling this method the following high-resolution (pre-downsampling) arrays are also
         available as data members:
+
          - wavelengthGrid ~ wave
          - sourceFlux ~ srcflux
          - observedFlux ~ obsflux
+
         In addition, each camera provides the following arrays tabulated on the same high-resolution
         wavelength grid:
+
          - throughput
          - sourcePhotonsSmooth ~ nobj
          - skyPhotonRateSmooth ~ nsky/expTime
          - readnoisePerBin ~ rdnoise
          - darkCurrentPerBin ~ sqrt(dknoise/expTime)
+
         These are accessible using the same camera index j, e.g. qsim.cameras[j].throughput.
         """
         # Check that this is a supported source type.
@@ -408,10 +421,13 @@ class Quick(object):
 
     def plot(self,results,labels=None,plotMin=None,plotMax=None,plotName='quicksim'):
         """
-        Generates a pair of plots for the specified results from a previous call to simulate(...).
-        Specify plotMin,Max in Angstroms to restrict the range of the plot. The caller is
-        responsible for calling plt.show() and/or plt.savefig(...) after this method returns.
-        The optional labels[0],labels[1] are used to label the two plots.
+        plot
+
+        Generates a pair of plots for the specified results from a previous call
+        to simulate(...). Specify plotMin,Max in Angstroms to restrict the range
+        of the plot. The caller is responsible for calling plt.show() and/or
+        plt.savefig(...) after this method returns. The optional
+        labels[0],labels[1] are used to label the two plots.
         """
         # Defer this import until we are actually asked to make a plot.
         import matplotlib.pyplot as plt

@@ -14,8 +14,8 @@ Status reports for developers
     :target: https://readthedocs.org/projects/specsim/?badge=latest
     :alt: Documentation Status
 
-.. image:: https://coveralls.io/repos/dkirkby/specsim/badge.svg?branch=master&service=github
-    :target: https://coveralls.io/github/dkirkby/specsim?branch=master
+.. image:: https://coveralls.io/repos/desihub/specsim/badge.svg?branch=master&service=github
+    :target: https://coveralls.io/github/desihub/specsim?branch=master
     :alt: Coverage Status
 
 .. image:: https://img.shields.io/pypi/v/specsim.svg

@@ -1,7 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 """
-Quick simulations of spectrograph response
+Quick simulations of fiber spectrograph response
 """
 
 # Affiliated packages may add whatever they like to this file, but

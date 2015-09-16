@@ -1,7 +1,7 @@
 specsim
 =======
 
-Quick simulations of spectrograph response.
+Quick simulations of fiber spectrograph response.
 
 Status reports for developers
 -----------------------------

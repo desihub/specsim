@@ -7,11 +7,17 @@ Install the latest stable release using::
 
     pip install specsim
 
+The corresponding documentation is `here
+<http://specsim.readthedocs.org/en/stable/>`__.
+
 Alternatively, you can install the latest developer version from github::
 
     github clone https://github.com/desihub/specsim.git
     cd specsim
     python setup.py install
+
+The corresponding documentation is then `here
+<http://specsim.readthedocs.org/en/latest/>`_.
 
 Required Dependencies
 ---------------------

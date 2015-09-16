@@ -252,10 +252,10 @@ def loadSDSSFilterCurves(whichColumn=1):
     filter data file headers for details.
     """
     # Get the path that this module was loaded from.
-    myPath = os.path.dirname(os.path.abspath(__file__))
+    import driver
+    myPath = os.path.dirname(os.path.abspath(driver.__file__))
     # Build the path where the filter curves should be.
-    filterPath = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(myPath))),'data','throughput')
+    filterPath = os.path.join(myPath,'data','throughput')
     curves = { }
     for band in 'ugriz':
         filterData = np.loadtxt(os.path.join(filterPath,'sdss_jun2001_%s_atm.dat' % band),unpack=True)

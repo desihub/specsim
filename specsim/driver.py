@@ -1,15 +1,13 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """
-Simple S/N calculator for DESI spectra.
+Quick simulator of a fiber spectrograph.
 
-Use specsim --help for instructions on running this program.
+Use quickspecsim --help for instructions on running this program.
 Based on the IDL code pro/desi_quicksim.pro by D. Schlegel (LBL)
 
-The DESIMODEL environment variable should be set to the root of your
-desimodel package and PYTHONPATH should include $DESIMODEL/py/, e.g.
-
-export DESIMODEL=`pwd`
-export PYTHONPATH=$DESIMODEL/py/:$PYTHONPATH
+The SPECSIM_MODEL environment variable should be set to the name of a
+directory containing the configuration files for the simulator.
+For DESI simulations, use the top-level directory of the desimodel package.
 
 Created 23-Jun-2014 by David Kirkby (dkirkby@uci.edu)
 """
@@ -78,9 +76,9 @@ def main(args=None):
         help = 'wavelength downsampling factor to use for SNR calculations')
     args = parser.parse_args(args)
 
-    # We require that the DESIMODEL environment variable is set.
-    if 'DESIMODEL' not in os.environ:
-        raise RuntimeError('The environment variable DESIMODEL must be set.')
+    # We require that the SPECSIM_MODEL environment variable is set.
+    if 'SPECSIM_MODEL' not in os.environ:
+        raise RuntimeError('The environment variable SPECSIM_MODEL must be set.')
 
     # Check for required arguments.
     if args.infile is None:
@@ -129,10 +127,10 @@ def main(args=None):
     print(specSummary)
 
     # Create the default atmosphere for the requested sky conditions.
-    atmosphere = sim.Atmosphere(skyConditions=args.sky,basePath=os.environ['DESIMODEL'])
+    atmosphere = sim.Atmosphere(skyConditions=args.sky,basePath=os.environ['SPECSIM_MODEL'])
 
     # Create a quick simulator using the default instrument model.
-    qsim = sim.Quick(atmosphere=atmosphere,basePath=os.environ['DESIMODEL'])
+    qsim = sim.Quick(atmosphere=atmosphere,basePath=os.environ['SPECSIM_MODEL'])
 
     # Initialize the simulation wavelength grid to use.
     if args.verbose:

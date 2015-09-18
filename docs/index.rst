@@ -6,5 +6,6 @@ specsim
     :maxdepth: 2
 
     install.rst
+    guide.rst
     config.rst
     api.rst

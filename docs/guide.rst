@@ -1,7 +1,10 @@
+.. |Ang| replace:: :math:`\AA`
+
 User's Guide
 ============
 
-A simulation has three main components as illustrated in the figure below:
+A simulation has the following main components, as illustrated in the figure
+below:
 
  - An astrophysical source.
  - A model of the sky and atmosphere.
@@ -56,7 +59,7 @@ has an optical PSF that is convolved with the atmospheric PSF and the source
 profile to determine the profile of light incident upon the fiber entrance face
 in the focal plane.  The overlap between this convolved profile and the fiber
 aperture determines the fiber acceptance fraction :math:`f_S(\lambda)`. The
-resulting flux :math:`F(\lambda)` in erg/Å entering the fiber is:
+resulting flux :math:`F(\lambda)` in erg/|Ang| entering the fiber is:
 
 .. math::
 
@@ -111,44 +114,56 @@ resulting signal in detected electrons is given by:
 
     N^{det}_{ip} = G N^{eh}_{ip} + I_{dk,i} n_{ip} \Delta t
 
-with a corresponding variance (*should pixel area be squared here?*):
+with a corresponding variance:
 
 .. math::
 
-    V^{det}_p = N^{det}_{ip} + \sigma^2_{ro,i} n_{ip}
+    V^{det}_{ip} = N^{det}_{ip} + \sigma^2_{ro,i} n_{ip}
 
 where :math:`n_{ip}` is the effective trace width in pixels for wavelength pixel
-:math:`p`.
+:math:`p`, and we assume that read noise is uncorrelated between pixels (so its
+variance scales with :math:`n_{ip}`).
 
+.. |none| replace:: :math:`\text{---}`
 
-.. |fluxunit| replace:: erg/(s cm\ :sup:`2` Å)
+.. |sunit| replace:: :math:`\text{erg}/(\text{s cm}^2 \AA)`
 
-+----------------------+-----------------------------------------+-----------+-------------+
-| Parameter            | Units                                   | Component | Description |
-+======================+=========================================+===========+=============+
-| :math:`\Delta t`     | s                                       |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`X`            | *none*                                  |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`s(\lambda)`   | |fluxunit|                              |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`b(\lambda)`   | |fluxunit|/arcsec\ :sup:`2`             |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`e(\lambda)`   | mags / airmass                          |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`A`            | cm\ :sup:`2`                            |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`a`            | arcsec                                  |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`f_S(\lambda)` | *none*                                  |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`T_i(\lambda)` | *none*                                  |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`G_i`          | det. elec. / e-h pair                   |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`I_{dk,i}`     | det. elec. / s / pixel                  |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`\sigma_{ro,i}`| det. elec. / pixel                      |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
-| :math:`n_{ip}`       | pixels                                  |           |             |
-+----------------------+-----------------------------------------+-----------+-------------+
+.. |bunit| replace:: :math:`\text{erg}/(\text{s cm}^2 \AA)/\text{arcsec}`
+
+.. |eunit| replace:: :math:`\text{mags}/\text{airmass}`
+
+.. |Gunit| replace:: :math:`\text{det.elec.} / \text{e-h pair}`
+
+.. |Iunit| replace:: :math:`\text{det.elec.} / \text{s} / \text{pixel}`
+
+.. |runit| replace:: :math:`\text{det.elec.} / \text{pixel}`
+
++----------------------+-----------------------+---------------+-------------------------+
+| Parameter            | Units                 | Component     | Description             |
++======================+=======================+===============+=========================+
+| :math:`\Delta t`     | :math:`\text{s}`      | Observation   | Exposure time           |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`X`            | |none|                | Observation   | Observing airmass       |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`s(\lambda)`   | |sunit|               | Source        | Source SED              |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`b(\lambda)`   | |bunit|               | Atmosphere    | Sky surface brightness  |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`e(\lambda)`   | |eunit|               | Atmosphere    | Atmospheric extinction  |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`A`            | :math:`\text{cm}^2`   | Telescope     | Primary unobscured area |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`a`            | :math:`\text{arcsec}` | Telescope     | Fiber entrance area     |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`f_S(\lambda)` | |none|                | Src+Atmos+Tel | Fiberloss fraction      |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`T_i(\lambda)` | |none|                | Tel+Camera    | Transmission throughput |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`I_{dk,i}`     | |Iunit|               | Camera        | Sensor darkcurrent      |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`G_i`          | |Gunit|               | Camera        | Readout gain            |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`\sigma_{ro,i}`| |runit|               | Camera        | Readout noise           |
++----------------------+-----------------------+---------------+-------------------------+
+| :math:`n_{ip}`       | :math:`\text{pixels}` | Camera        | Trace width             |
++----------------------+-----------------------+---------------+-------------------------+

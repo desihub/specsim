@@ -3,12 +3,39 @@ Installation
 
 The specsim package is compatible with python versions 2.6, 2.7, 3.3 and 3.4.
 
+For see what version, if any, you already have installed use::
+
+    pip show specsim
+
+Install Latest Stable Release
+-----------------------------
+
 Install the latest stable release using::
 
     pip install specsim
 
-The corresponding documentation is `here
-<http://specsim.readthedocs.org/en/stable/>`__.
+On systems where you do not have the privileges required to install python
+packages, use instead::
+
+    pip install specsim --user
+
+The documentation of the latest stable release is `here
+<http://specsim.readthedocs.org/en/stable/>`__. The required dependencies listed
+below will be automatically installed by this command.
+
+To update to a newer stable release after your initial install, use::
+
+    pip install specsim --upgrade
+
+To uninstall any previously installed stable release use::
+
+    pip uninstall specsim
+
+This method will also uninstall a developer version.  You do not need to
+uninstall before upgrading to the latest stable release.
+
+Install Latest Developer Version
+--------------------------------
 
 Alternatively, you can install the latest developer version from github::
 
@@ -16,8 +43,28 @@ Alternatively, you can install the latest developer version from github::
     cd specsim
     python setup.py install
 
-The corresponding documentation is then `here
-<http://specsim.readthedocs.org/en/latest/>`_.
+On systems where you do not have the privileges required to install python
+packages, use instead::
+
+    python setup.py install --user
+
+The documentation of the latest developer release is `here
+<http://specsim.readthedocs.org/en/latest/>`_. The required dependencies listed
+below will be automatically installed by the `setup.py` step above.
+
+Any changes you make to your git cloned package after running the `setup.py`
+step will not affect the installed version.  If you want your changes to
+apply directly to the installed version, use a "live install" instead::
+
+    python setup.py develop
+
+On systems where you do not have installation privileges, use::
+
+    python setup.py develop --user
+
+To stop using your git clone as a live install, use::
+
+    python setup.py develop --uninstall
 
 Required Dependencies
 ---------------------

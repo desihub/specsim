@@ -7,6 +7,8 @@ performed and what parameters it requires see the :doc:`/guide`. Configuration
 options specify the instrument and atmosphere to simulate, in addition to the
 source properties and observing parameters.
 
+.. _config_yaml:
+
 YAML
 ----
 
@@ -29,6 +31,8 @@ Note that the `ccd.*` prefixes are repeated once per camera.
 +--------------------------+------------------------------------------------------+
 | `exptime`                | Nominal exposure time in seconds                     |
 +--------------------------+------------------------------------------------------+
+
+.. _config_data:
 
 Tabulated Data
 --------------
@@ -57,6 +61,8 @@ model (elg, lrg, qso, ...) and `<C>` denotes optional sky conditions (-grey, -br
 +------------------------------------------+---------------------------------+
 | `data/spectra/ZenithExtinction-KPNO.dat` | WAVELENGTH, EXTINCTION          |
 +------------------------------------------+---------------------------------+
+
+.. _config_command_line:
 
 Command-Line Options
 --------------------

@@ -1,4 +1,4 @@
-.. |Ang| replace:: :math:`\AA`
+.. |Ang| replace:: :math:`\text{\AA}`
 
 User's Guide
 ============
@@ -125,17 +125,11 @@ where :math:`n_{ip}` is the effective trace width in pixels for wavelength pixel
 variance scales with :math:`n_{ip}`).
 
 .. |none| replace:: :math:`\text{---}`
-
 .. |sunit| replace:: :math:`\text{erg}/(\text{s cm}^2 \AA)`
-
 .. |bunit| replace:: :math:`\text{erg}/(\text{s cm}^2 \AA)/\text{arcsec}`
-
 .. |eunit| replace:: :math:`\text{mags}/\text{airmass}`
-
 .. |Gunit| replace:: :math:`\text{det.elec.} / \text{e-h pair}`
-
 .. |Iunit| replace:: :math:`\text{det.elec.} / \text{s} / \text{pixel}`
-
 .. |runit| replace:: :math:`\text{det.elec.} / \text{pixel}`
 
 +----------------------+-----------------------+---------------+-------------------------+

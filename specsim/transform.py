@@ -28,7 +28,7 @@ def altaz_to_focalplane(alt, az, alt0, az0):
 
     The input values can either be constants or numpy arrays. If any input is
     not a numpy array, it will be automatically converted to a
-    :type:`numpy.float`. The output shape is determined by the usual
+    :class:`numpy.float`. The output shape is determined by the usual
     `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__
     applied to all of the inputs.

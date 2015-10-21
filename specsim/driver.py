@@ -20,7 +20,10 @@ import numpy as np
 
 from astropy.utils.compat import argparse
 
-import specsim as sim
+import specsim.spectrum
+import specsim.atmosphere
+import specsim.quick
+
 
 # This is a setup.py entry-point, not a standalone script.
 # See http://astropy.readthedocs.org/en/latest/development/scripts.html
@@ -92,7 +95,7 @@ def main(args=None):
     if not os.path.isfile(args.infile):
         print('No such infile: %s' % args.infile)
         return -1
-    srcSpectrum = sim.SpectralFluxDensity.loadFromTextFile(args.infile,
+    srcSpectrum = specsim.spectrum.SpectralFluxDensity.loadFromTextFile(args.infile,
         wavelengthColumn=args.infile_wavecol,valuesColumn=args.infile_fluxcol,
         extrapolatedValue=(0. if args.truncated else None))
 
@@ -127,10 +130,10 @@ def main(args=None):
     print(specSummary)
 
     # Create the default atmosphere for the requested sky conditions.
-    atmosphere = sim.Atmosphere(skyConditions=args.sky,basePath=os.environ['SPECSIM_MODEL'])
+    atmosphere = specsim.atmosphere.Atmosphere(skyConditions=args.sky,basePath=os.environ['SPECSIM_MODEL'])
 
     # Create a quick simulator using the default instrument model.
-    qsim = sim.Quick(atmosphere=atmosphere,basePath=os.environ['SPECSIM_MODEL'])
+    qsim = specsim.quick.Quick(atmosphere=atmosphere,basePath=os.environ['SPECSIM_MODEL'])
 
     # Initialize the simulation wavelength grid to use.
     if args.verbose:

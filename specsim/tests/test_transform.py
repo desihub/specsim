@@ -38,15 +38,25 @@ def test_shape_to_focalplane():
     assert x.shape == y.shape and x.shape == (3,)
     x, y = altaz_to_focalplane(angle, angle, angle, angle)
     assert x.shape == y.shape and x.shape == (3,)
-
     x, y = altaz_to_focalplane(angle[:, np.newaxis], angle, 0., 0.)
+
     assert x.shape == y.shape and x.shape == (3, 3)
-    '''
-    ## This test fails for numpy < 1.9 ... why??
-    x, y = altaz_to_focalplane(angle, angle[:, np.newaxis],
-        angle[:, np.newaxis, np.newaxis], 0.)
-    assert x.shape == y.shape and x.shape == (3, 3, 3)
-    '''
+    try:
+        x, y = altaz_to_focalplane(angle, angle[:, np.newaxis],
+            angle[:, np.newaxis, np.newaxis], 0.)
+        assert x.shape == y.shape and x.shape == (3, 3, 3)
+        x, y = altaz_to_focalplane(angle, angle[:, np.newaxis],
+            angle[:, np.newaxis, np.newaxis],
+            angle[:, np.newaxis, np.newaxis, np.newaxis])
+        assert x.shape == y.shape and x.shape == (3, 3, 3, 3)
+        x, y = altaz_to_focalplane(angle, angle[:, np.newaxis],
+            0., angle[:, np.newaxis, np.newaxis, np.newaxis])
+        assert x.shape == y.shape and x.shape == (3, 1, 3, 3)
+    except RuntimeError:
+        # These tests fails for numpy < 1.9 because np.einsum does not
+        # broadcast correctly in this case. For details, See
+        # https://github.com/desihub/specsim/issues/10
+        pass
 
 
 def test_focalplane_to_origin():

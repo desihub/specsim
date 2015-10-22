@@ -85,7 +85,6 @@ def altaz_to_focalplane(alt, az, alt0, az0):
     u[0] = np.sin(az) * cos_alt
     u[1] = np.cos(az) * cos_alt
     u[2] = np.sin(alt)
-    ##u = (np.sin(az) * cos_alt, np.cos(az) * cos_alt, np.sin(alt))
 
     # Build combined rotation matrices R[-alt0,x].R[+az0,z].
     cos_alt0 = np.cos(alt0)
@@ -106,6 +105,10 @@ def altaz_to_focalplane(alt, az, alt0, az0):
 
     # Calculate v = R.u
     v = np.einsum('ij...,j...->i...', R, u)
+    if v[0].shape != output_shape:
+        raise RuntimeError(
+            'np.einsum does not broadcast correctly in numpy {}.'
+            .format(np.version.version))
 
     # Convert unit vectors to (x,y).
     return v[0], v[2]

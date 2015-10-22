@@ -97,3 +97,67 @@ def altaz_to_focalplane(alt, az, alt0, az0):
 
     # Convert unit vectors to (x,y).
     return v[0], v[2]
+
+
+def focalplane_to_altaz(x, y, alt0, az0):
+    """Convert focal plane (x,y) coordinates to local (alt,az) coordinates.
+
+    This is the inverse of :func:`altaz_to_focalplane`. Consult that function's
+    documentation for details.
+
+    Args:
+        x(float or numpy.ndarray): Target x position(s) in radians with +x
+            increasing eastwards along the azimuth direction.
+        y(float numpy.ndarray): Target y position(s) in radians with +y
+            increasing towards the zenith along the altitude direction.
+        alt0(float or numpy.ndarray): Boresight altitude(s) in radians above
+            the horizon.
+        az0(numpy.ndarray): Boresight azimuthal angle(s) in radians east of
+            north.
+
+    Returns:
+        tuple: Pair alt,az of numpy arrays of local sky coordinates in radians,
+            with alt measured above the horizon and az increasing eastwards of
+            north. The output arrays have the same shapes, given by
+            :func:`np.broadcast(x, y, alt0, az0) <numpy.broadcast>`.
+    """
+    if not isinstance(x, np.ndarray):
+        x = np.float(x)
+    if not isinstance(y, np.ndarray):
+        y = np.float(y)
+    if not isinstance(alt0, np.ndarray):
+        alt0 = np.float(alt0)
+    if not isinstance(az0, np.ndarray):
+        az0 = np.float(az0)
+
+    # Convert (x,y) to unit vectors.
+    z = np.sqrt(1 - x**2 - y**2)
+    v = np.empty(shape=[3,] + list(z.shape))
+    v[0] = x
+    v[1] = z
+    v[2] = y
+
+    # Build combined rotation matrices R[-alt0,x].R[+az0,z].
+    cos_alt0 = np.cos(alt0)
+    sin_alt0 = np.sin(alt0)
+    cos_az0 = np.cos(az0)
+    sin_az0 = np.sin(az0)
+    elem_shape = np.broadcast(alt0, az0).shape
+    R = np.empty(shape=[3,3] + list(elem_shape))
+    R[0, 0] = cos_az0
+    R[0, 1] = cos_alt0 * sin_az0
+    R[0, 2] = -sin_alt0 * sin_az0
+    R[1, 0] = -sin_az0
+    R[1, 1] = cos_alt0 * cos_az0
+    R[1, 2] = -cos_az0 * sin_alt0
+    R[2, 0] = 0.
+    R[2, 1] = sin_alt0
+    R[2, 2] = cos_alt0
+
+    # Calculate u = R.v
+    u = np.einsum('ij...,j...->i...', R, v)
+
+    # Convert unit vectors to (alt,az).
+    alt = np.arcsin(u[2])
+    az = np.arctan2(u[0], u[1])
+    return alt, az

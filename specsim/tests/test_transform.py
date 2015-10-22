@@ -1,10 +1,13 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
 from astropy.tests.helper import pytest
-from ..transform import altaz_to_focalplane, focalplane_to_altaz
+from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
+    observatories, sky_to_altaz
 
 import numpy as np
-
+from astropy.time import Time
+from astropy.coordinates import AltAz
+import astropy.units as u
 
 def test_origin_to_focalplane():
     alt, az = 0.5, 1.5
@@ -60,3 +63,18 @@ def test_focalplane_roundtrip():
     assert np.allclose([x, y], [x2, y2])
     alt2, az2 = focalplane_to_altaz(x2, y2, alt0, az0)
     assert np.allclose([alt, az], [alt2, az2])
+
+
+def test_altaz_null():
+    alt, az = 0.5*u.rad, 1.5*u.rad
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400*u.Angstrom
+    temperature = 5*u.deg_C
+    pressure = 800*u.kPa
+    altaz_in = AltAz(alt=alt, az=az, location=where, obstime=when,
+        obswl=wlen, temperature=temperature, pressure=pressure)
+    altaz_out = sky_to_altaz(altaz_in, where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    assert np.allclose(altaz_in.alt, altaz_out.alt)
+    assert np.allclose(altaz_in.az, altaz_out.az)

@@ -120,21 +120,26 @@ def focalplane_to_altaz(x, y, alt0, az0):
     This is the inverse of :func:`altaz_to_focalplane`. Consult that function's
     documentation for details.
 
-    Args:
-        x (float or numpy.ndarray): Target x position(s) in radians with +x
-            increasing eastwards along the azimuth direction.
-        y (float numpy.ndarray): Target y position(s) in radians with +y
-            increasing towards the zenith along the altitude direction.
-        alt0 (float or numpy.ndarray): Boresight altitude(s) in radians above
-            the horizon.
-        az0 (numpy.ndarray): Boresight azimuthal angle(s) in radians east of
-            north.
+    Parameters
+    ----------
+    x: float or numpy.ndarray
+        Target x position(s) in radians with +x increasing eastwards along the
+        azimuth direction.
+    y: float numpy.ndarray
+        Target y position(s) in radians with +y increasing towards the zenith
+        along the altitude direction.
+    alt0: float or numpy.ndarray
+        Boresight altitude(s) in radians above the horizon.
+    az0: float or numpy.ndarray
+        Boresight azimuthal angle(s) in radians east of north.
 
-    Returns:
-        tuple: Pair alt,az of numpy arrays of local sky coordinates in radians,
-            with alt measured above the horizon and az increasing eastwards of
-            north. The output arrays have the same shapes, given by
-            :func:`np.broadcast(x, y, alt0, az0) <numpy.broadcast>`.
+    Returns
+    -------
+    result: tuple
+        Pair alt,az of numpy arrays of local sky coordinates in radians,
+        with alt measured above the horizon and az increasing eastwards of
+        north. The output arrays have the same shapes, given by
+        :func:`np.broadcast(x, y, alt0, az0) <numpy.broadcast>`.
     """
     if not isinstance(x, np.ndarray):
         x = np.float(x)
@@ -190,31 +195,40 @@ def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
     to all of the inputs.
 
-    Args:
-        sky_coords (object): An object representing one or more sky coordinates that are
-            transformable to an AltAz frame by invoking ``sky_coords.transform_to()``.
-            This argument will usually be an
-            instances of :class:`astropy.coordinates.SkyCoord`, but instances
-            of :class:`astropy.coordinates.AltAz` can also be used to isolate
-            the effects of changing the parameters of the atmospheric
-            refraction model.
-        where (astropy.coordinates.EarthLocation): The location where the
-            observations take place.
-        when (astropy.time.Time): The time(s) of the observations.
-        wavelength (astropy.units.Quantity): The wavelength(s) of the observations.
-        temperature (astropy.units.Quantity): The temperature(s) of the observations.
-        pressure (astropy.units.Quantity): The atmospheric pressure(s) of the
-            observations. These should be pressures at the telescope, rather
-            than adjusted to equivalent sea-level pressures. When ``None`` is
-            specified, the pressure(s) will be estimated at the telescope
-            elevation using a standard atmosphere model at the specified temperature(s).
-        relative_humidity (float or numpy.ndarray): Relative humidity (or
-            humidities) of the observations. Value(s) should be in the range
-            0-1 and are dimensionless.
+    Parameters
+    ----------
+    sky_coords: object
+        An object representing one or more sky coordinates that are
+        transformable to an AltAz frame by invoking
+        ``sky_coords.transform_to()``. This argument will usually be an
+        instances of :class:`astropy.coordinates.SkyCoord`, but instances
+        of :class:`astropy.coordinates.AltAz` can also be used to isolate
+        the effects of changing the parameters of the atmospheric
+        refraction model.
+    where: astropy.coordinates.EarthLocation
+        The location where the observations take place.
+    when: astropy.time.Time
+        The time(s) of the observations.
+    wavelength: astropy.units.Quantity
+        The wavelength(s) of the observations.
+    temperature: astropy.units.Quantity
+        The temperature(s) of the observations.
+    pressure: astropy.units.Quantity
+        The atmospheric pressure(s) of the
+        observations. These should be pressures at the telescope, rather
+        than adjusted to equivalent sea-level pressures. When ``None`` is
+        specified, the pressure(s) will be estimated at the telescope elevation
+        using a standard atmosphere model at the specified temperature(s).
+    relative_humidity: float or numpy.ndarray
+        Relative humidity (or humidities) of the observations. Value(s) should
+        be in the range 0-1 and are dimensionless.
 
-    Returns:
-        astropy.coordinates.AltAz: An array of ALT-AZ coordinates with a shape
-            given by :func:`np.broadcast(sky_coords, when, wavelength, temperature, pressure) <numpy.broadcast>`.
+    Returns
+    -------
+    result: astropy.coordinates.AltAz
+        An array of ALT-AZ coordinates with a shape given by
+        :func:`np.broadcast(sky_coords, when, wavelength, temperature, pressure)
+        <numpy.broadcast>`.
     """
     if not isinstance(relative_humidity, np.ndarray):
         relative_humidity = np.float(relative_humidity)

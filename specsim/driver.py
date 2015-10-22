@@ -20,9 +20,7 @@ import numpy as np
 
 from astropy.utils.compat import argparse
 
-import specsim.spectrum
-import specsim.atmosphere
-import specsim.quick
+import specsim
 
 
 # This is a setup.py entry-point, not a standalone script.

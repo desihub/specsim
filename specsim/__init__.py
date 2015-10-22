@@ -12,8 +12,9 @@ from ._astropy_init import *
 
 # For egg_info test builds to pass, put package imports here.
 if not _ASTROPY_SETUP_:
-    pass
-    #from .spectrum import WavelengthFunction,SpectralFluxDensity
-    #from .instrument import Instrument
-    #from .atmosphere import Atmosphere
-    #from .quick import Quick
+    import atmosphere
+    import instrument
+    import quick
+    import sources
+    import spectrum
+    import transform

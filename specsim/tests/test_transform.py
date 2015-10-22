@@ -9,6 +9,7 @@ from astropy.time import Time
 from astropy.coordinates import AltAz
 import astropy.units as u
 
+
 def test_origin_to_focalplane():
     alt, az = 0.5, 1.5
     x, y = altaz_to_focalplane(alt, az, alt, az)

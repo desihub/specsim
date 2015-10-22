@@ -48,22 +48,25 @@ def altaz_to_focalplane(alt, az, alt0, az0):
     All input values are assumed to be in radians and all output values are
     calculated in radians.
 
-    Args:
-        alt (float or numpy.ndarray): Target altitude(s) in radians above the
-            horizon.
-        az (float numpy.ndarray): Target azimuthal angle(s) in radians east of
-            north.
-        alt0 (float or numpy.ndarray): Boresight altitude(s) in radians above
-            the horizon.
-        az0 (numpy.ndarray): Boresight azimuthal angle(s) in radians east of
-            north.
+    Parameters
+    ----------
+    alt : :class:`float` or :class:`numpy.ndarray`
+        Target altitude(s) in radians above the horizon.
+    az : :class:`float` or :class:`numpy.ndarray`
+        Target azimuthal angle(s) in radians east of north.
+    alt0 : :class:`float` or :class:`numpy.ndarray`
+        Boresight altitude(s) in radians above the horizon.
+    az0 : :class:`float` or :class:`numpy.ndarray`
+        Boresight azimuthal angle(s) in radians east of north.
 
-    Returns:
-        tuple: Pair x,y of numpy arrays of focal-plane coordinates in radians,
-            with +x along the azimuth direction (increasing eastwards) and +y
-            along the altitude direction (increasing towards zenith). The
-            output arrays have the same shapes, given by
-            :func:`np.broadcast(alt, az, alt0, az0) <numpy.broadcast>`.
+    Returns
+    -------
+    :class:`tuple`
+        Pair x,y of numpy arrays of focal-plane coordinates in radians,
+        with +x along the azimuth direction (increasing eastwards) and +y
+        along the altitude direction (increasing towards zenith). The
+        output arrays have the same shapes, given by
+        :func:`np.broadcast(alt, az, alt0, az0) <numpy.broadcast>`.
     """
     if not isinstance(alt, np.ndarray):
         alt = np.float(alt)
@@ -122,20 +125,20 @@ def focalplane_to_altaz(x, y, alt0, az0):
 
     Parameters
     ----------
-    x: float or numpy.ndarray
+    x : :class:`float` or :class:`numpy.ndarray`
         Target x position(s) in radians with +x increasing eastwards along the
         azimuth direction.
-    y: float numpy.ndarray
+    y : :class:`float` or :class:`numpy.ndarray`
         Target y position(s) in radians with +y increasing towards the zenith
         along the altitude direction.
-    alt0: float or numpy.ndarray
+    alt0 : :class:`float` or :class:`numpy.ndarray`
         Boresight altitude(s) in radians above the horizon.
-    az0: float or numpy.ndarray
+    az0 : :class:`float` or :class:`numpy.ndarray`
         Boresight azimuthal angle(s) in radians east of north.
 
     Returns
     -------
-    result: tuple
+    :class:`tuple`
         Pair alt,az of numpy arrays of local sky coordinates in radians,
         with alt measured above the horizon and az increasing eastwards of
         north. The output arrays have the same shapes, given by
@@ -197,7 +200,7 @@ def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,
 
     Parameters
     ----------
-    sky_coords: object
+    sky_coords : :class:`object`
         An object representing one or more sky coordinates that are
         transformable to an AltAz frame by invoking
         ``sky_coords.transform_to()``. This argument will usually be an
@@ -205,27 +208,27 @@ def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,
         of :class:`astropy.coordinates.AltAz` can also be used to isolate
         the effects of changing the parameters of the atmospheric
         refraction model.
-    where: astropy.coordinates.EarthLocation
+    where : :class:`astropy.coordinates.EarthLocation`
         The location where the observations take place.
-    when: astropy.time.Time
+    when : :class:`astropy.time.Time`
         The time(s) of the observations.
-    wavelength: astropy.units.Quantity
-        The wavelength(s) of the observations.
-    temperature: astropy.units.Quantity
-        The temperature(s) of the observations.
-    pressure: astropy.units.Quantity
-        The atmospheric pressure(s) of the
-        observations. These should be pressures at the telescope, rather
+    wavelength : :class:`astropy.units.Quantity`
+        The wavelength(s) of the observations with units of length.
+    temperature : :class:`astropy.units.Quantity`
+        The temperature(s) of the observations with temperature units.
+    pressure : :class:`astropy.units.Quantity`
+        The atmospheric pressure(s) of the observations with appropriate units.
+        These should be pressures at the telescope, rather
         than adjusted to equivalent sea-level pressures. When ``None`` is
         specified, the pressure(s) will be estimated at the telescope elevation
         using a standard atmosphere model at the specified temperature(s).
-    relative_humidity: float or numpy.ndarray
+    relative_humidity : :class:`float` or :class:`numpy.ndarray`
         Relative humidity (or humidities) of the observations. Value(s) should
         be in the range 0-1 and are dimensionless.
 
     Returns
     -------
-    result: astropy.coordinates.AltAz
+    :class:`astropy.coordinates.AltAz`
         An array of ALT-AZ coordinates with a shape given by
         :func:`np.broadcast(sky_coords, when, wavelength, temperature, pressure)
         <numpy.broadcast>`.

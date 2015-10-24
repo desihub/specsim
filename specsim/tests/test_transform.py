@@ -16,6 +16,15 @@ def test_origin_to_focalplane():
     assert np.allclose(x, 0 * u.rad) and np.allclose(y, 0 * u.rad)
 
 
+def test_focalplane_units():
+    platescale = 200 * u.mm / u.deg
+    alt, az = 0.5 * u.rad, 1.5 * u.rad
+    x, y = altaz_to_focalplane(alt, az, alt, az, platescale=platescale)
+    assert x.unit == u.m and y.unit == u.m
+    alt, az = focalplane_to_altaz(x, y, alt, az, platescale=platescale)
+    assert alt.unit == u.rad and az.unit == u.rad
+
+
 def test_shape_to_focalplane():
     zero = 0. * u.rad
     x, y = altaz_to_focalplane(zero, zero, zero, zero)

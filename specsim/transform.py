@@ -26,7 +26,7 @@ observatories = {
 }
 
 
-def altaz_to_focalplane(alt, az, alt0, az0):
+def altaz_to_focalplane(alt, az, alt0, az0, platescale=1):
     """
     Convert local (alt,az) coordinates to focal plane (x,y) coordinates.
 
@@ -49,23 +49,30 @@ def altaz_to_focalplane(alt, az, alt0, az0):
 
     Parameters
     ----------
-    alt : :class:`astropy.units.Quantity`
+    alt : :class:`astropy.coordinates.Angle`
         Target altitude angle(s) above the horizon.
-    az : :class:`astropy.units.Quantity`
+    az : :class:`astropy.coordinates.Angle`
         Target azimuthal angle(s) east of north.
-    alt0 : :class:`astropy.units.Quantity`
+    alt0 : :class:`astropy.coordinates.Angle`
         Boresight altitude angle(s) above the horizon.
-    az0 : :class:`astropy.units.Quantity`
+    az0 : :class:`astropy.coordinates.Angle`
         Boresight azimuthal angle(s) east of north.
+    platescale : :class:`astropy.units.Quantity`
+        Conversion from angular separation relative to the boresight to
+        the output focal plane coordinates.
 
     Returns
     -------
     :class:`tuple`
-        Pair x,y of numpy arrays of focal-plane coordinates in radians,
-        with +x along the azimuth direction (increasing eastwards) and +y
-        along the altitude direction (increasing towards zenith). The
-        output arrays have the same shapes, given by
-        :func:`np.broadcast(alt, az, alt0, az0) <numpy.broadcast>`.
+        Pair x,y of focal-plane coordinates expressed as
+        :class:`astropy.units.Quantity` objects, with +x along the
+        azimuth direction (increasing eastwards) and +y along the altitude
+        direction (increasing towards zenith). The output arrays have the same
+        shapes, given by
+        :func:`np.broadcast(alt, az, alt0, az0) <numpy.broadcast>`. The output
+        units are determined by the input ``platescale`` and will be ``u.rad``
+        if the platescale is dimensionless, or otherwise the SI units of
+        ``platescale * u.rad``.
     """
     # Check that the input shapes are compatible for broadcasting to the output,
     # otherwise this will raise a ValueError.
@@ -104,10 +111,11 @@ def altaz_to_focalplane(alt, az, alt0, az0):
             .format(np.version.version))
 
     # Convert unit vectors to (x,y).
-    return vv[0] * u.rad, vv[2] * u.rad
+    conversion = (1 * u.rad * platescale).si
+    return vv[0] * conversion, vv[2] * conversion
 
 
-def focalplane_to_altaz(x, y, alt0, az0):
+def focalplane_to_altaz(x, y, alt0, az0, platescale=1):
     """Convert focal plane (x,y) coordinates to local (alt,az) coordinates.
 
     This is the inverse of :func:`altaz_to_focalplane`. Consult that function's
@@ -116,27 +124,33 @@ def focalplane_to_altaz(x, y, alt0, az0):
     Parameters
     ----------
     x : :class:`astropy.units.Quantity`
-        Target x position(s) in the focal plane, expressed as an angle with
-        +x increasing eastwards along the azimuth direction.
+        Target x position(s) in the focal plane with +x increasing eastwards
+        along the azimuth direction.  The input units must be such that
+        ``x / platescale`` is an angle.
     y : :class:`astropy.units.Quantity`
-        Target y position(s) in focal plane, expressed as an angle with +y
-        increasing towards the zenith along the altitude direction.
-    alt0 : :class:`astropy.units.Quantity`
+        Target y position(s) in focal plane with +y increasing towards the
+        zenith along the altitude direction.  The input units must be such that
+        ``y / platescale`` is an angle.
+    alt0 : :class:`astropy.coordinates.Angle`
         Boresight altitude angle(s) above the horizon.
-    az0 : :class:`astropy.units.Quantity`
+    az0 : :class:`astropy.coordinates.Angle`
         Boresight azimuthal angle(s) east of north.
+    platescale : :class:`astropy.units.Quantity`
+        Conversion from angular separation relative to the boresight to
+        the output focal plane coordinates.
 
     Returns
     -------
     :class:`tuple`
-        Pair alt,az of numpy arrays of local sky coordinates in radians,
-        with alt measured above the horizon and az increasing eastwards of
-        north. The output arrays have the same shapes, given by
+        Pair alt,az of focal-plane coordinates expressed as
+        :class:`astropy.units.Angle` objects, with alt measured above the
+        horizon and az increasing eastwards of north. The output arrays have
+        the same shapes, given by
         :func:`np.broadcast(x, y, alt0, az0) <numpy.broadcast>`.
     """
-    # Convert (x,y) to unit vectors.
-    x = x.to(u.rad)
-    y = y.to(u.rad)
+    # Convert (x,y) to vectors in radians.
+    x = (x / platescale).to(u.rad)
+    y = (y / platescale).to(u.rad)
     z = np.sqrt(1 - x.value**2 - y.value**2)
     vv = np.empty(shape=[3,] + list(z.shape))
     vv[0] = x.value

@@ -265,3 +265,66 @@ def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,
 
     # Perform the transforms.
     return sky_coords.transform_to(observing_frame)
+
+
+def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
+                              longitude=None,
+                              max_error=0.01*u.arcsec, max_iterations=3):
+    """Adjust a time to a specified target hour angle.
+
+    The input nominal time will be adjusted to the closest time where the
+    specified hour angle is achieved, using either a positive or negative
+    adjustment.
+
+    Parameters
+    ----------
+    nominal_time : :class:`astropy.time.Time`
+        Nominal time that will be adjusted. If it does not have an associated
+        location, the longitude parameter must be set.
+    target_ra : :class:`astropy.units.quantity.Quantity`
+        Target right ascension to use for calculating the hour angle.
+    hour_angle : :class:`astropy.units.quantity.Quantity`
+        Desired target hour angle after the adjustment, expressed as an angle.
+    longitude : :class:`astropy.units.quantity.Quantity`
+        The longitude to use for calculating the hour angle.  When the value
+        is ``None``, the location associated with ``nominal_time`` is used.
+    max_error : :class:`astropy.units.quantity.Quantity`
+        The desired accuracy of the hour angle after the adjustment, expressed
+        as an angle.
+    max_iterations : int
+        The maximum number of iterations to use in order to achieve the desired
+        accuracy.
+
+    Returns
+    -------
+    :class:`astropy.time.Time`
+        Adjusted time, which will be within ``max_error`` of ``target_ra``, or
+        else a RuntimeError will be raised.
+
+    Raises
+    ------
+    :class:`RuntimeError`
+        The desired accuracy could not be achieved after ``max_iterations``.
+    """
+    sidereal = 1 / 1.002737909350795
+    when = nominal_time
+    num_iterations = 0
+    while True:
+        # Calculate the nominal local sidereal time of the target.
+        lst = when.sidereal_time('apparent', longitude) - target_ra
+
+        # Are we close enough?
+        if np.abs(lst - hour_angle) <= max_error:
+            break
+
+        # Have we run out of iterations?
+        if num_iterations >= max_iterations:
+            raise RuntimeError(
+                'Reached max_iterations = {}.'.format(max_iterations))
+        num_iterations += 1
+
+        # Offset to the nearest time with the desired hour angle.
+        # Correct for the fact that 360 deg corresponds to a sidereal day.
+        when = when - (lst - hour_angle) * u.hour / (15 * u.deg) * sidereal
+
+    return when

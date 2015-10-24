@@ -2,7 +2,7 @@
 
 from astropy.tests.helper import pytest
 from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
-    observatories, sky_to_altaz
+    observatories, sky_to_altaz, adjust_time_to_hour_angle
 
 import numpy as np
 from astropy.time import Time
@@ -89,3 +89,18 @@ def test_altaz_null():
         wavelength=wlen, temperature=temperature, pressure=pressure)
     assert np.allclose(altaz_in.alt, altaz_out.alt)
     assert np.allclose(altaz_in.az, altaz_out.az)
+
+
+def test_adjust_null():
+    ra = 45 * u.deg
+    when = Time(56383, format='mjd', location=observatories['APO'])
+    ha = when.sidereal_time('apparent') - ra
+    adjusted = adjust_time_to_hour_angle(when, ra, ha)
+    assert adjusted == when
+
+
+def test_adjust_missing_longitude():
+    ra = 45 * u.deg
+    when = Time(56383, format='mjd', location=None)
+    with pytest.raises(ValueError):
+        adjusted = adjust_time_to_hour_angle(when, ra, 0.)

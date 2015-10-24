@@ -8,8 +8,6 @@ observatories : dict
     Dictionary of predefined observing locations represented as
     :class:`astropy.coordinates.EarthLocation` objects.
 """
-from __future__ import print_function, division
-
 import numpy as np
 
 import astropy.time
@@ -39,10 +37,10 @@ def altaz_to_focalplane(alt, az, alt0, az0, platescale=1):
     >>> alt0, az0 = 45 * u.deg, 0 * u.deg
     >>> x, y = altaz_to_focalplane(alt0 + 1 * u.deg, az0, alt0, az0, scale)
     >>> print(np.round(x, 4), np.round(y, 4))
-    0.0 m 0.2 m
+    (<Quantity 0.0 m>, <Quantity 0.2 m>)
     >>> x, y = altaz_to_focalplane(alt0, az0 + 1 * u.deg, alt0, az0, scale)
     >>> print(np.round(x, 4), np.round(y, 4))
-    0.1414 m 0.0009 m
+    (<Quantity 0.1414 m>, <Quantity 0.0009 m>)
 
     This function implements a purely mathematical coordinate transform and does
     not invoke any atmospheric refraction physics.  Use :func:`sky_to_altaz`
@@ -134,7 +132,7 @@ def focalplane_to_altaz(x, y, alt0, az0, platescale=1):
     >>> alt, az = focalplane_to_altaz(x, y, alt0, az0, scale)
     >>> x, y = altaz_to_focalplane(alt, az, alt0, az0, scale)
     >>> print(np.round(x, 6), np.round(y, 6))
-    0.004 m -0.002 m
+    (<Quantity 0.004 m>, <Quantity -0.002 m>)
 
     Consult that function's documentation for details.
 
@@ -213,7 +211,7 @@ def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,
     >>> sky = astropy.coordinates.ICRS(ra=45 * u.deg, dec = -30 * u.deg)
     >>> altaz = sky_to_altaz(sky, where, when, 5400 * u.Angstrom)
     >>> print(np.round(altaz.alt, 4), np.round(altaz.az, 4))
-    20d44m47.76s 210d06m12.96s
+    (<Latitude 20.7466 deg>, <Longitude 210.1036 deg>)
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied

@@ -31,21 +31,27 @@ def altaz_to_focalplane(alt, az, alt0, az0, platescale=1):
     Convert local (alt,az) coordinates to focal plane (x,y) coordinates.
 
     A plate coordinate system is defined by its boresight altitude and azimuth,
-    corresponding to (x,y) = (0,0), and the conventions that +x increases
+    corresponding to the (x,y) origin, and the conventions that +x increases
     eastwards along the azimuth axis and +y increases towards the zenith along
-    the altitude axis.
+    the altitude axis:
+
+    >>> scale = 200 * u.mm / u.deg
+    >>> alt0, az0 = 45 * u.deg, 0 * u.deg
+    >>> altaz_to_focalplane(alt0 + 1 * u.deg, az0, alt0, az0, scale)
+    (<Quantity 0.0 m>, <Quantity 0.19998984624065838 m>)
+    >>> altaz_to_focalplane(alt0, az0 + 1 * u.deg, alt0, az0, scale)
+    (<Quantity 0.1414141764452249 m>, <Quantity 0.0008726424738180304 m>)
 
     This function implements a purely mathematical coordinate transform and does
     not invoke any atmospheric refraction physics.  Use :func:`sky_to_altaz`
     to convert global sky coordinates (ra,dec) into local (alt,az) coordinates,
     which does involve refraction.
 
-    The input values can either be constants or numpy arrays. If any input is
-    not a numpy array, it will be automatically converted to a
-    :class:`numpy.float`. The output shape is determined by the usual
-    `numpy broadcasting rules
+    The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__
-    applied to all of the inputs.
+    applied to all of the inputs, , so this function can be used to tabulate
+    (x,y) coordinates on a user-specified grid covering different targets
+    and boresights.
 
     Parameters
     ----------
@@ -118,8 +124,16 @@ def altaz_to_focalplane(alt, az, alt0, az0, platescale=1):
 def focalplane_to_altaz(x, y, alt0, az0, platescale=1):
     """Convert focal plane (x,y) coordinates to local (alt,az) coordinates.
 
-    This is the inverse of :func:`altaz_to_focalplane`. Consult that function's
-    documentation for details.
+    This is the inverse of :func:`altaz_to_focalplane`:
+
+    >>> scale = 200 * u.mm / u.deg
+    >>> alt0, az0 = 45 * u.deg, 0 * u.deg
+    >>> x, y = 4 * u.mm, -2 * u.mm
+    >>> alt, az = focalplane_to_altaz(x, y, alt0, az0, scale)
+    >>> altaz_to_focalplane(alt, az, alt0, az0, scale)
+    (<Quantity 0.004000000000000002 m>, <Quantity -0.002000000000000512 m>)
+
+    Consult that function's documentation for details.
 
     Parameters
     ----------
@@ -189,11 +203,20 @@ def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,
 
     This function encapsulates algorithms for the time-dependent transformation
     between RA-DEC and ALT-AZ, and models the wavelength-dependent atmospheric
-    refraction.
+    refraction:
+
+    >>> where = observatories['KPNO']
+    >>> when = astropy.time.Time(56383, format='mjd')
+    >>> sky = astropy.coordinates.ICRS(ra=45 * u.deg, dec = -30 * u.deg)
+    >>> altaz = sky_to_altaz(sky, where, when, 5400 * u.Angstrom)
+    >>> altaz.alt, altaz.az
+    (<Latitude 20.746642144141592 deg>, <Longitude 210.10358458923005 deg>)
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
-    to all of the inputs.
+    to all of the inputs, so this function can be used to tabulate (alt,az)
+    coordinates on a user-specified grid covering sky x time x wavelength x
+    temperature x pressure x humidity.
 
     Parameters
     ----------
@@ -300,7 +323,7 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
 
     Raises
     ------
-    :class:`RuntimeError`
+    RuntimeError
         The desired accuracy could not be achieved after ``max_iterations``.
     """
     sidereal = 1 / 1.002737909350795

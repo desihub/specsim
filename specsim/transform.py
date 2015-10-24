@@ -2,9 +2,11 @@
 """
 Implement transformations between sky and focal plane coordinate systems.
 
-Attributes:
-    observatories (dict): Dictionary of predefined observing locations
-        represented as :class:`astropy.coordinates.EarthLocation` objects.
+Attributes
+----------
+observatories : dict
+    Dictionary of predefined observing locations represented as
+    :class:`astropy.coordinates.EarthLocation` objects.
 """
 from __future__ import print_function, division
 
@@ -45,19 +47,16 @@ def altaz_to_focalplane(alt, az, alt0, az0):
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__
     applied to all of the inputs.
 
-    All input values are assumed to be in radians and all output values are
-    calculated in radians.
-
     Parameters
     ----------
-    alt : :class:`float` or :class:`numpy.ndarray`
-        Target altitude(s) in radians above the horizon.
-    az : :class:`float` or :class:`numpy.ndarray`
-        Target azimuthal angle(s) in radians east of north.
-    alt0 : :class:`float` or :class:`numpy.ndarray`
-        Boresight altitude(s) in radians above the horizon.
-    az0 : :class:`float` or :class:`numpy.ndarray`
-        Boresight azimuthal angle(s) in radians east of north.
+    alt : :class:`astropy.units.Quantity`
+        Target altitude angle(s) above the horizon.
+    az : :class:`astropy.units.Quantity`
+        Target azimuthal angle(s) east of north.
+    alt0 : :class:`astropy.units.Quantity`
+        Boresight altitude angle(s) above the horizon.
+    az0 : :class:`astropy.units.Quantity`
+        Boresight azimuthal angle(s) east of north.
 
     Returns
     -------
@@ -68,15 +67,6 @@ def altaz_to_focalplane(alt, az, alt0, az0):
         output arrays have the same shapes, given by
         :func:`np.broadcast(alt, az, alt0, az0) <numpy.broadcast>`.
     """
-    if not isinstance(alt, np.ndarray):
-        alt = np.float(alt)
-    if not isinstance(az, np.ndarray):
-        az = np.float(az)
-    if not isinstance(alt0, np.ndarray):
-        alt0 = np.float(alt0)
-    if not isinstance(az0, np.ndarray):
-        az0 = np.float(az0)
-
     # Check that the input shapes are compatible for broadcasting to the output,
     # otherwise this will raise a ValueError.
     output_shape = np.broadcast(alt, az, alt0, az0).shape
@@ -84,10 +74,10 @@ def altaz_to_focalplane(alt, az, alt0, az0):
     # Convert (alt,az) to unit vectors.
     cos_alt = np.cos(alt)
     elem_shape = np.broadcast(alt, az).shape
-    u = np.empty(shape=[3,] + list(elem_shape))
-    u[0] = np.sin(az) * cos_alt
-    u[1] = np.cos(az) * cos_alt
-    u[2] = np.sin(alt)
+    uu = np.empty(shape=[3,] + list(elem_shape))
+    uu[0] = np.sin(az) * cos_alt
+    uu[1] = np.cos(az) * cos_alt
+    uu[2] = np.sin(alt)
 
     # Build combined rotation matrices R[-alt0,x].R[+az0,z].
     cos_alt0 = np.cos(alt0)
@@ -106,15 +96,15 @@ def altaz_to_focalplane(alt, az, alt0, az0):
     R[2, 1] = -cos_az0 * sin_alt0
     R[2, 2] = cos_alt0
 
-    # Calculate v = R.u
-    v = np.einsum('ij...,j...->i...', R, u)
-    if v[0].shape != output_shape:
+    # Calculate vv = R.uu
+    vv = np.einsum('ij...,j...->i...', R, uu)
+    if vv[0].shape != output_shape:
         raise RuntimeError(
             'np.einsum does not broadcast correctly in numpy {}.'
             .format(np.version.version))
 
     # Convert unit vectors to (x,y).
-    return v[0], v[2]
+    return vv[0] * u.rad, vv[2] * u.rad
 
 
 def focalplane_to_altaz(x, y, alt0, az0):
@@ -125,16 +115,16 @@ def focalplane_to_altaz(x, y, alt0, az0):
 
     Parameters
     ----------
-    x : :class:`float` or :class:`numpy.ndarray`
-        Target x position(s) in radians with +x increasing eastwards along the
-        azimuth direction.
-    y : :class:`float` or :class:`numpy.ndarray`
-        Target y position(s) in radians with +y increasing towards the zenith
-        along the altitude direction.
-    alt0 : :class:`float` or :class:`numpy.ndarray`
-        Boresight altitude(s) in radians above the horizon.
-    az0 : :class:`float` or :class:`numpy.ndarray`
-        Boresight azimuthal angle(s) in radians east of north.
+    x : :class:`astropy.units.Quantity`
+        Target x position(s) in the focal plane, expressed as an angle with
+        +x increasing eastwards along the azimuth direction.
+    y : :class:`astropy.units.Quantity`
+        Target y position(s) in focal plane, expressed as an angle with +y
+        increasing towards the zenith along the altitude direction.
+    alt0 : :class:`astropy.units.Quantity`
+        Boresight altitude angle(s) above the horizon.
+    az0 : :class:`astropy.units.Quantity`
+        Boresight azimuthal angle(s) east of north.
 
     Returns
     -------
@@ -144,21 +134,14 @@ def focalplane_to_altaz(x, y, alt0, az0):
         north. The output arrays have the same shapes, given by
         :func:`np.broadcast(x, y, alt0, az0) <numpy.broadcast>`.
     """
-    if not isinstance(x, np.ndarray):
-        x = np.float(x)
-    if not isinstance(y, np.ndarray):
-        y = np.float(y)
-    if not isinstance(alt0, np.ndarray):
-        alt0 = np.float(alt0)
-    if not isinstance(az0, np.ndarray):
-        az0 = np.float(az0)
-
     # Convert (x,y) to unit vectors.
-    z = np.sqrt(1 - x**2 - y**2)
-    v = np.empty(shape=[3,] + list(z.shape))
-    v[0] = x
-    v[1] = z
-    v[2] = y
+    x = x.to(u.rad)
+    y = y.to(u.rad)
+    z = np.sqrt(1 - x.value**2 - y.value**2)
+    vv = np.empty(shape=[3,] + list(z.shape))
+    vv[0] = x.value
+    vv[1] = z
+    vv[2] = y.value
 
     # Build combined rotation matrices R[-alt0,x].R[+az0,z].
     cos_alt0 = np.cos(alt0)
@@ -177,13 +160,13 @@ def focalplane_to_altaz(x, y, alt0, az0):
     R[2, 1] = sin_alt0
     R[2, 2] = cos_alt0
 
-    # Calculate u = R.v
-    u = np.einsum('ij...,j...->i...', R, v)
+    # Calculate uu = R.vv
+    uu = np.einsum('ij...,j...->i...', R, vv)
 
     # Convert unit vectors to (alt,az).
-    alt = np.arcsin(u[2])
-    az = np.arctan2(u[0], u[1])
-    return alt, az
+    alt = np.arcsin(uu[2])
+    az = np.arctan2(uu[0], uu[1])
+    return alt * u.rad, az * u.rad
 
 
 def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,

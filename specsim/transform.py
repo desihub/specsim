@@ -36,11 +36,11 @@ def altaz_to_focalplane(alt, az, alt0, az0, platescale=1):
     >>> scale = 200 * u.mm / u.deg
     >>> alt0, az0 = 45 * u.deg, 0 * u.deg
     >>> x, y = altaz_to_focalplane(alt0 + 1 * u.deg, az0, alt0, az0, scale)
-    >>> round(x.to(u.mm).value, 2), round(y.to(u.mm).value, 2)
-    (0.0, 199.99)
+    >>> print('X = %.2f mm, Y = %.2f mm' % (x.to(u.mm).value, y.to(u.mm).value))
+    X = 0.00 mm, Y = 199.99 mm
     >>> x, y = altaz_to_focalplane(alt0, az0 + 1 * u.deg, alt0, az0, scale)
-    >>> round(x.to(u.mm).value, 2), round(y.to(u.mm).value, 2)
-    (141.41, 0.87)
+    >>> print('X = %.2f mm, Y = %.2f mm' % (x.to(u.mm).value, y.to(u.mm).value))
+    X = 141.41 mm, Y = 0.87 mm
 
     This function implements a purely mathematical coordinate transform and does
     not invoke any atmospheric refraction physics.  Use :func:`sky_to_altaz`
@@ -131,8 +131,8 @@ def focalplane_to_altaz(x, y, alt0, az0, platescale=1):
     >>> x, y = 4 * u.mm, -2 * u.mm
     >>> alt, az = focalplane_to_altaz(x, y, alt0, az0, scale)
     >>> x, y = altaz_to_focalplane(alt, az, alt0, az0, scale)
-    >>> round(x.to(u.mm).value, 2), round(y.to(u.mm).value, 2)
-    (4.0, -2.0)
+    >>> print('X = %.2f mm, Y = %.2f mm' % (x.to(u.mm).value, y.to(u.mm).value))
+    X = 4.00 mm, Y = -2.00 mm
 
     Consult that function's documentation for details.
 
@@ -210,10 +210,11 @@ def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,
     >>> when = astropy.time.Time('2001-01-01T00:00:00')
     >>> polaris = astropy.coordinates.ICRS(ra=37.95 * u.deg, dec=89.25 * u.deg)
     >>> altaz = sky_to_altaz(polaris, where, when, 5400 * u.Angstrom)
-    >>> round(altaz.alt.to(u.deg).value, 3), round(altaz.az.to(u.deg).value, 3)
-    (32.465, 0.667)
-    >>> round(where.latitude.to(u.deg).value, 3)
-    31.963
+    >>> print('alt = %.3f deg, az = %.3f deg' %
+    ... (altaz.alt.to(u.deg).value, altaz.az.to(u.deg).value))
+    alt = 32.465 deg, az = 0.667 deg
+    >>> print('lat = %.3f deg' % where.latitude.to(u.deg).value)
+    lat = 31.963 deg
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
@@ -304,8 +305,8 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
     >>> night = astropy.time.Time(55100, format='mjd', location=where)
     >>> polaris = astropy.coordinates.ICRS(ra=37.95 * u.deg, dec=89.25 * u.deg)
     >>> when = adjust_time_to_hour_angle(night, polaris.ra, 0 * u.deg)
-    >>> round(when.mjd, 3)
-    55099.403
+    >>> print('MJD %.3f' % when.mjd)
+    MJD 55099.403
 
     Parameters
     ----------

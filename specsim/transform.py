@@ -36,11 +36,11 @@ def altaz_to_focalplane(alt, az, alt0, az0, platescale=1):
     >>> scale = 200 * u.mm / u.deg
     >>> alt0, az0 = 45 * u.deg, 0 * u.deg
     >>> x, y = altaz_to_focalplane(alt0 + 1 * u.deg, az0, alt0, az0, scale)
-    >>> print(np.round(x, 4), np.round(y, 4))
-    (<Quantity 0.0 m>, <Quantity 0.2 m>)
+    >>> round(x.to(u.mm).value, 2), round(y.to(u.mm).value, 2)
+    (0.0, 199.99)
     >>> x, y = altaz_to_focalplane(alt0, az0 + 1 * u.deg, alt0, az0, scale)
-    >>> print(np.round(x, 4), np.round(y, 4))
-    (<Quantity 0.1414 m>, <Quantity 0.0009 m>)
+    >>> round(x.to(u.mm).value, 2), round(y.to(u.mm).value, 2)
+    (141.41, 0.87)
 
     This function implements a purely mathematical coordinate transform and does
     not invoke any atmospheric refraction physics.  Use :func:`sky_to_altaz`
@@ -131,8 +131,8 @@ def focalplane_to_altaz(x, y, alt0, az0, platescale=1):
     >>> x, y = 4 * u.mm, -2 * u.mm
     >>> alt, az = focalplane_to_altaz(x, y, alt0, az0, scale)
     >>> x, y = altaz_to_focalplane(alt, az, alt0, az0, scale)
-    >>> print(np.round(x, 6), np.round(y, 6))
-    (<Quantity 0.004 m>, <Quantity -0.002 m>)
+    >>> round(x.to(u.mm).value, 2), round(y.to(u.mm).value, 2)
+    (4.0, -2.0)
 
     Consult that function's documentation for details.
 
@@ -204,14 +204,16 @@ def sky_to_altaz(sky_coords, where, when, wavelength, temperature=15*u.deg_C,
 
     This function encapsulates algorithms for the time-dependent transformation
     between RA-DEC and ALT-AZ, and models the wavelength-dependent atmospheric
-    refraction:
+    refraction. For example, to locate Polaris from Kitt Peak:
 
     >>> where = observatories['KPNO']
-    >>> when = astropy.time.Time(56383, format='mjd')
-    >>> sky = astropy.coordinates.ICRS(ra=45 * u.deg, dec = -30 * u.deg)
-    >>> altaz = sky_to_altaz(sky, where, when, 5400 * u.Angstrom)
-    >>> print(np.round(altaz.alt, 4), np.round(altaz.az, 4))
-    (<Latitude 20.7466 deg>, <Longitude 210.1036 deg>)
+    >>> when = astropy.time.Time('2001-01-01T00:00:00')
+    >>> polaris = astropy.coordinates.ICRS(ra=37.95 * u.deg, dec=89.25 * u.deg)
+    >>> altaz = sky_to_altaz(polaris, where, when, 5400 * u.Angstrom)
+    >>> round(altaz.alt.to(u.deg).value, 3), round(altaz.az.to(u.deg).value, 3)
+    (32.465, 0.667)
+    >>> round(where.latitude.to(u.deg).value, 3)
+    31.963
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
@@ -295,7 +297,15 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
 
     The input nominal time will be adjusted to the closest time where the
     specified hour angle is achieved, using either a positive or negative
-    adjustment.
+    adjustment.  For example to observe Polaris from KPNO on MJD 55100 at
+    its maximum elevation (hour angle = 0):
+
+    >>> where = observatories['KPNO']
+    >>> night = astropy.time.Time(55100, format='mjd', location=where)
+    >>> polaris = astropy.coordinates.ICRS(ra=37.95 * u.deg, dec=89.25 * u.deg)
+    >>> when = adjust_time_to_hour_angle(night, polaris.ra, 0 * u.deg)
+    >>> round(when.mjd, 3)
+    55099.403
 
     Parameters
     ----------

@@ -8,7 +8,8 @@ import os.path
 import numpy as np
 import scipy.interpolate
 
-from . import WavelengthFunction,SpectralFluxDensity
+import specsim.spectrum
+
 
 class Atmosphere(object):
     def __init__(self,skySpectrumFilename=None,zenithExtinctionFilename=None,
@@ -35,6 +36,8 @@ class Atmosphere(object):
             zenithExtinctionFilename = os.path.join(basePath,
                 'data','spectra','ZenithExtinction-KPNO.dat')
         # Load the tabulated sky spectrum.
-        self.skySpectrum = SpectralFluxDensity.loadFromTextFile(skySpectrumFilename)
+        self.skySpectrum =\
+            specsim.spectrum.SpectralFluxDensity.loadFromTextFile(skySpectrumFilename)
         # Load the tabulated zenith extinction coefficients.
-        self.zenithExtinction = WavelengthFunction.loadFromTextFile(zenithExtinctionFilename)
+        self.zenithExtinction =\
+            specsim.spectrum.WavelengthFunction.loadFromTextFile(zenithExtinctionFilename)

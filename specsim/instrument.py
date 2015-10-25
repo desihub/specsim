@@ -12,7 +12,8 @@ import numpy as np
 from astropy.io import fits
 import scipy.interpolate
 
-from . import WavelengthFunction,SpectralFluxDensity
+import specsim.spectrum
+
 
 class Instrument(object):
     """
@@ -48,8 +49,8 @@ class Instrument(object):
             # from the FITS table stored as HDU[1]. Values outside of the tabulated
             # wavelength range will silently extrapolate to zero.
             table = hduList[1].data
-            self.throughput[camera] = WavelengthFunction(table['wavelength'],table['throughput'],
-                extrapolatedValue=0.)
+            self.throughput[camera] = specsim.spectrum.WavelengthFunction(
+                table['wavelength'],table['throughput'], extrapolatedValue=0.)
             hduList.close()
         # Loop over fiberloss models present in the throughput directory.
         self.fiberloss = { }
@@ -57,7 +58,8 @@ class Instrument(object):
             # Extract the model name from the filename.
             model = os.path.basename(fiberlossFile)[10:-4]
             # Load the data from this file.
-            self.fiberloss[model] = WavelengthFunction.loadFromTextFile(fiberlossFile,extrapolatedValue=0.)
+            self.fiberloss[model] = specsim.spectrum.WavelengthFunction.loadFromTextFile(
+                fiberlossFile,extrapolatedValue=0.)
         # Open the PSF parameter file.
         hduList = fits.open(psfFile)
         # Loop over camera bands to build linear interpolations of the PSF FWHM in the
@@ -79,13 +81,18 @@ class Instrument(object):
             table = hduList[key].data
             wave = table['wavelength']
             # Load tabulated PSF functions of wavelength.
-            self.angstromsPerRow[band] = WavelengthFunction(wave,table['angstroms_per_row'],extrapolatedValue=0.)
-            self.psfFWHMWavelength[band] = WavelengthFunction(wave,table['fwhm_wave'],extrapolatedValue=0.)
-            self.psfFWHMSpatial[band] = WavelengthFunction(wave,table['fwhm_wave'],extrapolatedValue=0.)
-            self.psfNPixelsSpatial[band] = WavelengthFunction(wave,table['neff_spatial'],extrapolatedValue=0.)
+            self.angstromsPerRow[band] = specsim.spectrum.WavelengthFunction(
+                wave,table['angstroms_per_row'],extrapolatedValue=0.)
+            self.psfFWHMWavelength[band] = specsim.spectrum.WavelengthFunction(
+                wave,table['fwhm_wave'],extrapolatedValue=0.)
+            self.psfFWHMSpatial[band] = specsim.spectrum.WavelengthFunction(
+                wave,table['fwhm_wave'],extrapolatedValue=0.)
+            self.psfNPixelsSpatial[band] = specsim.spectrum.WavelengthFunction(
+                wave,table['neff_spatial'],extrapolatedValue=0.)
             # Get the wavelength limits for the camera from the FITS header.
             waveMin,waveMax = hduList[key].header['WMIN_ALL'],hduList[key].header['WMAX_ALL']
-            assert waveMin == wave[0] and waveMax == wave[-1], ("Inconsistent wavelength limits for %s" % key)
+            assert waveMin == wave[0] and waveMax == wave[-1], (
+                "Inconsistent wavelength limits for %s" % key)
             self.cameraWavelengthRanges.append((waveMin,waveMax))
             cameraMidpt.append(0.5*(waveMin+waveMax))
         hduList.close()

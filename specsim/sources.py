@@ -10,6 +10,7 @@ import numpy as np
 
 root2pi = np.sqrt(2*math.pi)
 
+
 def getOIIDoubletFlux(totalFlux,wave):
     """
     Returns a vector of [OII] doublet fluxes in erg/(s*cm^2*Ang) corresponding to the

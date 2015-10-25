@@ -12,6 +12,7 @@ import scipy.integrate
 from astropy import constants as const
 from astropy import units
 
+
 class WavelengthFunction(object):
     """
     Represents an arbitrary function of wavelength.

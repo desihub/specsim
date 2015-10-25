@@ -12,7 +12,10 @@ from scipy.special import exp10
 from astropy import constants as const
 from astropy import units
 
-from . import Atmosphere,Instrument,SpectralFluxDensity
+import specsim.spectrum
+import specsim.atmosphere
+import specsim.instrument
+
 
 class QuickCamera(object):
     """
@@ -134,8 +137,10 @@ class Quick(object):
     using the specified base path.
     """
     def __init__(self,atmosphere=None,instrument=None,basePath=''):
-        self.atmosphere = atmosphere if atmosphere else Atmosphere(basePath=basePath)
-        self.instrument = instrument if instrument else Instrument(basePath=basePath)
+        self.atmosphere = (atmosphere if atmosphere else
+            specsim.atmosphere.Atmosphere(basePath=basePath))
+        self.instrument = (instrument if instrument else
+            specsim.instrument.Instrument(basePath=basePath))
 
         # Precompute the physical constant h*c in units of erg*Ang.
         self.hc = const.h.to(units.erg*units.s)*const.c.to(units.angstrom/units.s)
@@ -287,8 +292,8 @@ class Quick(object):
 
         # Convert the source to a SpectralFluxDensity if necessary, setting the flux to zero
         # outside the input source spectrum's range.
-        if not isinstance(sourceSpectrum,SpectralFluxDensity):
-            sourceSpectrum = SpectralFluxDensity(
+        if not isinstance(sourceSpectrum,specsim.spectrum.SpectralFluxDensity):
+            sourceSpectrum = specsim.spectrum.SpectralFluxDensity(
                 sourceSpectrum[0],sourceSpectrum[1],extrapolatedValue=0.)
 
         # Resample the source spectrum to our simulation grid, if necessary.

@@ -77,6 +77,9 @@ class QuickCamera(object):
                 last_row = min(nbins, bin + nhalf + 1)
                 psf = np.exp(-0.5 * (
                     (wavelengthGrid[first_row: last_row] - lam) / sigma)**2)
+                # We normalize the PSF even when it is truncated at the edges of the
+                # resolution function, so that the resolution-convolved flux does not
+                # drop off when the true flux is constant.
                 psf /= np.sum(psf)
                 rng = slice(nextIndex, nextIndex + psf.size)
                 sparseIndices[rng] = range(first_row, last_row)

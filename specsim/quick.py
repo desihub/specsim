@@ -64,9 +64,9 @@ class QuickCamera(object):
         wavelength_spacing = wavelengthGrid[1] - wavelengthGrid[0]
         nhalf = int(np.ceil(5 * max_sigma / wavelength_spacing))
         nbins = wavelengthGrid.size
-        sparseData = np.empty((2*nhalf*nbins,))
-        sparseIndices = np.empty((2*nhalf*nbins,),dtype=np.int32)
-        sparseIndPtr = np.empty((nbins+1,),dtype=np.int32)
+        sparseData = np.empty(((2 * nhalf + 1) * nbins,))
+        sparseIndices = np.empty(((2 * nhalf + 1) * nbins,), dtype=np.int32)
+        sparseIndPtr = np.empty((nbins + 1,), dtype=np.int32)
         nextIndex = 0
         for bin in range(nbins):
             sparseIndPtr[bin] = nextIndex
@@ -74,10 +74,11 @@ class QuickCamera(object):
                 lam = wavelengthGrid[bin]
                 sigma = self.sigmaWavelength[bin]
                 if sigma > 0:
-                    psf = np.exp(-0.5*((wavelengthGrid[bin-nhalf:bin+nhalf]-lam)/sigma)**2)
+                    psf = np.exp(-0.5 * (
+                        (wavelengthGrid[bin - nhalf: bin + nhalf + 1] - lam) / sigma)**2)
                     psf /= np.sum(psf)
-                    rng = slice(nextIndex,nextIndex+psf.size)
-                    sparseIndices[rng] = range(bin-nhalf,bin+nhalf)
+                    rng = slice(nextIndex, nextIndex + psf.size)
+                    sparseIndices[rng] = range(bin - nhalf, bin + nhalf + 1)
                     sparseData[rng] = psf
                     nextIndex += psf.size
         sparseIndPtr[-1] = nextIndex

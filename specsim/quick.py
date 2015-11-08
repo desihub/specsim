@@ -58,7 +58,11 @@ class QuickCamera(object):
         self.angstromsPerRow = self.angstromsPerRowModel.getResampledValues(wavelengthGrid)
 
         # Build a sparse matrix representation of the co-added resolution smoothing kernel.
-        nhalf = 50
+        # Tabulate a Gaussian approximation of the PSF at each simulation wavelength,
+        # truncated at 5x the maximum sigma.
+        max_sigma = np.max(self.sigmaWavelength)
+        wavelength_spacing = wavelengthGrid[1] - wavelengthGrid[0]
+        nhalf = int(np.ceil(5 * max_sigma / wavelength_spacing))
         nbins = wavelengthGrid.size
         sparseData = np.empty((2*nhalf*nbins,))
         sparseIndices = np.empty((2*nhalf*nbins,),dtype=np.int32)

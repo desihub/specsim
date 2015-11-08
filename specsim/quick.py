@@ -70,17 +70,18 @@ class QuickCamera(object):
         nextIndex = 0
         for bin in range(nbins):
             sparseIndPtr[bin] = nextIndex
-            if bin >= nhalf and bin < nbins-nhalf and self.throughput[bin] > 0:
-                lam = wavelengthGrid[bin]
-                sigma = self.sigmaWavelength[bin]
-                if sigma > 0:
-                    psf = np.exp(-0.5 * (
-                        (wavelengthGrid[bin - nhalf: bin + nhalf + 1] - lam) / sigma)**2)
-                    psf /= np.sum(psf)
-                    rng = slice(nextIndex, nextIndex + psf.size)
-                    sparseIndices[rng] = range(bin - nhalf, bin + nhalf + 1)
-                    sparseData[rng] = psf
-                    nextIndex += psf.size
+            lam = wavelengthGrid[bin]
+            sigma = self.sigmaWavelength[bin]
+            if self.throughput[bin] > 0 and sigma > 0:
+                first_row = max(0, bin - nhalf)
+                last_row = min(nbins, bin + nhalf + 1)
+                psf = np.exp(-0.5 * (
+                    (wavelengthGrid[first_row: last_row] - lam) / sigma)**2)
+                psf /= np.sum(psf)
+                rng = slice(nextIndex, nextIndex + psf.size)
+                sparseIndices[rng] = range(first_row, last_row)
+                sparseData[rng] = psf
+                nextIndex += psf.size
         sparseIndPtr[-1] = nextIndex
         # The original IDL code uses the transpose of the correct smoothing kernel,
         # which corresponds to the second commented line below. We ultimately want the

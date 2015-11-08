@@ -182,16 +182,31 @@ class Quick(object):
         self.wavelengthGrid = None
 
     def setWavelengthGrid(self,wavelengthMin,wavelengthMax,wavelengthStep):
-        """
-        setWavelengthGrid
+        """Set the linear wavelength grid to use for simulation.
 
-        Sets the linearly spaced wavelength grid that will be used to generate
-        spectra for subsequent calls to simulate(). Parameter values should be
-        in Angstroms.
+        This method pre-tabulates simulation quantities on the specified grid that
+        are independent of the simulated source, to avoid duplicating this work
+        in subsequent repeated calls to :meth:`simulate`.
+
+        In case the requested step size does not exactly divide the specified
+        range, the maximum wavelength will be silently adjusted.
+
+        The wavelength limits should normally be set ~5 sigma beyond the camera
+        coverage to avoid artifacts from resolution fall off at the edges of
+        the simulation grid.
+
+        Parameters
+        ----------
+        wavelengthMin : float
+            Minimum wavelength to simulate in Angstroms.
+        wavelengthMax : float
+            Maximum wavelength to simulate in Angstroms.
+        wavelengthStep : float
+            Linear step size to use in Angstroms.
         """
         nwave = 1+int(math.floor((wavelengthMax-wavelengthMin)/wavelengthStep))
         if nwave <= 0:
-            raise RuntimeError('simulate.Quick: invalid wavelength grid parameters %r,%r,%r' %
+            raise ValueError('simulate.Quick: invalid wavelength grid parameters %r,%r,%r' %
                 (wavelengthMin,wavelengthMax,wavelengthStep))
         wavelengthGrid = wavelengthMin + wavelengthStep*np.arange(nwave)
 

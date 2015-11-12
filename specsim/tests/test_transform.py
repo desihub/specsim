@@ -112,7 +112,6 @@ def test_invalid_frame():
 
 
 def test_altaz_roundtrip():
-    ra, dec = 0.5 * u.rad, 1.5 * u.rad
     where = observatories['APO']
     when = Time(56383, format='mjd')
     wlen = 5400 * u.Angstrom

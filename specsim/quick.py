@@ -58,24 +58,33 @@ class QuickCamera(object):
         self.angstromsPerRow = self.angstromsPerRowModel.getResampledValues(wavelengthGrid)
 
         # Build a sparse matrix representation of the co-added resolution smoothing kernel.
-        nhalf = 50
+        # Tabulate a Gaussian approximation of the PSF at each simulation wavelength,
+        # truncated at 5x the maximum sigma.
+        max_sigma = np.max(self.sigmaWavelength)
+        wavelength_spacing = wavelengthGrid[1] - wavelengthGrid[0]
+        nhalf = int(np.ceil(5 * max_sigma / wavelength_spacing))
         nbins = wavelengthGrid.size
-        sparseData = np.empty((2*nhalf*nbins,))
-        sparseIndices = np.empty((2*nhalf*nbins,),dtype=np.int32)
-        sparseIndPtr = np.empty((nbins+1,),dtype=np.int32)
+        sparseData = np.empty(((2 * nhalf + 1) * nbins,))
+        sparseIndices = np.empty(((2 * nhalf + 1) * nbins,), dtype=np.int32)
+        sparseIndPtr = np.empty((nbins + 1,), dtype=np.int32)
         nextIndex = 0
         for bin in range(nbins):
             sparseIndPtr[bin] = nextIndex
-            if bin >= nhalf and bin < nbins-nhalf and self.throughput[bin] > 0:
-                lam = wavelengthGrid[bin]
-                sigma = self.sigmaWavelength[bin]
-                if sigma > 0:
-                    psf = np.exp(-0.5*((wavelengthGrid[bin-nhalf:bin+nhalf]-lam)/sigma)**2)
-                    psf /= np.sum(psf)
-                    rng = slice(nextIndex,nextIndex+psf.size)
-                    sparseIndices[rng] = range(bin-nhalf,bin+nhalf)
-                    sparseData[rng] = psf
-                    nextIndex += psf.size
+            lam = wavelengthGrid[bin]
+            sigma = self.sigmaWavelength[bin]
+            if self.throughput[bin] > 0 and sigma > 0:
+                first_row = max(0, bin - nhalf)
+                last_row = min(nbins, bin + nhalf + 1)
+                psf = np.exp(-0.5 * (
+                    (wavelengthGrid[first_row: last_row] - lam) / sigma)**2)
+                # We normalize the PSF even when it is truncated at the edges of the
+                # resolution function, so that the resolution-convolved flux does not
+                # drop off when the true flux is constant.
+                psf /= np.sum(psf)
+                rng = slice(nextIndex, nextIndex + psf.size)
+                sparseIndices[rng] = range(first_row, last_row)
+                sparseData[rng] = psf
+                nextIndex += psf.size
         sparseIndPtr[-1] = nextIndex
         # The original IDL code uses the transpose of the correct smoothing kernel,
         # which corresponds to the second commented line below. We ultimately want the
@@ -173,16 +182,31 @@ class Quick(object):
         self.wavelengthGrid = None
 
     def setWavelengthGrid(self,wavelengthMin,wavelengthMax,wavelengthStep):
-        """
-        setWavelengthGrid
+        """Set the linear wavelength grid to use for simulation.
 
-        Sets the linearly spaced wavelength grid that will be used to generate
-        spectra for subsequent calls to simulate(). Parameter values should be
-        in Angstroms.
+        This method pre-tabulates simulation quantities on the specified grid that
+        are independent of the simulated source, to avoid duplicating this work
+        in subsequent repeated calls to :meth:`simulate`.
+
+        In case the requested step size does not exactly divide the specified
+        range, the maximum wavelength will be silently adjusted.
+
+        The wavelength limits should normally be set ~5 sigma beyond the camera
+        coverage to avoid artifacts from resolution fall off at the edges of
+        the simulation grid.
+
+        Parameters
+        ----------
+        wavelengthMin : float
+            Minimum wavelength to simulate in Angstroms.
+        wavelengthMax : float
+            Maximum wavelength to simulate in Angstroms.
+        wavelengthStep : float
+            Linear step size to use in Angstroms.
         """
         nwave = 1+int(math.floor((wavelengthMax-wavelengthMin)/wavelengthStep))
         if nwave <= 0:
-            raise RuntimeError('simulate.Quick: invalid wavelength grid parameters %r,%r,%r' %
+            raise ValueError('simulate.Quick: invalid wavelength grid parameters %r,%r,%r' %
                 (wavelengthMin,wavelengthMax,wavelengthStep))
         wavelengthGrid = wavelengthMin + wavelengthStep*np.arange(nwave)
 

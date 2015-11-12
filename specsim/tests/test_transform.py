@@ -2,11 +2,12 @@
 
 from astropy.tests.helper import pytest
 from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
-    observatories, sky_to_altaz, adjust_time_to_hour_angle
+    observatories, create_observing_model, sky_to_altaz, altaz_to_sky, \
+    adjust_time_to_hour_angle
 
 import numpy as np
 from astropy.time import Time
-from astropy.coordinates import AltAz
+from astropy.coordinates import SkyCoord, AltAz
 import astropy.units as u
 
 
@@ -86,19 +87,44 @@ def test_focalplane_roundtrip():
     assert np.allclose(alt, alt2) and np.allclose(az, az2)
 
 
-def test_altaz_null():
-    alt, az = 0.5 * u.rad, 1.5 * u.rad
+def test_to_altaz_null():
     where = observatories['APO']
     when = Time(56383, format='mjd')
     wlen = 5400 * u.Angstrom
     temperature = 5 * u.deg_C
     pressure = 800 * u.kPa
-    altaz_in = AltAz(alt=alt, az=az, location=where, obstime=when,
-        obswl=wlen, temperature=temperature, pressure=pressure)
-    altaz_out = sky_to_altaz(altaz_in, where=where, when=when,
+    obs_model = create_observing_model(where=where, when=when,
         wavelength=wlen, temperature=temperature, pressure=pressure)
+    altaz_in = AltAz(alt=0.5*u.rad, az=1.5*u.rad, location=where,
+        obstime=when, obswl=wlen, temperature=temperature, pressure=pressure)
+    altaz_out = sky_to_altaz(altaz_in, obs_model)
     assert np.allclose(altaz_in.alt, altaz_out.alt)
     assert np.allclose(altaz_in.az, altaz_out.az)
+
+
+def test_invalid_frame():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen)
+    with pytest.raises(ValueError):
+        altaz_to_sky(0.5*u.rad, 1.5*u.rad, obs_model, frame='invalid')
+
+
+def test_altaz_roundtrip():
+    ra, dec = 0.5 * u.rad, 1.5 * u.rad
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    temperature = 5 * u.deg_C
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    sky_in = SkyCoord(ra=0.5*u.rad, dec=1.5*u.rad, frame='icrs')
+    altaz_out = sky_to_altaz(sky_in, obs_model)
+    sky_out = altaz_to_sky(altaz_out.alt, altaz_out.az, obs_model, frame='icrs')
+    assert np.allclose(sky_in.ra, sky_out.ra)
+    assert np.allclose(sky_in.dec, sky_out.dec)
 
 
 def test_adjust_null():

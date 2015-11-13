@@ -126,6 +126,24 @@ def test_altaz_roundtrip():
     assert np.allclose(sky_in.dec, sky_out.dec)
 
 
+def test_altaz_array_roundtrip():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    temperature = 5 * u.deg_C
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    sky_in = SkyCoord(
+        ra=(1+np.arange(10))*u.deg, dec=(1+np.arange(10))*u.deg, frame='icrs')
+    altaz_out = sky_to_altaz(sky_in, obs_model)
+    sky_out = altaz_to_sky(altaz_out.alt, altaz_out.az, obs_model, frame='icrs')
+    assert np.allclose(
+        sky_in.ra.to(u.deg).value, sky_out.ra.to(u.deg).value, atol=0.015)
+    assert np.allclose(
+        sky_in.dec.to(u.deg).value, sky_out.dec.to(u.deg).value, atol=0.010)
+
+
 def test_adjust_null():
     ra = 45 * u.deg
     when = Time(56383, format='mjd', location=observatories['APO'])

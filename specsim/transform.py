@@ -31,6 +31,9 @@ observatories = {
 }
 
 
+low_altitude_threshold = 5 * u.deg
+
+
 def altaz_to_focalplane(alt, az, alt0, az0, platescale=1):
     """
     Convert local (alt,az) coordinates to focal plane (x,y) coordinates.
@@ -307,9 +310,8 @@ def sky_to_altaz(sky_coords, observing_model):
 
     Setting a pressure value of zero disables the atmospheric refraction model,
     so that returned coordinates are topocentric.  The atmospheric refraction
-    model becomes inaccurate for altitudes :attr:`below 5 degrees
-    <low_altitude_threshold>` so a `UserWarning` will be issued to flag this
-    condition.
+    model becomes inaccurate for altitudes below 5 degrees so a `UserWarning`
+    will be issued to flag this condition.
 
     Parameters
     ----------
@@ -364,9 +366,8 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
 
     Setting a pressure value of zero disables the atmospheric refraction model,
     so that returned coordinates are topocentric.  The atmospheric refraction
-    model becomes inaccurate for altitudes :attr:`below 5 degrees
-    <low_altitude_threshold>` so a `UserWarning` will be issued to flag this
-    condition.
+    model becomes inaccurate for altitudes below 5 degrees so a `UserWarning`
+    will be issued to flag this condition.
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
@@ -490,9 +491,6 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
         when = when - (lst - hour_angle) * u.hour / (15 * u.deg) * sidereal
 
     return when
-
-
-low_altitude_threshold = 5 * u.deg
 
 
 def _warn_for_low_altitudes(altaz):

@@ -7,7 +7,14 @@ Attributes
 observatories : dict
     Dictionary of predefined observing locations represented as
     :class:`astropy.coordinates.EarthLocation` objects.
+low_altitude_threshold : :class:`astropy.coordinates.Angle`
+    The atmospheric refraction model becomes inaccurate for altitude angles
+    below this threshold, so :func:`sky_to_altaz` and :func:`altaz_to_sky`
+    will issue a `UserWarning` if they encounter a lower value, unless
+    refraction has been disabled by specifying zero pressure.
 """
+import warnings
+
 import numpy as np
 
 import astropy.time
@@ -298,6 +305,12 @@ def sky_to_altaz(sky_coords, observing_model):
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
     to the input coordinates and the refraction model.
 
+    Setting a pressure value of zero disables the atmospheric refraction model,
+    so that returned coordinates are topocentric.  The atmospheric refraction
+    model becomes inaccurate for altitudes :attr:`below 5 degrees
+    <low_altitude_threshold>` so a `UserWarning` will be issued to flag this
+    condition.
+
     Parameters
     ----------
     sky_coords : :class:`object`
@@ -320,10 +333,16 @@ def sky_to_altaz(sky_coords, observing_model):
     """
     # Check that the input coordinates are compatible for broadcasting with
     # the refraction model, otherwise this will raise a ValueError.
-    np.broadcast(sky_coords, observing_model)
+    output_shape = np.broadcast(sky_coords, observing_model).shape
 
     # Perform the transforms.
-    return sky_coords.transform_to(observing_model)
+    altaz_out = sky_coords.transform_to(observing_model)
+
+    # Warn about low altitudes when refraction is being applied.
+    _warn_for_low_altitudes(altaz_out)
+
+    assert altaz_out.shape == output_shape
+    return altaz_out
 
 
 def altaz_to_sky(alt, az, observing_model, frame='icrs'):
@@ -343,20 +362,22 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
     ... (radec.ra.to(u.deg).value, radec.dec.to(u.deg).value))
     ra = 349.106 deg, dec = 61.962 deg
 
+    Setting a pressure value of zero disables the atmospheric refraction model,
+    so that returned coordinates are topocentric.  The atmospheric refraction
+    model becomes inaccurate for altitudes :attr:`below 5 degrees
+    <low_altitude_threshold>` so a `UserWarning` will be issued to flag this
+    condition.
+
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
     to the input coordinates and the refraction model.
 
     Parameters
     ----------
-    sky_coords : :class:`object`
-        An object representing one or more sky coordinates that are
-        transformable to an AltAz frame by invoking
-        ``sky_coords.transform_to()``. This argument will usually be an
-        instances of :class:`astropy.coordinates.SkyCoord`, but instances
-        of :class:`astropy.coordinates.AltAz` can also be used to isolate
-        the effects of changing the parameters of the atmospheric
-        refraction model.
+    alt : :class:`astropy.coordinates.Angle`
+        Altitude angle(s) above the horizon to convert to sky coordinates.
+    az : :class:`astropy.coordinates.Angle`
+        Azimuthal angle(s) east of north to convert to sky coordinates.
     observing_model : :class:`astropy.coordinates.AltAz`
         The ALT-AZ coordinate frame(s) that specify the observing conditions,
         normally obtained by calling :func:`create_observing_model`.
@@ -375,14 +396,17 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
     """
     # Check that the input coordinates are compatible for broadcasting with
     # the refraction model, otherwise this will raise a ValueError.
-    np.broadcast(alt, az, observing_model)
+    output_shape = np.broadcast(alt, az, observing_model).shape
 
     # Initialize the input coordinates.
-    altaz_coords = astropy.coordinates.AltAz(alt=alt, az=az,
+    altaz_in = astropy.coordinates.AltAz(alt=alt, az=az,
         location=observing_model.location, obstime=observing_model.obstime,
         obswl=observing_model.obswl, temperature=observing_model.temperature,
         pressure=observing_model.pressure,
         relative_humidity=observing_model.relative_humidity)
+
+    # Warn about low altitudes when refraction is being applied.
+    _warn_for_low_altitudes(altaz_in)
 
     # If the frame is specified as a string, try to convert it to
     # a BaseCoordinateFrame instance.
@@ -392,7 +416,9 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
         frame = astropy.coordinates.frame_transform_graph.lookup_name(frame)()
 
     # Perform the transforms.
-    return altaz_coords.transform_to(frame)
+    sky_out = altaz_in.transform_to(frame)
+    assert sky_out.shape == output_shape
+    return sky_out
 
 
 def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
@@ -464,3 +490,24 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
         when = when - (lst - hour_angle) * u.hour / (15 * u.deg) * sidereal
 
     return when
+
+
+low_altitude_threshold = 5 * u.deg
+
+
+def _warn_for_low_altitudes(altaz):
+    """Warn for low altitudes where the refraction model is inaccurate.
+
+    No warnings are issued if the pressure is always zero, since that
+    disables the refraction calculations.
+    """
+    refracted = altaz.pressure.value != 0
+    if isinstance(refracted, np.ndarray):
+        issue_warning = (np.min(altaz.alt[refracted])
+            < low_altitude_threshold)
+    else:
+        issue_warning = (refracted and
+            (np.min(altaz.alt) < low_altitude_threshold))
+    if issue_warning:
+        warnings.warn(
+            'Refraction model is inaccurate for altitudes below 5 degrees.')

@@ -5,9 +5,10 @@ from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
     observatories, create_observing_model, sky_to_altaz, altaz_to_sky, \
     adjust_time_to_hour_angle
 
+import warnings
 import numpy as np
 from astropy.time import Time
-from astropy.coordinates import SkyCoord, AltAz
+from astropy.coordinates import SkyCoord, AltAz, ICRS
 import astropy.units as u
 
 
@@ -106,10 +107,78 @@ def test_invalid_frame():
     where = observatories['APO']
     when = Time(56383, format='mjd')
     wlen = 5400 * u.Angstrom
-    obs_model = create_observing_model(where=where, when=when, wavelength=wlen)
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
     with pytest.raises(ValueError):
         altaz_to_sky(0.5*u.rad, 1.5*u.rad, obs_model, frame='invalid')
 
+
+def test_alt_no_warn():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = 0 * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    # The pytest 2.5.1 bundled with astropy_helpers does not implement
+    # pytest.warns, so we turn the warning into an exception.
+    warnings.simplefilter("error")
+    altaz_to_sky(4*u.deg, 0*u.deg, obs_model)
+    # Corresponds to alt=4deg, az=0deg, as used above.
+    sky = ICRS(ra=263.65021762*u.deg, dec=59.50265906*u.deg)
+    sky_to_altaz(sky, obs_model)
+
+
+def test_alt_no_warn_pressure_array():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = np.array([0., 800.]) * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    # The pytest 2.5.1 bundled with astropy_helpers does not implement
+    # pytest.warns, so we turn the warning into an exception.
+    warnings.simplefilter("error")
+    alt = np.array([4., 6.]) * u.deg
+    altaz_to_sky(alt, 0*u.deg, obs_model)
+
+
+def test_alt_warn():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    # The pytest 2.5.1 bundled with astropy_helpers does not implement
+    # pytest.warns, so we turn the warning into an exception.
+    warnings.simplefilter("error")
+    with pytest.raises(UserWarning):
+        altaz_to_sky(4*u.deg, 0*u.deg, obs_model)
+    with pytest.raises(UserWarning):
+        # Corresponds to alt=4deg, az=0deg, as used above.
+        sky = ICRS(ra=263.65021762*u.deg, dec=59.50265906*u.deg)
+        sky_to_altaz(sky, obs_model)
+
+def test_alt_warn_pressure_array():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = np.array([0., 800.]) * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    # The pytest 2.5.1 bundled with astropy_helpers does not implement
+    # pytest.warns, so we turn the warning into an exception.
+    warnings.simplefilter("error")
+    alt = np.array([6., 4.]) * u.deg
+    with pytest.raises(UserWarning):
+        altaz_to_sky(alt, 0*u.deg, obs_model)
+    '''
+    alt = np.array([4., 6.]) * u.deg
+    with pytest.raises(UserWarning):
+        altaz_to_sky(alt[:, np.newaxis], 0*u.deg, obs_model)
+    '''
 
 def test_altaz_roundtrip():
     where = observatories['APO']

@@ -216,15 +216,25 @@ def create_observing_model(where, when, wavelength, temperature=15*u.deg_C,
     between sky coordinates and ALT-AZ through a specified atmosphere, and
     models the wavelength-dependent atmospheric refraction.
 
-    The output shape is determined by the usual `numpy broadcasting rules
-    <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
-    to all of the inputs, so this function can be used to tabulate an observing
-    model on a user-specified grid covering location x time x wavelength x
-    temperature x pressure x humidity.
-
     The model returned by this function can be passed to :func:`sky_to_altaz`
     and :func:`altaz_to_sky` to transform sky coordinates such as RA,DEC to
     and from this model's ALT,AZ coordinate frame(s).
+
+    The output shape resulting from using a model with :func:`sky_to_altaz` or
+    :func:`altaz_to_sky` is determined by the usual `numpy broadcasting rules
+    <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
+    to all of the coordinates and observing model inputs, so this function can
+    be used to tabulate an observing model on a user-specified grid covering
+    location x time x wavelength x temperature x pressure x humidity.  For
+    example, to model a grid of observing times and wavelengths:
+
+    >>> where = observatories['KPNO']
+    >>> when = astropy.time.Time([56382.9, 56383.1], format='mjd')
+    >>> wlen = np.linspace(4000., 10000., 7) * u.Angstrom
+    >>> obs_model = create_observing_model(where, when[:, np.newaxis], wlen)
+    >>> sky_in = astropy.coordinates.ICRS(ra=45*u.deg, dec=45*u.deg)
+    >>> sky_to_altaz(sky_in, obs_model).shape
+    (2, 7)
 
     Parameters
     ----------
@@ -306,7 +316,7 @@ def sky_to_altaz(sky_coords, observing_model):
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
-    to the input coordinates and the refraction model.
+    to the input coordinates and the observing model input parameters.
 
     Setting a pressure value of zero disables the atmospheric refraction model,
     so that returned coordinates are topocentric.  The atmospheric refraction
@@ -335,7 +345,10 @@ def sky_to_altaz(sky_coords, observing_model):
     """
     # Check that the input coordinates are compatible for broadcasting with
     # the refraction model, otherwise this will raise a ValueError.
-    output_shape = np.broadcast(sky_coords, observing_model).shape
+    output_shape = np.broadcast(
+        sky_coords, observing_model.location, observing_model.obstime,
+        observing_model.obswl, observing_model.temperature,
+        observing_model.pressure, observing_model.relative_humidity).shape
 
     # Perform the transforms.
     altaz_out = sky_coords.transform_to(observing_model)
@@ -343,7 +356,9 @@ def sky_to_altaz(sky_coords, observing_model):
     # Warn about low altitudes when refraction is being applied.
     _warn_for_low_altitudes(altaz_out)
 
-    assert altaz_out.shape == output_shape
+    if altaz_out.shape != output_shape:
+        raise RuntimeError('sky_to_altaz output shape is {0} but expected {1}.'
+                           .format(altaz_out.shape, output_shape))
     return altaz_out
 
 
@@ -371,7 +386,7 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
-    to the input coordinates and the refraction model.
+    to the input coordinates and the observing model input parameters.
 
     Parameters
     ----------
@@ -397,7 +412,10 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
     """
     # Check that the input coordinates are compatible for broadcasting with
     # the refraction model, otherwise this will raise a ValueError.
-    output_shape = np.broadcast(alt, az, observing_model).shape
+    output_shape = np.broadcast(
+        alt, az, observing_model.location, observing_model.obstime,
+        observing_model.obswl, observing_model.temperature,
+        observing_model.pressure, observing_model.relative_humidity).shape
 
     # Initialize the input coordinates.
     altaz_in = astropy.coordinates.AltAz(alt=alt, az=az,
@@ -418,7 +436,9 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
 
     # Perform the transforms.
     sky_out = altaz_in.transform_to(frame)
-    assert sky_out.shape == output_shape
+    if sky_out.shape != output_shape:
+        raise RuntimeError('altaz_to_sky output shape is {0} but expected {1}.'
+                           .format(sky_out.shape, output_shape))
     return sky_out
 
 

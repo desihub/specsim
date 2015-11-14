@@ -213,6 +213,63 @@ def test_altaz_array_roundtrip():
         sky_in.dec.to(u.deg).value, sky_out.dec.to(u.deg).value, atol=0.010)
 
 
+def test_sky_to_altaz_shape():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    temperature = 5 * u.deg_C
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    angles = np.array([45., 50., 55.]) * u.deg
+    assert sky_to_altaz(ICRS(ra=angles, dec=angles), obs_model).shape == (3,)
+    assert sky_to_altaz(
+        ICRS(ra=angles[:, np.newaxis], dec=angles), obs_model).shape == (3, 3)
+    assert sky_to_altaz(
+        ICRS(ra=angles, dec=angles[:, np.newaxis]), obs_model).shape == (3, 3)
+    wlen = np.array([5000., 6000.]) * u.Angstrom
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    assert sky_to_altaz(ICRS(45*u.deg, 45*u.deg), obs_model).shape == (2,)
+    with pytest.raises(ValueError):
+        # Cannot broadcast (3,) (3,) (2,)
+        sky_to_altaz(ICRS(ra=angles, dec=angles), obs_model)
+    assert sky_to_altaz(
+        ICRS(ra=angles[:, np.newaxis], dec=angles[:, np.newaxis]),
+        obs_model).shape == (3, 2)
+    assert sky_to_altaz(
+        ICRS(ra=angles[:, np.newaxis, np.newaxis], dec=angles[:, np.newaxis]),
+        obs_model).shape == (3, 3, 2)
+
+
+def test_altaz_to_sky_shape():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    temperature = 5 * u.deg_C
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    angles = np.array([40., 45., 50.]) * u.deg
+    assert altaz_to_sky(angles, angles, obs_model).shape == (3,)
+    assert altaz_to_sky(
+        angles[:, np.newaxis], angles, obs_model).shape == (3, 3)
+    assert altaz_to_sky(
+        angles, angles[:, np.newaxis], obs_model).shape == (3, 3)
+    wlen = np.array([5000., 6000.]) * u.Angstrom
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    assert altaz_to_sky(45*u.deg, 45*u.deg, obs_model).shape == (2,)
+    with pytest.raises(ValueError):
+        # Cannot broadcast (3,) (3,) (2,)
+        altaz_to_sky(angles, angles, obs_model)
+    assert altaz_to_sky(
+        angles[:, np.newaxis], angles[:, np.newaxis], obs_model).shape == (3, 2)
+    assert altaz_to_sky(
+        angles[:, np.newaxis, np.newaxis], angles[:, np.newaxis],
+        obs_model).shape == (3, 3, 2)
+
+
 def test_adjust_null():
     ra = 45 * u.deg
     when = Time(56383, format='mjd', location=observatories['APO'])

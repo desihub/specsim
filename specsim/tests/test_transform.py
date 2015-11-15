@@ -3,7 +3,7 @@
 from astropy.tests.helper import pytest
 from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
     observatories, create_observing_model, sky_to_altaz, altaz_to_sky, \
-    adjust_time_to_hour_angle
+    adjust_time_to_hour_angle, low_altitude_threshold
 
 import warnings
 import numpy as np
@@ -123,11 +123,8 @@ def test_alt_no_warn():
                                        pressure=pressure)
     # The pytest 2.5.1 bundled with astropy_helpers does not implement
     # pytest.warns, so we turn the warning into an exception.
-    warnings.simplefilter("error")
-    altaz_to_sky(4*u.deg, 0*u.deg, obs_model)
-    # Corresponds to alt=4deg, az=0deg, as used above.
-    sky = ICRS(ra=263.65021762*u.deg, dec=59.50265906*u.deg)
-    sky_to_altaz(sky, obs_model)
+    warnings.simplefilter('error')
+    altaz_to_sky(low_altitude_threshold - 1*u.deg, 0*u.deg, obs_model)
 
 
 def test_alt_no_warn_pressure_array():
@@ -139,8 +136,9 @@ def test_alt_no_warn_pressure_array():
                                        pressure=pressure)
     # The pytest 2.5.1 bundled with astropy_helpers does not implement
     # pytest.warns, so we turn the warning into an exception.
-    warnings.simplefilter("error")
-    alt = np.array([4., 6.]) * u.deg
+    warnings.simplefilter('error')
+    alt0 = low_altitude_threshold.to(u.deg).value
+    alt = np.array([alt0 - 1, alt0 + 1]) * u.deg
     altaz_to_sky(alt, 0*u.deg, obs_model)
 
 
@@ -153,13 +151,10 @@ def test_alt_warn():
                                        pressure=pressure)
     # The pytest 2.5.1 bundled with astropy_helpers does not implement
     # pytest.warns, so we turn the warning into an exception.
-    warnings.simplefilter("error")
+    warnings.simplefilter('error')
     with pytest.raises(UserWarning):
-        altaz_to_sky(4*u.deg, 0*u.deg, obs_model)
-    with pytest.raises(UserWarning):
-        # Corresponds to alt=4deg, az=0deg, as used above.
-        sky = ICRS(ra=263.65021762*u.deg, dec=59.50265906*u.deg)
-        sky_to_altaz(sky, obs_model)
+        altaz_to_sky(low_altitude_threshold - 1*u.deg, 0*u.deg, obs_model)
+
 
 def test_alt_warn_pressure_array():
     where = observatories['APO']
@@ -170,15 +165,15 @@ def test_alt_warn_pressure_array():
                                        pressure=pressure)
     # The pytest 2.5.1 bundled with astropy_helpers does not implement
     # pytest.warns, so we turn the warning into an exception.
-    warnings.simplefilter("error")
-    alt = np.array([6., 4.]) * u.deg
+    warnings.simplefilter('error')
+    alt0 = low_altitude_threshold.to(u.deg).value
+    alt = np.array([alt0 + 1, alt0 - 1]) * u.deg
     with pytest.raises(UserWarning):
         altaz_to_sky(alt, 0*u.deg, obs_model)
-    '''
-    alt = np.array([4., 6.]) * u.deg
+    alt = np.array([alt0 - 1, alt0 + 1]) * u.deg
     with pytest.raises(UserWarning):
-        altaz_to_sky(alt[:, np.newaxis], 0*u.deg, obs_model)
-    '''
+        print altaz_to_sky(alt[:, np.newaxis], 0*u.deg, obs_model).shape
+
 
 def test_altaz_roundtrip():
     where = observatories['APO']

@@ -516,16 +516,30 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
 def _warn_for_low_altitudes(altaz):
     """Warn for low altitudes where the refraction model is inaccurate.
 
-    No warnings are issued if the pressure is always zero, since that
-    disables the refraction calculations.
+    This test is only performed when the pressure is non-zero, since zero
+    pressure disables the atmospheric refraction model. In case both the
+    altitude coordinates and the pressure values are arrays, these are
+    broadcast together to test for any inacurrate (altitude, pressure)
+    resulting combinations.
+
+    Parameters
+    ----------
+    altaz : :class:`astropy.coordinates.AltAz`
+        Input alt,az coordinates to test.
     """
     refracted = altaz.pressure.value != 0
-    if isinstance(refracted, np.ndarray):
-        issue_warning = (np.min(altaz.alt[refracted])
-            < low_altitude_threshold)
+    low = altaz.alt < low_altitude_threshold
+    if isinstance(refracted, np.ndarray) and isinstance(low, np.ndarray):
+        # Broadcast the pressure and altitude shapes to check if any of the
+        # resulting combinations are inaccurate.
+        inaccurate = np.any(np.logical_and(refracted, low))
+    elif isinstance(low, np.ndarray):
+        inaccurate = refracted and np.any(low)
+    elif isinstance(refracted, np.ndarray):
+        inaccurate = np.any(refracted) and low
     else:
-        issue_warning = (refracted and
-            (np.min(altaz.alt) < low_altitude_threshold))
-    if issue_warning:
+        inaccurate = refracted and low
+    if inaccurate:
         warnings.warn(
-            'Refraction model is inaccurate for altitudes below 5 degrees.')
+            'Refraction model is inaccurate for altitudes below {0}.'
+            .format(low_altitude_threshold))

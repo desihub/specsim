@@ -2,6 +2,31 @@
 """
 Implement transformations between sky and focal plane coordinate systems.
 
+The :func:`sky_to_altaz` and :func:`altaz_to_sky` functions use the
+atmospheric refraction model implemented in :class:`astropy.coordinates.AltAz`,
+based on that implemented in `ERFA <https://github.com/liberfa/erfa>`__, which
+is fast but becomes inaccurate at low altitudes (high airmass).  The table
+below gives the round-trip altitude errors for converting from (alt,az) to
+(ra,dec) and back to (alt,az):
+
+============== ==============
+Altitude (deg) Error (arcsec)
+============== ==============
+          10.0        -15.175
+          15.0         -1.891
+          20.0         -0.425
+          25.0         -0.130
+          30.0         -0.048
+          35.0         -0.020
+          40.0         -0.009
+          45.0         -0.004
+============== ==============
+
+The :func:`sky_to_altaz` and :func:`altaz_to_sky` issue a warning when using
+altitude angles (and a non-zero atmospheric pressure) below 20 degrees.  The
+value of this threshold can be read and changed programmatically via the
+:attr:`low_altitude_threshold` module attribute.
+
 Attributes
 ----------
 observatories : dict
@@ -320,7 +345,7 @@ def sky_to_altaz(sky_coords, observing_model):
 
     Setting a pressure value of zero disables the atmospheric refraction model,
     so that returned coordinates are topocentric.  The atmospheric refraction
-    model becomes inaccurate for altitudes below 5 degrees so a `UserWarning`
+    model becomes inaccurate for altitudes below 20 degrees so a `UserWarning`
     will be issued to flag this condition.
 
     Parameters
@@ -381,7 +406,7 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
 
     Setting a pressure value of zero disables the atmospheric refraction model,
     so that returned coordinates are topocentric.  The atmospheric refraction
-    model becomes inaccurate for altitudes below 5 degrees so a `UserWarning`
+    model becomes inaccurate for altitudes below 20 degrees so a `UserWarning`
     will be issued to flag this condition.
 
     The output shape is determined by the usual `numpy broadcasting rules

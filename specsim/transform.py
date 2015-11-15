@@ -6,8 +6,9 @@ The :func:`sky_to_altaz` and :func:`altaz_to_sky` functions use the
 atmospheric refraction model implemented in :class:`astropy.coordinates.AltAz`,
 based on that implemented in `ERFA <https://github.com/liberfa/erfa>`__, which
 is fast but becomes inaccurate at low altitudes (high airmass).  The table
-below gives the round-trip altitude errors for converting from (alt,az) to
-(ra,dec) and back to (alt,az):
+below (from `this notebook <https://github.com/desihub/specsim/
+blob/master/docs/nb/TransformExamples.ipynb>`__) gives the round-trip altitude
+errors for converting from (alt,az) to (ra,dec) and back to (alt,az):
 
 ============== ==============
 Altitude (deg) Error (arcsec)

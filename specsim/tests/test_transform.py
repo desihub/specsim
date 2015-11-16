@@ -2,11 +2,13 @@
 
 from astropy.tests.helper import pytest
 from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
-    observatories, sky_to_altaz, adjust_time_to_hour_angle
+    observatories, create_observing_model, sky_to_altaz, altaz_to_sky, \
+    adjust_time_to_hour_angle, low_altitude_threshold
 
+import warnings
 import numpy as np
 from astropy.time import Time
-from astropy.coordinates import AltAz
+from astropy.coordinates import SkyCoord, AltAz, ICRS
 import astropy.units as u
 
 
@@ -86,19 +88,178 @@ def test_focalplane_roundtrip():
     assert np.allclose(alt, alt2) and np.allclose(az, az2)
 
 
-def test_altaz_null():
-    alt, az = 0.5 * u.rad, 1.5 * u.rad
+def test_to_altaz_null():
     where = observatories['APO']
     when = Time(56383, format='mjd')
     wlen = 5400 * u.Angstrom
     temperature = 5 * u.deg_C
     pressure = 800 * u.kPa
-    altaz_in = AltAz(alt=alt, az=az, location=where, obstime=when,
-        obswl=wlen, temperature=temperature, pressure=pressure)
-    altaz_out = sky_to_altaz(altaz_in, where=where, when=when,
+    obs_model = create_observing_model(where=where, when=when,
         wavelength=wlen, temperature=temperature, pressure=pressure)
+    altaz_in = AltAz(alt=0.5*u.rad, az=1.5*u.rad, location=where,
+        obstime=when, obswl=wlen, temperature=temperature, pressure=pressure)
+    altaz_out = sky_to_altaz(altaz_in, obs_model)
     assert np.allclose(altaz_in.alt, altaz_out.alt)
     assert np.allclose(altaz_in.az, altaz_out.az)
+
+
+def test_invalid_frame():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    with pytest.raises(ValueError):
+        altaz_to_sky(0.5*u.rad, 1.5*u.rad, obs_model, frame='invalid')
+
+
+def test_alt_no_warn():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = 0 * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    # The pytest 2.5.1 bundled with astropy_helpers does not implement
+    # pytest.warns, so we turn the warning into an exception.
+    warnings.simplefilter('error')
+    altaz_to_sky(low_altitude_threshold - 1*u.deg, 0*u.deg, obs_model)
+
+
+def test_alt_no_warn_pressure_array():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = np.array([0., 800.]) * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    # The pytest 2.5.1 bundled with astropy_helpers does not implement
+    # pytest.warns, so we turn the warning into an exception.
+    warnings.simplefilter('error')
+    alt0 = low_altitude_threshold.to(u.deg).value
+    alt = np.array([alt0 - 1, alt0 + 1]) * u.deg
+    altaz_to_sky(alt, 0*u.deg, obs_model)
+
+
+def test_alt_warn():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    # The pytest 2.5.1 bundled with astropy_helpers does not implement
+    # pytest.warns, so we turn the warning into an exception.
+    warnings.simplefilter('error')
+    with pytest.raises(UserWarning):
+        altaz_to_sky(low_altitude_threshold - 1*u.deg, 0*u.deg, obs_model)
+
+
+def test_alt_warn_pressure_array():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    pressure = np.array([0., 800.]) * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure)
+    # The pytest 2.5.1 bundled with astropy_helpers does not implement
+    # pytest.warns, so we turn the warning into an exception.
+    warnings.simplefilter('error')
+    alt0 = low_altitude_threshold.to(u.deg).value
+    alt = np.array([alt0 + 1, alt0 - 1]) * u.deg
+    with pytest.raises(UserWarning):
+        altaz_to_sky(alt, 0*u.deg, obs_model)
+    alt = np.array([alt0 - 1, alt0 + 1]) * u.deg
+    with pytest.raises(UserWarning):
+        print altaz_to_sky(alt[:, np.newaxis], 0*u.deg, obs_model).shape
+
+
+def test_altaz_roundtrip():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    temperature = 5 * u.deg_C
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    sky_in = SkyCoord(ra=0.5*u.rad, dec=1.5*u.rad, frame='icrs')
+    altaz_out = sky_to_altaz(sky_in, obs_model)
+    sky_out = altaz_to_sky(altaz_out.alt, altaz_out.az, obs_model, frame='icrs')
+    assert np.allclose(sky_in.ra, sky_out.ra)
+    assert np.allclose(sky_in.dec, sky_out.dec)
+
+
+def test_altaz_array_roundtrip():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    temperature = 5 * u.deg_C
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    alt_in, az_in = np.linspace(20., 89., 70) * u.deg, 90. * u.deg
+    sky = altaz_to_sky(alt_in, az_in, obs_model)
+    altaz_out = sky_to_altaz(sky, obs_model)
+    assert np.all(np.abs(altaz_out.alt - alt_in) < 0.5 * u.arcsec)
+    assert np.all(np.abs(altaz_out.az - az_in) < 1e-5 * u.arcsec)
+
+
+def test_sky_to_altaz_shape():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    temperature = 5 * u.deg_C
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    angles = np.array([45., 50., 55.]) * u.deg
+    assert sky_to_altaz(ICRS(ra=angles, dec=angles), obs_model).shape == (3,)
+    assert sky_to_altaz(
+        ICRS(ra=angles[:, np.newaxis], dec=angles), obs_model).shape == (3, 3)
+    assert sky_to_altaz(
+        ICRS(ra=angles, dec=angles[:, np.newaxis]), obs_model).shape == (3, 3)
+    wlen = np.array([5000., 6000.]) * u.Angstrom
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    assert sky_to_altaz(ICRS(45*u.deg, 45*u.deg), obs_model).shape == (2,)
+    with pytest.raises(ValueError):
+        # Cannot broadcast (3,) (3,) (2,)
+        sky_to_altaz(ICRS(ra=angles, dec=angles), obs_model)
+    assert sky_to_altaz(
+        ICRS(ra=angles[:, np.newaxis], dec=angles[:, np.newaxis]),
+        obs_model).shape == (3, 2)
+    assert sky_to_altaz(
+        ICRS(ra=angles[:, np.newaxis, np.newaxis], dec=angles[:, np.newaxis]),
+        obs_model).shape == (3, 3, 2)
+
+
+def test_altaz_to_sky_shape():
+    where = observatories['APO']
+    when = Time(56383, format='mjd')
+    wlen = 5400 * u.Angstrom
+    temperature = 5 * u.deg_C
+    pressure = 800 * u.kPa
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    angles = np.array([40., 45., 50.]) * u.deg
+    assert altaz_to_sky(angles, angles, obs_model).shape == (3,)
+    assert altaz_to_sky(
+        angles[:, np.newaxis], angles, obs_model).shape == (3, 3)
+    assert altaz_to_sky(
+        angles, angles[:, np.newaxis], obs_model).shape == (3, 3)
+    wlen = np.array([5000., 6000.]) * u.Angstrom
+    obs_model = create_observing_model(where=where, when=when,
+        wavelength=wlen, temperature=temperature, pressure=pressure)
+    assert altaz_to_sky(45*u.deg, 45*u.deg, obs_model).shape == (2,)
+    with pytest.raises(ValueError):
+        # Cannot broadcast (3,) (3,) (2,)
+        altaz_to_sky(angles, angles, obs_model)
+    assert altaz_to_sky(
+        angles[:, np.newaxis], angles[:, np.newaxis], obs_model).shape == (3, 2)
+    assert altaz_to_sky(
+        angles[:, np.newaxis, np.newaxis], angles[:, np.newaxis],
+        obs_model).shape == (3, 3, 2)
 
 
 def test_adjust_null():

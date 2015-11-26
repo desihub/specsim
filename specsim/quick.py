@@ -54,6 +54,13 @@ class QuickCamera(object):
         # FWHM to an equivalent Gaussian sigma.
         fwhmToSigma = 1./(2*math.sqrt(2*math.log(2)))
         self.sigmaWavelength = self.psfFWHMWavelengthModel.getResampledValues(wavelengthGrid)*fwhmToSigma
+
+        # extrapolate null values
+        mask=np.where(self.sigmaWavelength<=0)[0]
+        if mask.size > 0 and mask.size != wavelengthGrid.size :
+            self.sigmaWavelength[mask]=np.interp(wavelengthGrid[mask],wavelengthGrid[self.sigmaWavelength>0],self.sigmaWavelength[self.sigmaWavelength>0])
+        
+
         # Resample the conversion between pixels and Angstroms and save the results.
         self.angstromsPerRow = self.angstromsPerRowModel.getResampledValues(wavelengthGrid)
 
@@ -68,11 +75,24 @@ class QuickCamera(object):
         sparseIndices = np.empty(((2 * nhalf + 1) * nbins,), dtype=np.int32)
         sparseIndPtr = np.empty((nbins + 1,), dtype=np.int32)
         nextIndex = 0
+
+        # define a set of bins to compute the kernel
+        # it is the range of positive throughput with a nhalf margin
+        mask=np.where(self.throughput>0)[0]
+        if mask.size > 0 :
+            begin_bin = max(0,mask[0]-nhalf)
+            end_bin   = min(nbins,mask[-1]+nhalf+1)
+        else :
+            begin_bin = nbins
+            end_bin = nbins
+            
+        
+        
         for bin in range(nbins):
             sparseIndPtr[bin] = nextIndex
             lam = wavelengthGrid[bin]
             sigma = self.sigmaWavelength[bin]
-            if self.throughput[bin] > 0 and sigma > 0:
+            if bin >= begin_bin and bin < end_bin and sigma > 0:
                 first_row = max(0, bin - nhalf)
                 last_row = min(nbins, bin + nhalf + 1)
                 psf = np.exp(-0.5 * (
@@ -80,6 +100,8 @@ class QuickCamera(object):
                 # We normalize the PSF even when it is truncated at the edges of the
                 # resolution function, so that the resolution-convolved flux does not
                 # drop off when the true flux is constant.
+                # note: this preserves the flux integrated over the full PSF extent 
+                # but not at smaller scales.
                 psf /= np.sum(psf)
                 rng = slice(nextIndex, nextIndex + psf.size)
                 sparseIndices[rng] = range(first_row, last_row)

@@ -446,9 +446,10 @@ class Quick(object):
             # nphot is a sum over orginal wave bins.
             calib_downsampled = np.sum(camera.sourceCalib[:last].reshape(downShape),axis=1)
             # Add inverse variance for camera
-            (results.camivar)[:,j] = calib_downsampled**2/(variance+(variance==0))
+            vcMask=(variance>0)&(calib_downsampled>0)
+            (results.camivar)[vcMask,j] = calib_downsampled[vcMask]**2/variance[vcMask]
             # Add flux in camera (not the same for all cameras because of change of resolution)
-            (results.camflux)[:,j] = (results.nobj)[:,j]/(calib_downsampled+(calib_downsampled==0))
+            (results.camflux)[vcMask,j] = (results.nobj)[vcMask,j]/calib_downsampled[vcMask]
             
         # Calculate the total SNR, combining the individual camera SNRs in quadrature.
         results.snrtot = np.sqrt(np.sum(results.snr**2,axis=1))

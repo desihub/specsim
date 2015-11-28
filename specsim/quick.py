@@ -298,6 +298,11 @@ class Quick(object):
          - rdnoise[j]: RMS read noise in electrons in camera j
          - dknoise[j]: RMS dark current shot noise in electrons in camera j
          - snr[j]: signal-to-noise ratio in camera j
+         - camivar[j]: inverse variance of source flux in (1e-17 erg/s/cm^2/Ang)^-2 in camera j
+         - camflux[j]: source flux in 1e-17 erg/s/cm^2/Ang in camera j 
+                     (different for each camera because of change of resolution)
+                
+         
 
         Note that the number of cameras (indexed by j) in the returned results is not hard coded
         but determined by the instrument we were initialized with. Cameras are indexed in order
@@ -407,7 +412,9 @@ class Quick(object):
             (str('nsky'),float,(nbands,)),
             (str('rdnoise'),float,(nbands,)),
             (str('dknoise'),float,(nbands,)),
-            (str('snr'),float,(nbands,))
+            (str('snr'),float,(nbands,)),
+            (str('camflux'),float,(nbands,)),
+            (str('camivar'),float,(nbands,)),            
             ])
 
         # Fill the results arrays from our high-resolution arrays. Wavelengths are tabulated at
@@ -435,6 +442,15 @@ class Quick(object):
             signalMask = (results.nobj)[:,j] > 0
             (results.snr)[:,j] = np.zeros((ndown,))
             (results.snr)[signalMask,j] = (results.nobj)[signalMask,j]/np.sqrt(variance[signalMask])
+            # Compute calib in downsampled wave grid, it's a sum because
+            # nphot is a sum over orginal wave bins.
+            calib_downsampled = np.sum(camera.sourceCalib[:last].reshape(downShape),axis=1)
+            # Add inverse variance for camera
+            vcMask=(variance>0)&(calib_downsampled>0)
+            (results.camivar)[vcMask,j] = calib_downsampled[vcMask]**2/variance[vcMask]
+            # Add flux in camera (not the same for all cameras because of change of resolution)
+            (results.camflux)[vcMask,j] = (results.nobj)[vcMask,j]/calib_downsampled[vcMask]
+            
         # Calculate the total SNR, combining the individual camera SNRs in quadrature.
         results.snrtot = np.sqrt(np.sum(results.snr**2,axis=1))
         # Calculate the corresponding inverse variance per bin. Bins with no observed flux will have IVAR=0.

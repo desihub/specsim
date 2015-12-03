@@ -446,10 +446,7 @@ class Quick(object):
             # nphot is a sum over orginal wave bins.
             # The effective calibration of convolved spectra is different from the true one
             # because resolution and transmission don't commute
-            smooth_camera_flux  = camera.sparseKernel.dot(self.sourceFlux)
-            smooth_camera_calib = np.zeros(smooth_camera_flux.shape)
-            fluxMask = smooth_camera_flux>0
-            smooth_camera_calib[fluxMask] =  camera.sourcePhotonsSmooth[fluxMask]/smooth_camera_flux[fluxMask]
+            smooth_camera_calib=camera.sparseKernel.dot(np.ones(self.sourceFlux.shape)*camera.sourceCalib)
             calib_downsampled = np.sum(smooth_camera_calib[:last].reshape(downShape),axis=1)
             # Add inverse variance for camera
             vcMask=(variance>0)&(calib_downsampled>0)

@@ -15,7 +15,8 @@ import astropy.units as u
 def test_origin_to_focalplane():
     alt, az = 0.5 * u.rad, 1.5 * u.rad
     x, y = altaz_to_focalplane(alt, az, alt, az)
-    assert np.allclose(x, 0 * u.rad) and np.allclose(y, 0 * u.rad)
+    assert np.allclose(x.to(u.rad).value, 0)
+    assert np.allclose(y.to(u.rad).value, 0)
 
 
 def test_focalplane_units():
@@ -75,7 +76,8 @@ def test_shape_to_focalplane():
 def test_focalplane_to_origin():
     alt0, az0 = 0.5 * u.rad, 1.5 * u.rad
     alt, az = focalplane_to_altaz(0. * u.rad, 0. * u.rad, alt0, az0)
-    assert np.allclose(alt, alt0) and np.allclose(az, az0)
+    assert np.allclose(alt.to(u.rad).value, alt0.to(u.rad).value)
+    assert np.allclose(az.to(u.rad).value, az0.to(u.rad).value)
 
 
 def test_focalplane_roundtrip():
@@ -83,9 +85,11 @@ def test_focalplane_roundtrip():
     x, y = -0.01 * u.rad, +0.02 * u.rad
     alt, az = focalplane_to_altaz(x, y, alt0, az0)
     x2, y2 = altaz_to_focalplane(alt, az, alt0, az0)
-    assert np.allclose(x, x2) and np.allclose(y, y2)
+    assert np.allclose(x.to(u.rad).value, x2.to(u.rad).value)
+    assert np.allclose(y.to(u.rad).value, y2.to(u.rad).value)
     alt2, az2 = focalplane_to_altaz(x2, y2, alt0, az0)
-    assert np.allclose(alt, alt2) and np.allclose(az, az2)
+    assert np.allclose(alt.to(u.rad).value, alt2.to(u.rad).value)
+    assert np.allclose(az.to(u.rad).value, az2.to(u.rad).value)
 
 
 def test_to_altaz_null():
@@ -99,8 +103,10 @@ def test_to_altaz_null():
     altaz_in = AltAz(alt=0.5*u.rad, az=1.5*u.rad, location=where,
         obstime=when, obswl=wlen, temperature=temperature, pressure=pressure)
     altaz_out = sky_to_altaz(altaz_in, obs_model)
-    assert np.allclose(altaz_in.alt, altaz_out.alt)
-    assert np.allclose(altaz_in.az, altaz_out.az)
+    assert np.allclose(altaz_in.alt.to(u.rad).value,
+                       altaz_out.alt.to(u.rad).value)
+    assert np.allclose(altaz_in.az.to(u.rad).value,
+                       altaz_out.az.to(u.rad).value)
 
 
 def test_invalid_frame():
@@ -186,8 +192,8 @@ def test_altaz_roundtrip():
     sky_in = SkyCoord(ra=0.5*u.rad, dec=1.5*u.rad, frame='icrs')
     altaz_out = sky_to_altaz(sky_in, obs_model)
     sky_out = altaz_to_sky(altaz_out.alt, altaz_out.az, obs_model, frame='icrs')
-    assert np.allclose(sky_in.ra, sky_out.ra)
-    assert np.allclose(sky_in.dec, sky_out.dec)
+    assert np.allclose(sky_in.ra.to(u.rad).value, sky_out.ra.to(u.rad).value)
+    assert np.allclose(sky_in.dec.to(u.rad).value, sky_out.dec.to(u.rad).value)
 
 
 def test_altaz_array_roundtrip():

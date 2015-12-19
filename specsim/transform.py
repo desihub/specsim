@@ -54,6 +54,9 @@ observatories = {
         lat='32d46m49s', lon='-105d49m13s', height=2788.*u.m),
     'KPNO': astropy.coordinates.EarthLocation.from_geodetic(
         lat='31d57m48s', lon='-111d36m0s', height=2120.*u.m),
+    # http://www.ctio.noao.edu/noao/content/coordinates-observatories-cerro-tololo-and-cerro-pachon
+    'LSST': astropy.coordinates.EarthLocation.from_geodetic(
+        lat='-30d14m40.68s', lon='-70d44m57.90s', height=2647.*u.m),
 }
 
 

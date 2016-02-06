@@ -1,7 +1,7 @@
 0.3 (unreleased)
 ----------------
 
-- No changes yet
+- Refactor to use speclite for spectroscopic data operations.
 
 0.2 (2015-12-18)
 ----------------

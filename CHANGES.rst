@@ -1,7 +1,8 @@
 0.3 (unreleased)
 ----------------
 
-- Refactor to use speclite for spectroscopic data operations.
+- Read files using astropy.table.Table.read() instead of numpy.loadtxt()
+  and astropy.io.fits.read().
 
 0.2 (2015-12-18)
 ----------------

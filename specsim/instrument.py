@@ -9,7 +9,6 @@ import os.path
 import glob
 import yaml
 import numpy as np
-from astropy.io import fits
 import scipy.interpolate
 
 import specsim.spectrum

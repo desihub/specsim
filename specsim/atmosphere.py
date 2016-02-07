@@ -46,26 +46,39 @@ class Atmosphere(object):
     zenithExtinction : :class:`specsim.spectrum.WavelengthFunction`
         Tabulated atmospheric extinction function at zenith (airmass = 1).
     """
-    def __init__(self, skySpectrumFilename=None, zenithExtinctionFilename=None,
-                 skyConditions='dark', basePath=''):
-        # Apply defaults if necessary.
-        if not skySpectrumFilename:
-            skyNames = {
-                'dark' : 'spec-sky.dat',
-                'grey' : 'spec-sky-grey.dat',
-                'bright' : 'spec-sky-bright.dat'}
-            if skyConditions not in skyNames:
-                raise ValueError('Atmosphere: invalid skyConditions "{0}",' +
-                    ' expected one of {1}.'
-                    .format(skyConditions, ','.join(skyNames.keys())))
-            skySpectrumFilename = os.path.join(
-                basePath, 'data', 'spectra', skyNames[skyConditions])
-        if not zenithExtinctionFilename:
-            zenithExtinctionFilename = os.path.join(
-                basePath, 'data', 'spectra', 'ZenithExtinction-KPNO.dat')
-        # Load the tabulated sky spectrum.
-        self.skySpectrum =\
-            specsim.spectrum.SpectralFluxDensity.load(skySpectrumFilename)
-        # Load the tabulated zenith extinction coefficients.
-        self.zenithExtinction =\
-            specsim.spectrum.WavelengthFunction.load(zenithExtinctionFilename)
+    def __init__(self, sky_spectrum, zenith_extinction,
+                 extinct_emission, airmass):
+
+        self.skySpectrum = sky_spectrum
+        self.zenithExtinction = zenith_extinction
+
+        self.extinct_emission = extinct_emission
+        self.airmass = airmass
+
+
+def initialize(config):
+    """Initialize the atmosphere model from configuration parameters.
+
+    Parameters
+    ----------
+    config : :class:`specsim.config.Configuration`
+        The configuration parameters to use.
+
+    Returns
+    -------
+    Atmosphere
+        An initialized atmosphere model.
+    """
+    # Check for required top-level config nodes.
+    atmosphere = config.get('atmosphere')
+    sky = atmosphere.get('sky')
+    extinction = atmosphere.get('extinction')
+    extinct_emission = atmosphere.get('extinct_emission').value
+    airmass = atmosphere.get('airmass').value
+
+    # Load tabulated data.
+    sky_spectrum = config.load_table(sky.get('table'))
+    zenith_extinction = config.load_table(extinction.get('table'))
+
+    return Atmosphere(
+        sky_spectrum, zenith_extinction, extinct_emission, airmass)

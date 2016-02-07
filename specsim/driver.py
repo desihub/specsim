@@ -138,7 +138,7 @@ def main(args=None):
     print(specSummary)
 
     # Create the default atmosphere for the requested sky conditions.
-    atmosphere = specsim.atmosphere.Atmosphere(skyConditions=args.sky,basePath=os.environ['SPECSIM_MODEL'])
+    atmosphere = specsim.atmosphere.initialize(config)
 
     # Create a quick simulator using the default instrument model.
     qsim = specsim.quick.Quick(atmosphere=atmosphere,basePath=os.environ['SPECSIM_MODEL'])

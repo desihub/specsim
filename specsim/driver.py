@@ -16,8 +16,6 @@ from __future__ import print_function, division
 import os
 import os.path
 
-import yaml
-
 import numpy as np
 
 from astropy.utils.compat import argparse
@@ -30,7 +28,8 @@ import specsim
 
 def main(args=None):
     # parse command-line arguments
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v','--verbose', action = 'store_true',
         help = 'provide verbose output on progress')
     parser.add_argument('-c', '--config', default = None,
@@ -82,14 +81,10 @@ def main(args=None):
     args = parser.parse_args(args)
 
     # Read the required configuration file.
-    if not args.config:
-        print('Missing required config file name.')
+    if args.config is None:
+        print('The --config option is required.')
         return -1
-    with open(args.config) as f:
-        config = yaml.safe_load(f)
-    if args.verbose:
-        print('Using config "{0}".'.format(config['name']))
-        print(config)
+    config = specsim.config.load(args.config, args.verbose)
 
     # We require that the SPECSIM_MODEL environment variable is set.
     if 'SPECSIM_MODEL' not in os.environ:

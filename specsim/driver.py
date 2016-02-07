@@ -16,6 +16,8 @@ from __future__ import print_function, division
 import os
 import os.path
 
+import yaml
+
 import numpy as np
 
 from astropy.utils.compat import argparse
@@ -31,6 +33,8 @@ def main(args=None):
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v','--verbose', action = 'store_true',
         help = 'provide verbose output on progress')
+    parser.add_argument('-c', '--config', default = None,
+        help = 'name of YAML configuration file to read')
     parser.add_argument('--model', choices=['lrg','elg','star','qso','sky'],
         help = 'throughput model for light entering the fiber')
     parser.add_argument('--infile', type = str, default = None,
@@ -76,6 +80,16 @@ def main(args=None):
     parser.add_argument('--downsampling', type = int, default = 5,
         help = 'wavelength downsampling factor to use for SNR calculations')
     args = parser.parse_args(args)
+
+    # Read the required configuration file.
+    if not args.config:
+        print('Missing required config file name.')
+        return -1
+    with open(args.config) as f:
+        config = yaml.safe_load(f)
+    if args.verbose:
+        print('Using config "{0}".'.format(config['name']))
+        print(config)
 
     # We require that the SPECSIM_MODEL environment variable is set.
     if 'SPECSIM_MODEL' not in os.environ:

@@ -55,8 +55,6 @@ class Instrument(object):
             # Load the data from this file.
             self.fiberloss[model] = specsim.spectrum.WavelengthFunction.load(
                 fiberlossFile,extrapolated_value=0.)
-        # Open the PSF parameter file.
-        hduList = fits.open(psfFile)
         # Loop over camera bands to build linear interpolations of the PSF FWHM in the
         # wavelength (Angstroms) and spatial (pixels) directions. We also build an
         # interpolation of the angstromsPerRow values needed to convert between pixels
@@ -70,27 +68,25 @@ class Instrument(object):
         cameraMidpt = [ ]
         for band in self.cameraBands:
             # Use a key of the form QUICKSIM-X where X identifies the camera band.
-            # Note that FITS does not recognize unicode strings as keys so we must
-            # explicity encode in 'ascii' here (or not import unicode_literals above).
-            key = ('QUICKSIM-%s' % band.upper()).encode('ascii')
-            table = hduList[key].data
-            wave = table['wavelength']
+            hdu = ('QUICKSIM-%s' % band.upper())
             # Load tabulated PSF functions of wavelength.
-            self.angstromsPerRow[band] = specsim.spectrum.WavelengthFunction(
-                wave,table['angstroms_per_row'],extrapolatedValue=0.)
-            self.psfFWHMWavelength[band] = specsim.spectrum.WavelengthFunction(
-                wave,table['fwhm_wave'],extrapolatedValue=0.)
-            self.psfFWHMSpatial[band] = specsim.spectrum.WavelengthFunction(
-                wave,table['fwhm_wave'],extrapolatedValue=0.)
-            self.psfNPixelsSpatial[band] = specsim.spectrum.WavelengthFunction(
-                wave,table['neff_spatial'],extrapolatedValue=0.)
+            self.angstromsPerRow[band] = specsim.spectrum.WavelengthFunction.load(
+                psfFile, hdu=hdu, wavelength_column='wavelength',
+                values_column='angstroms_per_row', extrapolated_value=0.)
+            self.psfFWHMWavelength[band] = specsim.spectrum.WavelengthFunction.load(
+                psfFile, hdu=hdu, wavelength_column='wavelength',
+                values_column='fwhm_wave', extrapolated_value=0.)
+            self.psfFWHMSpatial[band] = specsim.spectrum.WavelengthFunction.load(
+                psfFile, hdu=hdu, wavelength_column='wavelength',
+                values_column='fwhm_wave', extrapolated_value=0.)
+            self.psfNPixelsSpatial[band] = specsim.spectrum.WavelengthFunction.load(
+                psfFile, hdu=hdu, wavelength_column='wavelength',
+                values_column='neff_spatial', extrapolated_value=0.)
             # Get the wavelength limits for the camera from the FITS header.
-            waveMin,waveMax = hduList[key].header['WMIN_ALL'],hduList[key].header['WMAX_ALL']
-            assert waveMin == wave[0] and waveMax == wave[-1], (
-                "Inconsistent wavelength limits for %s" % key)
+            wave = self.angstromsPerRow[band].wavelength
+            waveMin, waveMax = wave[0], wave[-1]
             self.cameraWavelengthRanges.append((waveMin,waveMax))
             cameraMidpt.append(0.5*(waveMin+waveMax))
-        hduList.close()
         # Sort the camera bands in order of increasing wavelength (blue to red). This info
         # is already encoded in the order in which the cameras appear in the YAML file, but
         # is not preserved a YAML parser, which views the 'ccd' record as a dictionary.

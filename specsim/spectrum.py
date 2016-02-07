@@ -102,7 +102,7 @@ class WavelengthFunction(object):
     @classmethod
     def load(cls, filename, wavelength_column=0, values_column=1,
              wavelength_units=astropy.units.Angstrom, value_units=None,
-             hdu=None, extrapolated_value=None):
+             hdu=None, extrapolated_value=None, verbose=True):
         """Load a tabulated function of wavelength from a file.
 
         Parameters
@@ -133,7 +133,6 @@ class WavelengthFunction(object):
         :class:`WavelengthFunction` or subclass
             Newly created object.
         """
-        print('loading', filename)
         read_args = {}
         _, extension = os.path.splitext(filename)
         if extension == '.dat':
@@ -142,6 +141,8 @@ class WavelengthFunction(object):
             read_args['format'] = 'fits'
             if hdu is not None:
                 read_args['hdu'] = hdu
+        if verbose:
+            print('loading {0} with args: {1}'.format(filename, read_args))
         data = astropy.table.Table.read(filename, **read_args)
 
         try:

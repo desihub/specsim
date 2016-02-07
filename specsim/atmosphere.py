@@ -65,7 +65,7 @@ class Atmosphere(object):
                 basePath, 'data', 'spectra', 'ZenithExtinction-KPNO.dat')
         # Load the tabulated sky spectrum.
         self.skySpectrum =\
-            specsim.spectrum.SpectralFluxDensity.loadFromTextFile(skySpectrumFilename)
+            specsim.spectrum.SpectralFluxDensity.load(skySpectrumFilename)
         # Load the tabulated zenith extinction coefficients.
         self.zenithExtinction =\
-            specsim.spectrum.WavelengthFunction.loadFromTextFile(zenithExtinctionFilename)
+            specsim.spectrum.WavelengthFunction.load(zenithExtinctionFilename)

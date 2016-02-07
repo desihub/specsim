@@ -12,6 +12,8 @@ import scipy.integrate
 from astropy import constants as const
 from astropy import units
 
+import astropy.table
+
 
 class WavelengthFunction(object):
     """
@@ -95,6 +97,72 @@ class WavelengthFunction(object):
         Writes a text file containing two columns: wavelength and values.
         """
         np.savetxt(filename,np.vstack([self.wavelength,self.values]).T)
+
+
+    @classmethod
+    def load(cls, filename, wavelength_column=0, values_column=1,
+             wavelength_units=astropy.units.Angstrom, value_units=None,
+             extrapolated_value=None):
+        """Load a tabulated function of wavelength from a file.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to read.  The extension will be used to
+            automatically determine the file format.
+        wavelength_column : int or str
+            Index or name of the column containing the wavelength values.
+        values_column : int or str
+            Index or name of the column containing the tabulated values at
+            each wavelength.
+        wavelength_units : astropy.units.Unit or None
+            Units of the wavelength values.  If the file already specifies
+            units for the wavelength column, this parameter is ignored.
+        value_units : astropy.units.Unit or None
+            Units of the tabulated values. If the file already specifies
+            units for the wavelength column, this parameter is ignored.
+        extrapolated_value : float or None.
+            Value to use when extrapolating this tabulated data beyond its
+            wavelength range, or None if extrapolation should not be performed.
+
+        Returns
+        -------
+        :class:`WavelengthFunction` or subclass
+            Newly created object.
+        """
+        _, extension = os.path.splitext(filename)
+        if extension == '.dat':
+            format = 'ascii'
+        else:
+            format = None
+        data = astropy.table.Table.read(filename, format=format)
+
+        try:
+            wavelength = data.columns[wavelength_column]
+        except ValueError:
+            try:
+                wavelength = data[wavelength_column]
+            except ValueError:
+                raise ValueError('Invalid wavelength_column.')
+        try:
+            values = data.columns[values_column]
+        except ValueError:
+            try:
+                wavelength = data[values_column]
+            except ValueError:
+                raise ValueError('Invalid wavelength_column.')
+
+        if wavelength.unit is not None:
+            wavelength_unit = wavelength.unit
+        wavelength = wavelength.data
+
+        if values.unit is not None:
+            values_unit = values.unit
+        values = values.data
+
+        return cls(wavelength, values, wavelength_units,
+                   value_units, extrapolated_value)
+
 
     @classmethod
     def loadFromTextFile(cls,filename,wavelengthColumn=0,valuesColumn=1,

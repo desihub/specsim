@@ -164,22 +164,6 @@ class WavelengthFunction(object):
                    value_units, extrapolated_value)
 
 
-    @classmethod
-    def loadFromTextFile(cls,filename,wavelengthColumn=0,valuesColumn=1,
-        wavelengthUnits=units.angstrom,extrapolatedValue=None):
-        """
-        Returns a new WavelengthFunction (or subclass of WavelengthFunction) from the specified
-        text file.  Any comment lines beginning with '#' are ignored. Uses the specified columns
-        for the wavelength and values. Additional columns are allowed and silently ignored.
-        The default wavelength units are Angstroms but other units can be specified. Refer to
-        the WavelengthFunction constructor for details on extrapolatedValue.
-        """
-        content = np.loadtxt(filename,unpack=True)
-        if max(wavelengthColumn,valuesColumn) >= len(content):
-            raise RuntimeError('WavelengthFunction: invalid columns for loadFromTextFile.')
-        return cls(content[wavelengthColumn],content[valuesColumn],
-            wavelengthUnits=wavelengthUnits,extrapolatedValue=extrapolatedValue)
-
 class SpectralFluxDensity(WavelengthFunction):
     """
     Represents a spectral flux density as a function of wavelength.

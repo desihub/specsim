@@ -93,9 +93,10 @@ def main(args=None):
     if not os.path.isfile(args.infile):
         print('No such infile: %s' % args.infile)
         return -1
-    srcSpectrum = specsim.spectrum.SpectralFluxDensity.loadFromTextFile(args.infile,
-        wavelengthColumn=args.infile_wavecol,valuesColumn=args.infile_fluxcol,
-        extrapolatedValue=(0. if args.truncated else None))
+    srcSpectrum = specsim.spectrum.SpectralFluxDensity.load(
+        args.infile, wavelength_column=args.infile_wavecol,
+        values_column=args.infile_fluxcol,
+        extrapolated_value=(0. if args.truncated else None))
 
     # Rescale the source flux if requested.
     if args.ab_magnitude is not None:

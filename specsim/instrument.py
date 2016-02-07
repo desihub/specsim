@@ -58,8 +58,8 @@ class Instrument(object):
             # Extract the model name from the filename.
             model = os.path.basename(fiberlossFile)[10:-4]
             # Load the data from this file.
-            self.fiberloss[model] = specsim.spectrum.WavelengthFunction.loadFromTextFile(
-                fiberlossFile,extrapolatedValue=0.)
+            self.fiberloss[model] = specsim.spectrum.WavelengthFunction.load(
+                fiberlossFile,extrapolated_value=0.)
         # Open the PSF parameter file.
         hduList = fits.open(psfFile)
         # Loop over camera bands to build linear interpolations of the PSF FWHM in the

@@ -102,7 +102,7 @@ class WavelengthFunction(object):
     @classmethod
     def load(cls, filename, wavelength_column=0, values_column=1,
              wavelength_units=astropy.units.Angstrom, value_units=None,
-             extrapolated_value=None):
+             hdu=None, extrapolated_value=None):
         """Load a tabulated function of wavelength from a file.
 
         Parameters
@@ -121,6 +121,9 @@ class WavelengthFunction(object):
         value_units : astropy.units.Unit or None
             Units of the tabulated values. If the file already specifies
             units for the wavelength column, this parameter is ignored.
+        hdu : int or str or None
+            Index or name of the HDU to read from a FITS file.  Ignored for
+            other file types.
         extrapolated_value : float or None.
             Value to use when extrapolating this tabulated data beyond its
             wavelength range, or None if extrapolation should not be performed.
@@ -130,12 +133,16 @@ class WavelengthFunction(object):
         :class:`WavelengthFunction` or subclass
             Newly created object.
         """
+        print('loading', filename)
+        read_args = {}
         _, extension = os.path.splitext(filename)
         if extension == '.dat':
-            format = 'ascii'
-        else:
-            format = None
-        data = astropy.table.Table.read(filename, format=format)
+            read_args['format'] = 'ascii'
+        elif extension == '.fits':
+            read_args['format'] = 'fits'
+            if hdu is not None:
+                read_args['hdu'] = hdu
+        data = astropy.table.Table.read(filename, **read_args)
 
         try:
             wavelength = data.columns[wavelength_column]

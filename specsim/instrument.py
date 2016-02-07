@@ -43,15 +43,10 @@ class Instrument(object):
         # Loop over cameras listed in the model.
         self.throughput = { }
         for camera in self.model['ccd']:
-            # Try to open the throughput FITS file for this camera.
-            hduList = fits.open(os.path.join(throughputPath,'thru-%s.fits' % camera))
-            # Create linear interpolations of the wavelength and throughput columns
-            # from the FITS table stored as HDU[1]. Values outside of the tabulated
-            # wavelength range will silently extrapolate to zero.
-            table = hduList[1].data
-            self.throughput[camera] = specsim.spectrum.WavelengthFunction(
-                table['wavelength'],table['throughput'], extrapolatedValue=0.)
-            hduList.close()
+            self.throughput[camera] = specsim.spectrum.WavelengthFunction.load(
+                os.path.join(throughputPath,'thru-%s.fits' % camera),
+                wavelength_column='wavelength', values_column='throughput',
+                hdu=1, extrapolated_value=0.)
         # Loop over fiberloss models present in the throughput directory.
         self.fiberloss = { }
         for fiberlossFile in glob.iglob(os.path.join(throughputPath,'fiberloss-*.dat')):

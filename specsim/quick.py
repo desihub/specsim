@@ -59,7 +59,7 @@ class QuickCamera(object):
         mask=np.where(self.sigmaWavelength<=0)[0]
         if mask.size > 0 and mask.size != wavelengthGrid.size :
             self.sigmaWavelength[mask]=np.interp(wavelengthGrid[mask],wavelengthGrid[self.sigmaWavelength>0],self.sigmaWavelength[self.sigmaWavelength>0])
-        
+
 
         # Resample the conversion between pixels and Angstroms and save the results.
         self.angstromsPerRow = self.angstromsPerRowModel.getResampledValues(wavelengthGrid)
@@ -85,9 +85,9 @@ class QuickCamera(object):
         else :
             begin_bin = nbins
             end_bin = nbins
-            
-        
-        
+
+
+
         for bin in range(nbins):
             sparseIndPtr[bin] = nextIndex
             lam = wavelengthGrid[bin]
@@ -100,7 +100,7 @@ class QuickCamera(object):
                 # We normalize the PSF even when it is truncated at the edges of the
                 # resolution function, so that the resolution-convolved flux does not
                 # drop off when the true flux is constant.
-                # note: this preserves the flux integrated over the full PSF extent 
+                # note: this preserves the flux integrated over the full PSF extent
                 # but not at smaller scales.
                 psf /= np.sum(psf)
                 rng = slice(nextIndex, nextIndex + psf.size)
@@ -252,13 +252,13 @@ class Quick(object):
         photonRatePerBin = 1e-17*self.effArea*wavelengthStep/energyPerPhoton
 
         # Resample the sky spectrum.
-        sky = self.atmosphere.skySpectrum.getResampledValues(wavelengthGrid)
+        sky = self.atmosphere.surface_brightness
 
         # Integrate the sky flux over the fiber area and convert to a total photon rate (Hz).
         skyPhotonRate = sky*self.fiberArea*photonRatePerBin
 
         # Resample the zenith atmospheric extinction.
-        self.extinction = self.atmosphere.zenithExtinction.getResampledValues(wavelengthGrid)
+        self.extinction = self.atmosphere.extinction_coefficient
 
         # Initialize each camera for this wavelength grid.
         for camera in self.cameras:
@@ -299,10 +299,10 @@ class Quick(object):
          - dknoise[j]: RMS dark current shot noise in electrons in camera j
          - snr[j]: signal-to-noise ratio in camera j
          - camivar[j]: inverse variance of source flux in (1e-17 erg/s/cm^2/Ang)^-2 in camera j
-         - camflux[j]: source flux in 1e-17 erg/s/cm^2/Ang in camera j 
+         - camflux[j]: source flux in 1e-17 erg/s/cm^2/Ang in camera j
                      (different for each camera because of change of resolution)
-                
-         
+
+
 
         Note that the number of cameras (indexed by j) in the returned results is not hard coded
         but determined by the instrument we were initialized with. Cameras are indexed in order
@@ -414,7 +414,7 @@ class Quick(object):
             (str('dknoise'),float,(nbands,)),
             (str('snr'),float,(nbands,)),
             (str('camflux'),float,(nbands,)),
-            (str('camivar'),float,(nbands,)),            
+            (str('camivar'),float,(nbands,)),
             ])
 
         # Fill the results arrays from our high-resolution arrays. Wavelengths are tabulated at
@@ -453,7 +453,7 @@ class Quick(object):
             (results.camivar)[vcMask,j] = calib_downsampled[vcMask]**2/variance[vcMask]
             # Add flux in camera (not the same for all cameras because of change of resolution)
             (results.camflux)[vcMask,j] = (results.nobj)[vcMask,j]/calib_downsampled[vcMask]
-            
+
         # Calculate the total SNR, combining the individual camera SNRs in quadrature.
         results.snrtot = np.sqrt(np.sum(results.snr**2,axis=1))
         # Calculate the corresponding inverse variance per bin. Bins with no observed flux will have IVAR=0.

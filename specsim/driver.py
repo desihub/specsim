@@ -148,6 +148,7 @@ def main(args=None):
         print('Will simulate wavelengths %f - %f Ang with %f Ang spacing.' %
             (args.min_wavelength,args.max_wavelength,args.wavelength_step))
     qsim.setWavelengthGrid(args.min_wavelength,args.max_wavelength,args.wavelength_step)
+    assert np.array_equal(qsim.wavelengthGrid, config.wavelength.value)
 
     # Perform a quick simulation of the observed spectrum.
     if args.verbose:

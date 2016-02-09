@@ -167,41 +167,31 @@ class Quick(object):
     If either of these is None, they are initialized to their default state
     using the specified base path.
     """
-    def __init__(self,atmosphere=None,instrument=None,basePath=''):
-        self.atmosphere = (atmosphere if atmosphere else
-            specsim.atmosphere.Atmosphere(basePath=basePath))
-        self.instrument = (instrument if instrument else
-            specsim.instrument.Instrument(basePath=basePath))
+    def __init__(self, config):
+
+        self.atmosphere = specsim.atmosphere.initialize(config)
+
+        self.instrument = specsim.instrument.initialize(config)
 
         # Precompute the physical constant h*c in units of erg*Ang.
         self.hc = const.h.to(units.erg*units.s)*const.c.to(units.angstrom/units.s)
 
-        # Calculate the telescope's effective area in cm^2.
-        dims = self.instrument.model['area']
-        D = dims['M1_diameter'] # in meters
-        obs = dims['obscuration_diameter'] # in meters
-        trussArea = 0.5*(D - obs)*dims['M2_support_width'] # in meters^2
-        self.effArea = 1e4*(math.pi*((0.5*D)**2 - (0.5*obs)**2) - 4*trussArea)
+        # Lookup the telescope's effective area in cm^2.
+        self.effArea = self.instrument.effective_area.to(units.cm**2).value
 
-        # Calculate the fiber area in arcsec^2.
-        fibers = self.instrument.model['fibers']
-        self.fiberArea = math.pi*(0.5*fibers['diameter_arcsec'])**2
+        # Lookup the fiber area in arcsec^2.
+        self.fiberArea = self.instrument.fiber_area.to(units.arcsec**2).value
 
-        # Loop over cameras in increasing wavelength order.
         self.cameras = [ ]
-        for band,limits in zip(self.instrument.cameraBands,self.instrument.cameraWavelengthRanges):
-            # Lookup this camera's RMS read noise in electrons/pixel.
-            readnoisePerPixel = self.instrument.model['ccd'][band]['readnoise']
-            # Lookup this camera's dark current in electrons/pixel/hour and convert /hr to /s.
-            darkCurrentPerPixel = self.instrument.model['ccd'][band]['darkcurrent']/3600.
-            # Initialize this camera.
-            camera = QuickCamera(limits,self.instrument.throughput[band],
-                self.instrument.psfFWHMWavelength[band],self.instrument.angstromsPerRow[band],
-                self.instrument.psfNPixelsSpatial[band],readnoisePerPixel,darkCurrentPerPixel)
-            self.cameras.append(camera)
+        for camera in self.instrument.cameras:
+            quick_camera = QuickCamera(
+                (0, 0), camera.throughput, camera.fwhm_wave,
+                camera.angstroms_per_row, camera.neff_spatial,
+                camera.read_noise.to('electron').value,
+                camera.dark_current.to('electron/(pixel s)').value)
+            self.cameras.append(quick_camera)
 
-        # No wavelength grid has been set yet.
-        self.wavelengthGrid = None
+        self.wavelengthGrid = config.wavelength
 
     def setWavelengthGrid(self,wavelengthMin,wavelengthMax,wavelengthStep):
         """Set the linear wavelength grid to use for simulation.

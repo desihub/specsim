@@ -81,10 +81,9 @@ def initialize(config):
     airmass = atmosphere.get('airmass').value
 
     # Load tabulated data.
-    surface_brightness = config.load_table(
-        sky.get('table'), 'surface_brightness')
+    surface_brightness = config.load_table(sky, 'surface_brightness')
     extinction_coefficient = config.load_table(
-        extinction.get('table'), 'extinction_coefficient')
+        extinction, 'extinction_coefficient')
 
     return Atmosphere(
         surface_brightness, extinction_coefficient,

@@ -137,11 +137,9 @@ def main(args=None):
             specSummary += ' %s=%.2f' % (band,mags[band])
     print(specSummary)
 
-    # Create the default atmosphere for the requested sky conditions.
-    atmosphere = specsim.atmosphere.initialize(config)
-
     # Create a quick simulator using the default instrument model.
-    qsim = specsim.quick.Quick(atmosphere=atmosphere,basePath=os.environ['SPECSIM_MODEL'])
+    qsim = specsim.quick.Quick(config)
+    raise NotImplementedError()
 
     # Initialize the simulation wavelength grid to use.
     if args.verbose:

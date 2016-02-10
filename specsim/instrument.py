@@ -72,6 +72,26 @@ class Camera(object):
         fwhm_to_sigma = 1. / (2 * math.sqrt(2 * math.log(2)))
         self.sigma_wave = fwhm_to_sigma * self.fwhm_wave
 
+        # Calculate the size of each wavelength bin in units of pixel rows.
+        wavelength_bin_size = np.gradient(self.wavelength)
+        mask = self.angstroms_per_row.value > 0
+        neff_wavelength = np.zeros_like(self.neff_spatial)
+        neff_wavelength[mask] = (
+            wavelength_bin_size[mask] / self.angstroms_per_row[mask])
+
+        # Calculate the effective pixel area contributing to the signal
+        # in each wavelength bin.
+        self.neff_pixels = neff_wavelength * self.neff_spatial
+
+        # Calculate the read noise per wavelength bin, assuming that
+        # readnoise is uncorrelated between pixels (hence the sqrt scaling). The
+        # value will be zero in pixels that are not used by this camera.
+        self.read_noise_per_bin = (
+            self.read_noise * np.sqrt(self.neff_pixels.to(u.pixel**2).value))
+
+        # Calculate the dark current per wavelength bin.
+        self.dark_current_per_bin = self.dark_current * self.neff_pixels
+
 
 def initialize(config):
     """Initialize the instrument model from configuration parameters.

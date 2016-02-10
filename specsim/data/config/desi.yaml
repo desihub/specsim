@@ -74,7 +74,8 @@ instrument:
                 wavelength_min: 3569 Angstrom
                 wavelength_max: 5949 Angstrom
                 read_noise: 3.0 electron
-                dark_current: 3.0 electron/(hour pixel)
+                # We treat "pixel" as a linear unit, so we need pixel**2 here.
+                dark_current: 3.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
             psf:
                 table:
@@ -85,9 +86,10 @@ instrument:
                         wavelength: { name: wavelength }
                         angstroms_per_row:
                             name: angstroms_per_row
-                            # The units are already correct in the file but
-                            # not propagated since they are not valid for FITS.
-                            unit: Angstrom
+                            # The file uses Angstrom / row but "row" is not
+                            # recognized by astropy.units so we replace it with
+                            # the linear "pixel" unit.
+                            unit: Angstrom / pixel
                             override_unit: yes
                         fwhm_wave: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
@@ -104,7 +106,8 @@ instrument:
                 wavelength_min: 5625 Angstrom
                 wavelength_max: 7741 Angstrom
                 read_noise: 2.9 electron
-                dark_current: 2.0 electron/(hour pixel)
+                # We treat "pixel" as a linear unit, so we need pixel**2 here.
+                dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
             psf:
                 table:
@@ -115,9 +118,10 @@ instrument:
                         wavelength: { name: wavelength }
                         angstroms_per_row:
                             name: angstroms_per_row
-                            # The units are already correct in the file but
-                            # not propagated since they are not valid for FITS.
-                            unit: Angstrom
+                            # The file uses Angstrom / row but "row" is not
+                            # recognized by astropy.units so we replace it with
+                            # the linear "pixel" unit.
+                            unit: Angstrom / pixel
                             override_unit: yes
                         fwhm_wave: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
@@ -134,7 +138,8 @@ instrument:
                 wavelength_min: 7435 Angstrom
                 wavelength_max: 9834 Angstrom
                 read_noise: 2.9 electron
-                dark_current: 2.0 electron/(hour pixel)
+                # We treat "pixel" as a linear unit, so we need pixel**2 here.
+                dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
             psf:
                 table:
@@ -145,9 +150,10 @@ instrument:
                         wavelength: { name: wavelength }
                         angstroms_per_row:
                             name: angstroms_per_row
-                            # The units are already correct in the file but
-                            # not propagated since they are not valid for FITS.
-                            unit: Angstrom
+                            # The file uses Angstrom / row but "row" is not
+                            # recognized by astropy.units so we replace it with
+                            # the linear "pixel" unit.
+                            unit: Angstrom / pixel
                             override_unit: yes
                         fwhm_wave: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }

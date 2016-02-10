@@ -193,7 +193,7 @@ class Quick(object):
                 camera.sigma_wave.value,
                 camera.angstroms_per_row.value, camera.neff_spatial.value,
                 camera.read_noise.to('electron').value,
-                camera.dark_current.to('electron/(pixel s)').value,
+                camera.dark_current.to('electron/(pixel**2 s)').value,
                 photonRatePerBin, skyPhotonRate)
             self.cameras.append(quick_camera)
 

@@ -92,11 +92,6 @@ class Configuration(Node):
             except KeyError as e:
                 raise ValueError('Environment variable not set: {0}.'.format(e))
 
-        # Define custom dimensionless units used for configuration.
-        self.row_unit = astropy.units.def_unit(
-            ['row'], astropy.units.Unit(1), doc='row: one CCD row',
-            namespace=vars(astropy.units.astrophys))
-
         self.verbose = self.get('verbose').value
         if self.verbose:
             print('Using config "{0}" with base path "{1}".'

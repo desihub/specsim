@@ -14,6 +14,7 @@ import scipy.interpolate
 
 import astropy.units
 import astropy.table
+import astropy.utils.data
 
 
 class Node(object):

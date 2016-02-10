@@ -1,0 +1,94 @@
+name: Test Simulation
+
+# The base path is pre-pended to all non-absolute path values below.
+# {...} will be expanded using environment variables.
+base_path: '{DESIMODEL}/data'
+
+# Be verbose during the simulation?
+verbose: yes
+
+# Specify the wavelength grid to use for simulation.
+wavelength:
+    unit: Angstrom
+    min: 4000.0
+    max: 9000.0
+    step: 0.2
+
+# The atmosphere configuration is interpreted and validated by the
+# specsim.atmosphere module.
+atmosphere:
+    # Sky emission surface brightness.
+    sky:
+        table:
+            # The .ecsv extension is not automatically recognized.
+            format: ascii.ecsv
+            columns:
+                wavelength: { name: wavelength }
+                surface_brightness: { name: flux }
+            path: /Users/david/Cosmo/DESI/code/specsim/specsim/data/test/test_sky.ecsv
+    # Zenith extinction coefficients.
+    extinction:
+        table:
+            format: ascii.ecsv
+            columns:
+                wavelength: { name: wavelength }
+                extinction_coefficient: { name: extinction }
+            path: /Users/david/Cosmo/DESI/code/specsim/specsim/data/test/test_extinction.ecsv
+    # Should extinction be applied to the sky emission?
+    extinct_emission: no
+    # Airmass to use.
+    airmass: 1.0
+
+# The instrument configuration is interpreted and validated by the
+# specsim.instrument module.
+instrument:
+    name: Test Instrument
+    constants:
+        exposure_time: 1000.0 s
+        primary_mirror_diameter: 3.797 m
+        obscuration_diameter: 1.8 m
+        support_width: 0.025 m
+        # Averaged over the focal plane for 107.0 um physical diameter.
+        fiber_diameter: 1.52 arcsec
+    fiberloss:
+        table:
+            format: ascii
+            path: /Users/david/Cosmo/DESI/code/specsim/specsim/data/test/test_fiberloss.ecsv
+            columns:
+                wavelength: { name: wavelength }
+                fiber_acceptance: { name: fiberloss }
+    cameras:
+        r:
+            constants:
+                wavelength_min: 5625 Angstrom
+                wavelength_max: 7741 Angstrom
+                read_noise: 2.9 electron
+                dark_current: 2.0 electron/(hour pixel)
+                gain: 1.0 electron/adu
+            psf:
+                table:
+                    path: specpsf/psf-quicksim.fits
+                    hdu: QUICKSIM-R
+                    extrapolated_value: 0.0
+                    columns:
+                        wavelength: { name: wavelength }
+                        angstroms_per_row:
+                            name: angstroms_per_row
+                            # The units are already correct in the file but
+                            # not propagated since they are not valid for FITS.
+                            unit: Angstrom
+                            override_unit: yes
+                        fwhm_wave: { name: fwhm_wave }
+                        ##############
+                        ## FIX ME ! ##
+                        ##############
+                        fwhm_spatial: { name: fwhm_wave }
+                        neff_spatial: { name: neff_spatial }
+            throughput:
+                table:
+                    path: throughput/thru-R.fits
+                    hdu: THROUGHPUT
+                    extrapolated_value: 0.0
+                    columns:
+                        wavelength: { name: wavelength, unit: Angstrom }
+                        throughput: { name: throughput }

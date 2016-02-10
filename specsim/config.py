@@ -231,18 +231,31 @@ class Configuration(Node):
             return loaded_columns
 
 
-def load(filename, verbose):
+def load_config(name):
     """Load configuration data from a YAML file.
 
     Parameters
     ----------
-    filename : str
-        Name of a YAML file to read.
+    name : str
+        Name of the configuration to load, which can either be a pre-defined
+        name or else the name of a yaml file (with extension .yaml) to load.
+        Pre-defined names are mapped to corresponding files in this package's
+        data/config/ directory.
 
     Returns
     -------
     Configuration
         Initialized configuration object.
     """
-    with open(filename) as f:
+    base_name, extension = os.path.splitext(name)
+    if extension not in ('', '.yaml'):
+        raise ValueError('Config file must have .yaml extension.')
+    if extension:
+        file_name = name
+    else:
+        file_name = astropy.utils.data._find_pkg_data_path(
+            'data/config/{0}.yaml'.format(name))
+    if not os.path.isfile(file_name):
+        raise ValueError('No such config file "{0}".'.format(file_name))
+    with open(file_name) as f:
         return Configuration(yaml.safe_load(f))

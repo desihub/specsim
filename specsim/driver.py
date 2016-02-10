@@ -32,8 +32,8 @@ def main(args=None):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v','--verbose', action = 'store_true',
         help = 'provide verbose output on progress')
-    parser.add_argument('-c', '--config', default = None,
-        help = 'name of YAML configuration file to read')
+    parser.add_argument('-c', '--config', default = 'desi',
+        help = 'name of the simulation configuration to use')
     parser.add_argument('--model', choices=['lrg','elg','star','qso','sky'],
         help = 'throughput model for light entering the fiber')
     parser.add_argument('--infile', type = str, default = None,
@@ -81,12 +81,10 @@ def main(args=None):
     args = parser.parse_args(args)
 
     # Read the required configuration file.
-    if args.config is None:
-        print('The --config option is required.')
-        return -1
-    config = specsim.config.load(args.config, args.verbose)
+    config = specsim.config.load_config(args.config)
 
     # Update configuration options from command-line options.
+    ## verbose -> config.verbose
     ## airmass -> config.atmosphere.airmass
     ## exptime -> config.instrument.constants.exposure_time
     ## source_type -> config.instrument.fiberloss.table.path

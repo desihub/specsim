@@ -23,11 +23,7 @@ sky emission surface brightness.
 """
 from __future__ import print_function, division
 
-import os.path
 import numpy as np
-import scipy.interpolate
-
-import specsim.spectrum
 
 
 class Atmosphere(object):

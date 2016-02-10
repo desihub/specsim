@@ -83,10 +83,14 @@ class Configuration(Node):
         self.wavelength = (wave_min + wave_step * np.arange(nwave)) * wave_unit
 
         # Use environment variables to interpolate {NAME} in the base path.
-        try:
-            self.base_path = self.get('base_path').value.format(**os.environ)
-        except KeyError as e:
-            raise ValueError('Environment variable not set: {0}.'.format(e))
+        base_path = self.get('base_path').value
+        if base_path == '<PACKAGE_DATA>':
+            self.base_path = astropy.utils.data._find_pkg_data_path('data')
+        else:
+            try:
+                self.base_path = base_path.format(**os.environ)
+            except KeyError as e:
+                raise ValueError('Environment variable not set: {0}.'.format(e))
 
         # Define custom dimensionless units used for configuration.
         self.row_unit = astropy.units.def_unit(

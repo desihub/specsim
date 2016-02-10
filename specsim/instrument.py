@@ -11,10 +11,11 @@ import numpy as np
 class Instrument(object):
     """
     """
-    def __init__(self, name, fiber_acceptance, cameras, primary_mirror_diameter,
-                 obscuration_diameter, support_width, fiber_diameter,
-                 exposure_time):
+    def __init__(self, name, wavelength, fiber_acceptance, cameras,
+                 primary_mirror_diameter, obscuration_diameter, support_width,
+                 fiber_diameter, exposure_time):
         self.name = name
+        self.wavelength = wavelength
         self.fiber_acceptance = fiber_acceptance
         self.cameras = cameras
         self.primary_mirror_diameter = primary_mirror_diameter
@@ -97,7 +98,7 @@ def initialize(config):
         config.get('instrument.fiberloss'), 'fiber_acceptance')
 
     instrument = Instrument(
-        name, fiber_acceptance, initialized_cameras,
+        name, config.wavelength, fiber_acceptance, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['exposure_time'])

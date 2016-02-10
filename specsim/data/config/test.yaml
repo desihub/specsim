@@ -1,8 +1,11 @@
 name: Test Simulation
 
 # The base path is pre-pended to all non-absolute path values below.
-# {...} will be expanded using environment variables.
-base_path: '{DESIMODEL}/data'
+# Any embedded {...} will be expanded using environment variables.
+# Use <PACKAGE_DATA> to indicate that paths are relative to this package's
+# data/ directory.  You can leave this blank ('') if all paths are absolute or
+# relative to the current working directory.
+base_path: <PACKAGE_DATA>
 
 # Be verbose during the simulation?
 verbose: yes
@@ -25,7 +28,7 @@ atmosphere:
             columns:
                 wavelength: { name: wavelength }
                 surface_brightness: { name: flux }
-            path: /Users/david/Cosmo/DESI/code/specsim/specsim/data/test/test_sky.ecsv
+            path: test/test_sky.ecsv
     # Zenith extinction coefficients.
     extinction:
         table:
@@ -33,7 +36,7 @@ atmosphere:
             columns:
                 wavelength: { name: wavelength }
                 extinction_coefficient: { name: extinction }
-            path: /Users/david/Cosmo/DESI/code/specsim/specsim/data/test/test_extinction.ecsv
+            path: test/test_extinction.ecsv
     # Should extinction be applied to the sky emission?
     extinct_emission: no
     # Airmass to use.
@@ -53,7 +56,7 @@ instrument:
     fiberloss:
         table:
             format: ascii
-            path: /Users/david/Cosmo/DESI/code/specsim/specsim/data/test/test_fiberloss.ecsv
+            path: test/test_fiberloss.ecsv
             columns:
                 wavelength: { name: wavelength }
                 fiber_acceptance: { name: fiberloss }
@@ -67,7 +70,7 @@ instrument:
                 gain: 1.0 electron/adu
             psf:
                 table:
-                    path: specpsf/psf-quicksim.fits
+                    path: /Users/david/Cosmo/DESI/code/desimodel/data/specpsf/psf-quicksim.fits
                     hdu: QUICKSIM-R
                     extrapolated_value: 0.0
                     columns:
@@ -86,7 +89,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-R.fits
+                    path: /Users/david/Cosmo/DESI/code/desimodel/data/throughput/thru-R.fits
                     hdu: THROUGHPUT
                     extrapolated_value: 0.0
                     columns:

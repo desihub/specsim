@@ -10,7 +10,7 @@ import scipy.sparse as sp
 import scipy.interpolate
 from scipy.special import exp10
 from astropy import constants as const
-from astropy import units
+from astropy import units as u
 
 import specsim.spectrum
 import specsim.atmosphere
@@ -21,52 +21,41 @@ class QuickCamera(object):
     """
     A class representing one camera in a quick simulation.
     """
-    def __init__(self,wavelengthRange,throughputModel,psfFWHMWavelengthModel,angstromsPerRowModel,
-        psfNPixelsSpatialModel,readnoisePerPixel,darkCurrentPerPixel):
+    def __init__(self, wavelengthRange, wavelengthGrid,
+                 throughput, psfFWHMWavelength,
+                 angstromsPerRow, psfNPixelsSpatial, readnoisePerPixel,
+                 darkCurrentPerPixel, photonRatePerBin, skyPhotonRate):
         self.wavelengthRange = wavelengthRange
-        self.throughputModel = throughputModel
-        self.psfFWHMWavelengthModel = psfFWHMWavelengthModel
-        self.angstromsPerRowModel = angstromsPerRowModel
-        self.psfNPixelsSpatialModel = psfNPixelsSpatialModel
+        self.throughput = throughput
+        self.psfFWHMWavelength = psfFWHMWavelength
+        self.angstromsPerRow = angstromsPerRow
+        self.psfNPixelsSpatial = psfNPixelsSpatial
         self.readnoisePerPixel = readnoisePerPixel
         self.darkCurrentPerPixel = darkCurrentPerPixel
 
-    def setWavelengthGrid(self,wavelengthGrid,photonRatePerBin,skyPhotonRate):
-        """
-        setWavelengthGrid
-
-        Initializes for the specified wavelength grid which is guaranteed to be
-        linearly spaced. The mean rate of expected photons per wavelength bin
-        corresponding to a unit flux (assuming 100%% throughput) is provided via
-        photonRatePerBin. The mean sky photon rate per wavelength bin is
-        provided via skyPhotonRate.
-        """
-        # Resample our throughput on this grid.
-        self.throughput = self.throughputModel.getResampledValues(wavelengthGrid)
-
         # Truncate our throughput to the wavelength range covered by all fibers.
         self.coverage = np.logical_and(
-            wavelengthGrid >= self.wavelengthRange[0],wavelengthGrid <= self.wavelengthRange[1])
+            wavelengthGrid >= self.wavelengthRange[0],
+            wavelengthGrid <= self.wavelengthRange[1])
         self.throughput[~self.coverage] = 0.
-        assert np.all(self.throughput[self.coverage] > 0), "Camera has zero throughput within wavelength limits"
+        assert np.all(self.throughput[self.coverage] > 0), \
+            "Camera has zero throughput within wavelength limits"
 
         # Resample the PSF FWHM to our wavelength grid and convert from
         # FWHM to an equivalent Gaussian sigma.
-        fwhmToSigma = 1./(2*math.sqrt(2*math.log(2)))
-        self.sigmaWavelength = self.psfFWHMWavelengthModel.getResampledValues(wavelengthGrid)*fwhmToSigma
+        fwhmToSigma = 1. / (2 * math.sqrt(2 * math.log(2)))
+        self.sigmaWavelength = self.psfFWHMWavelength * fwhmToSigma
 
         # extrapolate null values
         mask=np.where(self.sigmaWavelength<=0)[0]
-        if mask.size > 0 and mask.size != wavelengthGrid.size :
-            self.sigmaWavelength[mask]=np.interp(wavelengthGrid[mask],wavelengthGrid[self.sigmaWavelength>0],self.sigmaWavelength[self.sigmaWavelength>0])
+        if mask.size > 0 and mask.size != wavelengthGrid.size:
+            self.sigmaWavelength[mask] = np.interp(
+                wavelengthGrid[mask], wavelengthGrid[self.sigmaWavelength>0],
+                self.sigmaWavelength[self.sigmaWavelength>0])
 
-
-        # Resample the conversion between pixels and Angstroms and save the results.
-        self.angstromsPerRow = self.angstromsPerRowModel.getResampledValues(wavelengthGrid)
-
-        # Build a sparse matrix representation of the co-added resolution smoothing kernel.
-        # Tabulate a Gaussian approximation of the PSF at each simulation wavelength,
-        # truncated at 5x the maximum sigma.
+        # Build a sparse matrix representation of the co-added resolution
+        # smoothing kernel. Tabulate a Gaussian approximation of the PSF at each
+        # simulation wavelength, truncated at 5x the maximum sigma.
         max_sigma = np.max(self.sigmaWavelength)
         wavelength_spacing = wavelengthGrid[1] - wavelengthGrid[0]
         nhalf = int(np.ceil(5 * max_sigma / wavelength_spacing))
@@ -85,8 +74,6 @@ class QuickCamera(object):
         else :
             begin_bin = nbins
             end_bin = nbins
-
-
 
         for bin in range(nbins):
             sparseIndPtr[bin] = nextIndex
@@ -111,8 +98,10 @@ class QuickCamera(object):
         # The original IDL code uses the transpose of the correct smoothing kernel,
         # which corresponds to the second commented line below. We ultimately want the
         # kernel in CSR format since this is ~10% faster than CSC for the convolution.
-        self.sparseKernel = sp.csc_matrix((sparseData,sparseIndices,sparseIndPtr),(nbins,nbins)).tocsr()
-        #self.sparseKernel = sp.csr_matrix((sparseData,sparseIndices,sparseIndPtr),(nbins,nbins))
+        self.sparseKernel = sp.csc_matrix(
+            (sparseData,sparseIndices,sparseIndPtr),(nbins,nbins)).tocsr()
+        #self.sparseKernel = sp.csr_matrix(
+        #   (sparseData,sparseIndices,sparseIndPtr),(nbins,nbins))
 
         '''
         # Build a non-sparse matrix as a cross check of the sparse version. This is only practical
@@ -132,14 +121,15 @@ class QuickCamera(object):
 
         # Rescale the mean rate (Hz) of photons to account for this camera's throughput.
         # We are including throughput but not atmostpheric absorption here.
-        self.photonRatePerBin = self.throughput*photonRatePerBin
+        self.photonRatePerBin = self.throughput * photonRatePerBin
 
         # Apply resolution smoothing and throughput to the sky photon rate.
-        self.skyPhotonRateSmooth = self.sparseKernel.dot(self.throughput*skyPhotonRate)
+        self.skyPhotonRateSmooth = self.sparseKernel.dot(
+            self.throughput*skyPhotonRate)
 
         # Resample the effective number of pixels in the spatial direction that
         # contribute read noise to each wavelength bin.
-        nPixelsSpatial = self.psfNPixelsSpatialModel.getResampledValues(wavelengthGrid)
+        nPixelsSpatial = self.psfNPixelsSpatial
 
         # Calculate the pixel size of each wavelength bin.
         wavelengthStep = wavelengthGrid[1] - wavelengthGrid[0]
@@ -147,17 +137,20 @@ class QuickCamera(object):
         ccdMask = self.angstromsPerRow > 0
         nPixelsWavelength[ccdMask] = wavelengthStep/self.angstromsPerRow[ccdMask]
 
-        # Calculate the effective number of pixels contributing to the signal in each wavelength bin.
+        # Calculate the effective number of pixels contributing to the signal
+        # in each wavelength bin.
         nEffectivePixels = nPixelsWavelength*nPixelsSpatial
 
         # Calculate the read noise in electrons per wavelength bin, assuming that
         # readnoise is uncorrelated between pixels (hence the sqrt scaling). The
         # value will be zero in pixels that are not used by this camera.
         self.readnoisePerBin = self.readnoisePerPixel*np.sqrt(nEffectivePixels)
-        assert np.all(self.readnoisePerBin[~self.coverage]==0), "Readnoise nonzero outside coverage"
+        assert np.all(self.readnoisePerBin[~self.coverage]==0), \
+            "Readnoise nonzero outside coverage"
 
         # Calculate the dark current in electrons/s per wavelength bin.
         self.darkCurrentPerBin = self.darkCurrentPerPixel*nEffectivePixels
+
 
 class Quick(object):
     """
@@ -173,91 +166,51 @@ class Quick(object):
 
         self.instrument = specsim.instrument.initialize(config)
 
-        # Precompute the physical constant h*c in units of erg*Ang.
-        self.hc = const.h.to(units.erg*units.s)*const.c.to(units.angstrom/units.s)
+        self.fiberAcceptanceFraction = self.instrument.fiber_acceptance
 
         # Lookup the telescope's effective area in cm^2.
-        self.effArea = self.instrument.effective_area.to(units.cm**2).value
+        self.effArea = self.instrument.effective_area.to(u.cm**2).value
 
         # Lookup the fiber area in arcsec^2.
-        self.fiberArea = self.instrument.fiber_area.to(units.arcsec**2).value
+        self.fiberArea = self.instrument.fiber_area.to(u.arcsec**2).value
 
-        self.cameras = [ ]
-        for camera in self.instrument.cameras:
-            quick_camera = QuickCamera(
-                (0, 0), camera.throughput, camera.fwhm_wave,
-                camera.angstroms_per_row, camera.neff_spatial,
-                camera.read_noise.to('electron').value,
-                camera.dark_current.to('electron/(pixel s)').value)
-            self.cameras.append(quick_camera)
-
-        self.wavelengthGrid = config.wavelength
-
-    def setWavelengthGrid(self,wavelengthMin,wavelengthMax,wavelengthStep):
-        """Set the linear wavelength grid to use for simulation.
-
-        This method pre-tabulates simulation quantities on the specified grid that
-        are independent of the simulated source, to avoid duplicating this work
-        in subsequent repeated calls to :meth:`simulate`.
-
-        In case the requested step size does not exactly divide the specified
-        range, the maximum wavelength will be silently adjusted.
-
-        The wavelength limits should normally be set ~5 sigma beyond the camera
-        coverage to avoid artifacts from resolution fall off at the edges of
-        the simulation grid.
-
-        Parameters
-        ----------
-        wavelengthMin : float
-            Minimum wavelength to simulate in Angstroms.
-        wavelengthMax : float
-            Maximum wavelength to simulate in Angstroms.
-        wavelengthStep : float
-            Linear step size to use in Angstroms.
-        """
-        nwave = 1+int(math.floor((wavelengthMax-wavelengthMin)/wavelengthStep))
-        if nwave <= 0:
-            raise ValueError('simulate.Quick: invalid wavelength grid parameters %r,%r,%r' %
-                (wavelengthMin,wavelengthMax,wavelengthStep))
-        wavelengthGrid = wavelengthMin + wavelengthStep*np.arange(nwave)
-
-        # Are we already using this grid?
-        if np.array_equal(wavelengthGrid,self.wavelengthGrid):
-            return
-
-        # Make sure we don't use an incompletely initialized grid.
-        self.wavelengthGrid = None
-
-        # Resample the fiberloss model for each source type.
-        self.fiberAcceptanceFraction = { }
-        for model in self.instrument.getSourceTypes():
-            self.fiberAcceptanceFraction[model] = (
-                self.instrument.fiberloss[model].getResampledValues(wavelengthGrid))
+        self.wavelengthGrid = config.wavelength.value
+        wavelengthStep = self.wavelengthGrid[1] - self.wavelengthGrid[0]
 
         # Calculate the energy per photon (ergs) at each wavelength.
-        energyPerPhoton = self.hc.value/wavelengthGrid
-        # Calculate the mean rate (Hz) of photons per wavelength bin for a flux of
-        # 1e-17 erg/cm^2/s/Ang. We are assuming 100% throughput here.
-        photonRatePerBin = 1e-17*self.effArea*wavelengthStep/energyPerPhoton
+        hc = const.h * const.c
+        energyPerPhoton = (hc / config.wavelength).to(u.erg).value
+
+        # Calculate the mean rate (Hz) of photons per wavelength bin for a flux
+        # of 1e-17 erg/cm^2/s/Ang. We are assuming 100% throughput here.
+        photonRatePerBin = 1e-17 * self.effArea * wavelengthStep / energyPerPhoton
 
         # Resample the sky spectrum.
-        sky = self.atmosphere.surface_brightness
+        sky = self.atmosphere.surface_brightness.to(
+            u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)).value
 
-        # Integrate the sky flux over the fiber area and convert to a total photon rate (Hz).
-        skyPhotonRate = sky*self.fiberArea*photonRatePerBin
+        # Integrate the sky flux over the fiber area and convert to a total
+        # photon rate (Hz).
+        skyPhotonRate = sky * self.fiberArea * photonRatePerBin
 
         # Resample the zenith atmospheric extinction.
         self.extinction = self.atmosphere.extinction_coefficient
 
-        # Initialize each camera for this wavelength grid.
-        for camera in self.cameras:
-            camera.setWavelengthGrid(wavelengthGrid,photonRatePerBin,skyPhotonRate)
-            camera.sigma_wave=camera.sigmaWavelength
-        # Remember this wavelength grid for subsequent calls to simulate().
-        self.wavelengthGrid = wavelengthGrid
+        self.cameras = [ ]
+        for camera in self.instrument.cameras:
+            quick_camera = QuickCamera(
+                (camera.wavelength_min.value, camera.wavelength_max.value),
+                config.wavelength.value, camera.throughput,
+                camera.fwhm_wave.value,
+                camera.angstroms_per_row.value, camera.neff_spatial.value,
+                camera.read_noise.to('electron').value,
+                camera.dark_current.to('electron/(pixel s)').value,
+                photonRatePerBin, skyPhotonRate)
+            self.cameras.append(quick_camera)
 
-    def simulate(self,sourceType,sourceSpectrum,airmass=1.,nread=1.,expTime=None,downsampling=5):
+
+    def simulate(self,sourceType,sourceSpectrum,airmass=1.,nread=1.,
+                 expTime=None,downsampling=5):
         """
         simulate
 
@@ -316,20 +269,7 @@ class Quick(object):
 
         These are accessible using the same camera index j, e.g. qsim.cameras[j].throughput.
         """
-        # Check that this is a supported source type.
-        if sourceType not in self.instrument.fiberloss:
-            raise RuntimeError('Quick.simulate: source type %s is not one of %s.' %
-                (sourceType,','.join(self.instrument.getSourceTypes())))
-
-        # Use the instrument's nominal exposure time by default.
-        if expTime is None:
-            expTime = self.instrument.model['exptime']
-
-        # Use a wavelength grid covering all cameras with 0.1 Ang spacing by default.
-        if self.wavelengthGrid is None:
-            waveMin = self.instrument.cameraWavelengthRanges[0][0]
-            waveMax = self.instrument.cameraWavelengthRanges[-1][-1]
-            self.setWavelengthGrid(waveMin,waveMax,0.1)
+        expTime = self.instrument.exposure_time.to(u.s).value
 
         # Convert the source to a SpectralFluxDensity if necessary, setting the flux to zero
         # outside the input source spectrum's range.
@@ -351,7 +291,7 @@ class Quick(object):
             # Calculate the calibration from source flux to mean number of detected photons
             # before resolution smearing in this camera's CCD.
             camera.sourceCalib = (expTime*camera.photonRatePerBin*
-                self.fiberAcceptanceFraction[sourceType]*exp10(-self.extinction*airmass/2.5))
+                self.fiberAcceptanceFraction*exp10(-self.extinction*airmass/2.5))
 
             # Apply resolution smoothing to the detected source photons.
             camera.sourcePhotonsSmooth = camera.sparseKernel.dot(

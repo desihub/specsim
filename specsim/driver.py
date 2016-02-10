@@ -56,7 +56,7 @@ def main(args=None):
         help = 'sky conditions to simulate')
     parser.add_argument('--airmass', type = float, default = 1.0,
         help = 'airmass for atmospheric extinction')
-    parser.add_argument('--exptime', type = float, default = None,
+    parser.add_argument('--exptime', type = float, default = 1000.0,
         help = 'overrides exposure time specified in the parameter file (secs)')
     parser.add_argument('--min-wavelength', type = float, default = 3500.3,
         help = 'minimum wavelength to simulate in Angstroms')
@@ -86,9 +86,13 @@ def main(args=None):
         return -1
     config = specsim.config.load(args.config, args.verbose)
 
-    # We require that the SPECSIM_MODEL environment variable is set.
-    if 'SPECSIM_MODEL' not in os.environ:
-        raise RuntimeError('The environment variable SPECSIM_MODEL must be set.')
+    # Update configuration options from command-line options.
+    ## airmass -> config.atmosphere.airmass
+    ## exptime -> config.instrument.constants.exposure_time
+    ## source_type -> config.instrument.fiberloss.table.path
+    assert args.airmass == 1.0
+    assert args.exptime == 1000.0
+    assert args.model == 'qso'
 
     # Check for required arguments.
     if args.infile is None:
@@ -139,14 +143,6 @@ def main(args=None):
 
     # Create a quick simulator using the default instrument model.
     qsim = specsim.quick.Quick(config)
-    raise NotImplementedError()
-
-    # Initialize the simulation wavelength grid to use.
-    if args.verbose:
-        print('Will simulate wavelengths %f - %f Ang with %f Ang spacing.' %
-            (args.min_wavelength,args.max_wavelength,args.wavelength_step))
-    qsim.setWavelengthGrid(args.min_wavelength,args.max_wavelength,args.wavelength_step)
-    assert np.array_equal(qsim.wavelengthGrid, config.wavelength.value)
 
     # Perform a quick simulation of the observed spectrum.
     if args.verbose:

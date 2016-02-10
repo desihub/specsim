@@ -7,6 +7,9 @@ import math
 
 import numpy as np
 
+import astropy.constants
+import astropy.units as u
+
 
 class Instrument(object):
     """
@@ -34,6 +37,18 @@ class Instrument(object):
         # Calculate the fiber area.
         self.fiber_area = math.pi * (0.5 * self.fiber_diameter) ** 2
 
+        # Calculate the energy per photon at each wavelength.
+        hc = astropy.constants.h * astropy.constants.c
+        energy_per_photon = (hc / self.wavelength).to(u.erg)
+
+        # Calculate the rate of photons incident on the focal plane per
+        # wavelength bin per unit spectral flux density. The fiber acceptance
+        # fraction is not included in this calculation.
+        wavelength_bin_size = np.gradient(self.wavelength)
+        self.photons_per_bin = (
+            self.effective_area * wavelength_bin_size / energy_per_photon
+            ).to((u.cm**2 * u.Angstrom) / u.erg)
+
 
 class Camera(object):
     """
@@ -52,6 +67,10 @@ class Camera(object):
         self.read_noise = read_noise
         self.dark_current = dark_current
         self.gain = gain
+
+        # Calculate the RMS resolution assuming a Gaussian PSF.
+        fwhm_to_sigma = 1. / (2 * math.sqrt(2 * math.log(2)))
+        self.sigma_wave = fwhm_to_sigma * self.fwhm_wave
 
 
 def initialize(config):

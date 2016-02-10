@@ -5,6 +5,7 @@ Provides classes to represent functions of wavelength.
 from __future__ import print_function, division
 
 import math
+import os
 import os.path
 import numpy as np
 import scipy.interpolate
@@ -312,11 +313,10 @@ def loadSDSSFilterCurves(whichColumn=1):
     for a point source. Values of 2-4 are also possible but probably not what you want. Consult the
     filter data file headers for details.
     """
-    # Get the path that this module was loaded from.
-    import driver
-    myPath = os.path.dirname(os.path.abspath(driver.__file__))
     # Build the path where the filter curves should be.
-    filterPath = os.path.join(myPath,'data','throughput')
+    import os
+    desimodel = os.environ.get('DESIMODEL', '.')
+    filterPath = os.path.join(desimodel,'data','throughput')
     curves = { }
     for band in 'ugriz':
         filterData = np.loadtxt(os.path.join(filterPath,'sdss_jun2001_%s_atm.dat' % band),unpack=True)

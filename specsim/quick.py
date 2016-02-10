@@ -9,7 +9,6 @@ import numpy as np
 import scipy.sparse as sp
 import scipy.interpolate
 from scipy.special import exp10
-from astropy import constants as const
 from astropy import units as u
 
 import specsim.spectrum
@@ -22,12 +21,12 @@ class QuickCamera(object):
     A class representing one camera in a quick simulation.
     """
     def __init__(self, wavelengthRange, wavelengthGrid,
-                 throughput, psfFWHMWavelength,
+                 throughput, sigmaWavelength,
                  angstromsPerRow, psfNPixelsSpatial, readnoisePerPixel,
                  darkCurrentPerPixel, photonRatePerBin, skyPhotonRate):
         self.wavelengthRange = wavelengthRange
         self.throughput = throughput
-        self.psfFWHMWavelength = psfFWHMWavelength
+        self.sigmaWavelength = sigmaWavelength
         self.angstromsPerRow = angstromsPerRow
         self.psfNPixelsSpatial = psfNPixelsSpatial
         self.readnoisePerPixel = readnoisePerPixel
@@ -40,11 +39,6 @@ class QuickCamera(object):
         self.throughput[~self.coverage] = 0.
         assert np.all(self.throughput[self.coverage] > 0), \
             "Camera has zero throughput within wavelength limits"
-
-        # Resample the PSF FWHM to our wavelength grid and convert from
-        # FWHM to an equivalent Gaussian sigma.
-        fwhmToSigma = 1. / (2 * math.sqrt(2 * math.log(2)))
-        self.sigmaWavelength = self.psfFWHMWavelength * fwhmToSigma
 
         # extrapolate null values
         mask=np.where(self.sigmaWavelength<=0)[0]
@@ -175,15 +169,10 @@ class Quick(object):
         self.fiberArea = self.instrument.fiber_area.to(u.arcsec**2).value
 
         self.wavelengthGrid = config.wavelength.value
-        wavelengthStep = self.wavelengthGrid[1] - self.wavelengthGrid[0]
-
-        # Calculate the energy per photon (ergs) at each wavelength.
-        hc = const.h * const.c
-        energyPerPhoton = (hc / config.wavelength).to(u.erg).value
 
         # Calculate the mean rate (Hz) of photons per wavelength bin for a flux
         # of 1e-17 erg/cm^2/s/Ang. We are assuming 100% throughput here.
-        photonRatePerBin = 1e-17 * self.effArea * wavelengthStep / energyPerPhoton
+        photonRatePerBin = 1e-17 * self.instrument.photons_per_bin.value
 
         # Resample the sky spectrum.
         sky = self.atmosphere.surface_brightness.to(
@@ -201,7 +190,7 @@ class Quick(object):
             quick_camera = QuickCamera(
                 (camera.wavelength_min.value, camera.wavelength_max.value),
                 config.wavelength.value, camera.throughput,
-                camera.fwhm_wave.value,
+                camera.sigma_wave.value,
                 camera.angstroms_per_row.value, camera.neff_spatial.value,
                 camera.read_noise.to('electron').value,
                 camera.dark_current.to('electron/(pixel s)').value,

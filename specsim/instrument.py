@@ -39,14 +39,13 @@ class Camera(object):
     """
     """
     def __init__(self, name, wavelength, throughput, angstroms_per_row,
-                 fwhm_wave, fwhm_spatial, neff_spatial, wavelength_min,
+                 fwhm_wave, neff_spatial, wavelength_min,
                  wavelength_max, read_noise, dark_current, gain):
         self.name = name
         self.wavelength = wavelength
         self.throughput = throughput
         self.angstroms_per_row = angstroms_per_row
         self.fwhm_wave = fwhm_wave
-        self.fwhm_spatial = fwhm_spatial
         self.neff_spatial = neff_spatial
         self.wavelength_min = wavelength_min
         self.wavelength_max = wavelength_max
@@ -76,7 +75,7 @@ def initialize(config):
         camera = cameras.get(camera_name)
         psf = config.load_table(
             camera.get('psf'),
-            ['angstroms_per_row', 'fwhm_wave', 'fwhm_spatial', 'neff_spatial'])
+            ['angstroms_per_row', 'fwhm_wave', 'neff_spatial'])
         throughput = config.load_table(
             camera.get('throughput'), 'throughput')
         constants = config.get_constants(camera,
@@ -84,7 +83,7 @@ def initialize(config):
              'read_noise', 'dark_current', 'gain'])
         initialized_cameras.append(Camera(
             camera_name, config.wavelength, throughput,
-            psf['angstroms_per_row'], psf['fwhm_wave'], psf['fwhm_spatial'],
+            psf['angstroms_per_row'], psf['fwhm_wave'],
             psf['neff_spatial'], constants['wavelength_min'],
             constants['wavelength_max'], constants['read_noise'],
             constants['dark_current'], constants['gain']))

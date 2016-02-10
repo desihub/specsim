@@ -40,14 +40,14 @@ Tabulated Data
 The table below lists the FITS binary table files required to configure a
 simulation.  The `*` pattern specifies a camera name (B, R, Z).
 
-+-------------------------------------+--------------+---------------------------------------+
-| Filename                            |  HDU Name    | Column Names                          |
-+=====================================+==============+=======================================+
-| `data/specpsf/psf-quicksim.fits`    | `QUICKSIM-*` | wavelength, angstroms_per_row,        |
-|                                     |              | fwhm_wave, fwhm_spatial, neff_spatial |
-+-------------------------------------+--------------+---------------------------------------+
-| `data/throughput/thru-*.fits`       | `THROUGHPUT` | wavelength, throughput                |
-+-------------------------------------+--------------+---------------------------------------+
++-------------------------------------+--------------+--------------------------------+
+| Filename                            |  HDU Name    | Column Names                   |
++=====================================+==============+================================+
+| `data/specpsf/psf-quicksim.fits`    | `QUICKSIM-*` | wavelength, angstroms_per_row, |
+|                                     |              | fwhm_wave, neff_spatial        |
++-------------------------------------+--------------+--------------------------------+
+| `data/throughput/thru-*.fits`       | `THROUGHPUT` | wavelength, throughput         |
++-------------------------------------+--------------+--------------------------------+
 
 The following ASCII data files are also required, where `<S>` denotes a source
 model (elg, lrg, qso, ...) and `<C>` denotes optional sky conditions (-grey, -bright).

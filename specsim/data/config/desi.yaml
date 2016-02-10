@@ -90,10 +90,6 @@ instrument:
                             unit: Angstrom
                             override_unit: yes
                         fwhm_wave: { name: fwhm_wave }
-                        ##############
-                        ## FIX ME ! ##
-                        ##############
-                        fwhm_spatial: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
@@ -124,10 +120,6 @@ instrument:
                             unit: Angstrom
                             override_unit: yes
                         fwhm_wave: { name: fwhm_wave }
-                        ##############
-                        ## FIX ME ! ##
-                        ##############
-                        fwhm_spatial: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
@@ -158,10 +150,6 @@ instrument:
                             unit: Angstrom
                             override_unit: yes
                         fwhm_wave: { name: fwhm_wave }
-                        ##############
-                        ## FIX ME ! ##
-                        ##############
-                        fwhm_spatial: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:

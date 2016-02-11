@@ -49,6 +49,98 @@ class Instrument(object):
             self.effective_area * wavelength_bin_size / energy_per_photon
             ).to((u.cm**2 * u.Angstrom) / u.erg)
 
+        for i, camera in enumerate(self.cameras):
+            if i == 0:
+                self.wavelength_min = camera.wavelength_min
+                self.wavelength_max = camera.wavelength_max
+            else:
+                self.wavelength_min = min(
+                    self.wavelength_min, camera.wavelength_min)
+                self.wavelength_max = max(
+                    self.wavelength_max, camera.wavelength_max)
+
+
+    def plot(self, flux=1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom),
+             exposure_time=None, cmap='nipy_spectral'):
+        """Plot a summary of this instrument's model.
+
+        Requires that the matplotlib package is installed.
+        """
+        import matplotlib.pyplot as plt
+        import matplotlib.cm as cm
+
+        fig, (ax1, ax2) = plt.subplots(2, sharex=True, figsize=(8, 8))
+        ax1_rhs = ax1.twinx()
+        ax2_rhs = ax2.twinx()
+        cmap = cm.get_cmap(cmap)
+
+        wave = self.wavelength.value
+        wave_unit = self.wavelength.unit
+        dwave = np.gradient(self.wavelength).value
+
+        if exposure_time is None:
+            exposure_time = self.exposure_time
+
+        ax1.plot(wave, self.fiber_acceptance, 'k--')
+        for camera in self.cameras:
+            cwave = camera.wavelength.to(wave_unit).value
+
+            # Use an approximate spectral color for each band.
+            mid_wave = 0.5 * (camera.wavelength_min + camera.wavelength_max)
+            color = cmap(
+                (mid_wave - self.wavelength_min) /
+                (self.wavelength_max - self.wavelength_min))
+
+            nphot = (flux * self.photons_per_bin * exposure_time *
+                     self.fiber_acceptance * camera.throughput / dwave)
+            dark_noise = np.sqrt(
+                (camera.dark_current_per_bin * exposure_time).value)
+            total_noise = np.sqrt(
+                dark_noise ** 2 + camera.read_noise_per_bin.value ** 2)
+
+            ax1.plot(cwave, camera.throughput, ls='-', color=color)
+
+            ax1_rhs.plot(cwave, nphot.value, ls=':', color=color)
+            ax1_rhs.fill_between(
+                cwave, total_noise / dwave, lw=0, color=color, alpha=0.2)
+            ax1_rhs.fill_between(
+                cwave, dark_noise / dwave, lw=0, color=color, alpha=0.2)
+            ax1_rhs.plot(cwave, total_noise / dwave, ls='-.', color=color)
+
+            ax2.plot(
+                cwave, camera.sigma_wave.to(wave_unit).value,
+                ls='-', color=color)
+            ax2.plot(
+                cwave, camera.angstroms_per_row.to(wave_unit / u.pixel).value,
+                ls='--', color=color)
+
+            ax2_rhs.plot(cwave, camera.neff_spatial, ls=':', color=color)
+
+        ax1.plot([], [], 'k--', label='Fiber Acceptance')
+        ax1.plot([], [], 'k-', label='Camera Throughput')
+        ax1.plot([], [], 'k:', label='{0}'.format(flux))
+        ax1.plot([], [], 'k-.', label='Total Noise')
+        ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                   ncol=2, mode="expand", borderaxespad=0.)
+
+        ax2.plot([], [], 'k-', label='RMS Resolution')
+        ax2.plot([], [], 'k--', label='Row Size')
+        ax2.plot([], [], 'k:', label='Column Size')
+        ax2.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                   ncol=3, mode="expand", borderaxespad=0.)
+
+        ax1.set_ylim(0., None)
+        ax1.set_ylabel('Fiber, Camera Throughput')
+        ax1_rhs.set_ylim(0., None)
+        ax1_rhs.set_ylabel(
+            'Photons, Electrons / Exposure / {0}'.format(wave_unit))
+        ax2.set_ylim(0., None)
+        ax2.set_ylabel('RMS Resolution, Row Size [{0}]'.format(wave_unit))
+        ax2_rhs.set_ylim(0., None)
+        ax2_rhs.set_ylabel('Effective Column Size [pixels]')
+        ax2.set_xlabel('Wavelength [{0}]'.format(wave_unit))
+        ax2.set_xlim(wave[0], wave[-1])
+
 
 class Camera(object):
     """
@@ -77,20 +169,24 @@ class Camera(object):
         mask = self.angstroms_per_row.value > 0
         neff_wavelength = np.zeros_like(self.neff_spatial)
         neff_wavelength[mask] = (
-            wavelength_bin_size[mask] / self.angstroms_per_row[mask])
+            wavelength_bin_size[mask] / self.angstroms_per_row[mask]
+            ).to(u.pixel)
 
         # Calculate the effective pixel area contributing to the signal
         # in each wavelength bin.
-        self.neff_pixels = neff_wavelength * self.neff_spatial
+        self.neff_pixels = (
+            neff_wavelength * self.neff_spatial).to(u.pixel ** 2)
 
         # Calculate the read noise per wavelength bin, assuming that
         # readnoise is uncorrelated between pixels (hence the sqrt scaling). The
         # value will be zero in pixels that are not used by this camera.
         self.read_noise_per_bin = (
-            self.read_noise * np.sqrt(self.neff_pixels.to(u.pixel**2).value))
+            self.read_noise * np.sqrt(self.neff_pixels.value)
+            ).to(u.electron)
 
         # Calculate the dark current per wavelength bin.
-        self.dark_current_per_bin = self.dark_current * self.neff_pixels
+        self.dark_current_per_bin = (
+            self.dark_current * self.neff_pixels).to(u.electron / u.s)
 
 
 def initialize(config):

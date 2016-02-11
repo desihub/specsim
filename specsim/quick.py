@@ -20,17 +20,13 @@ class QuickCamera(object):
     """
     A class representing one camera in a quick simulation.
     """
-    def __init__(self, wavelengthRange, wavelengthGrid,
-                 throughput, sigmaWavelength,
-                 angstromsPerRow, psfNPixelsSpatial, readnoisePerPixel,
-                 darkCurrentPerPixel, photonRatePerBin, skyPhotonRate):
+    def __init__(self, wavelengthRange, wavelengthGrid, sigma_wave,
+                 throughput, dark_current_per_bin, read_noise_per_bin):
         self.wavelengthRange = wavelengthRange
+        self.sigmaWavelength = sigma_wave
         self.throughput = throughput
-        self.sigmaWavelength = sigmaWavelength
-        self.angstromsPerRow = angstromsPerRow
-        self.psfNPixelsSpatial = psfNPixelsSpatial
-        self.readnoisePerPixel = readnoisePerPixel
-        self.darkCurrentPerPixel = darkCurrentPerPixel
+        self.readnoisePerBin = read_noise_per_bin
+        self.darkCurrentPerBin = dark_current_per_bin
 
         # Truncate our throughput to the wavelength range covered by all fibers.
         self.coverage = np.logical_and(
@@ -39,6 +35,8 @@ class QuickCamera(object):
         self.throughput[~self.coverage] = 0.
         assert np.all(self.throughput[self.coverage] > 0), \
             "Camera has zero throughput within wavelength limits"
+        assert np.all(self.readnoisePerBin[~self.coverage]==0), \
+            "Readnoise nonzero outside coverage"
 
         # extrapolate null values
         mask=np.where(self.sigmaWavelength<=0)[0]
@@ -113,38 +111,6 @@ class QuickCamera(object):
         print('sparse ok?',np.array_equal(kernel,self.sparseKernel.T.todense()))
         '''
 
-        # Rescale the mean rate (Hz) of photons to account for this camera's throughput.
-        # We are including throughput but not atmostpheric absorption here.
-        self.photonRatePerBin = self.throughput * photonRatePerBin
-
-        # Apply resolution smoothing and throughput to the sky photon rate.
-        self.skyPhotonRateSmooth = self.sparseKernel.dot(
-            self.throughput*skyPhotonRate)
-
-        # Resample the effective number of pixels in the spatial direction that
-        # contribute read noise to each wavelength bin.
-        nPixelsSpatial = self.psfNPixelsSpatial
-
-        # Calculate the pixel size of each wavelength bin.
-        wavelengthStep = wavelengthGrid[1] - wavelengthGrid[0]
-        nPixelsWavelength = np.zeros_like(wavelengthGrid)
-        ccdMask = self.angstromsPerRow > 0
-        nPixelsWavelength[ccdMask] = wavelengthStep/self.angstromsPerRow[ccdMask]
-
-        # Calculate the effective number of pixels contributing to the signal
-        # in each wavelength bin.
-        nEffectivePixels = nPixelsWavelength*nPixelsSpatial
-
-        # Calculate the read noise in electrons per wavelength bin, assuming that
-        # readnoise is uncorrelated between pixels (hence the sqrt scaling). The
-        # value will be zero in pixels that are not used by this camera.
-        self.readnoisePerBin = self.readnoisePerPixel*np.sqrt(nEffectivePixels)
-        assert np.all(self.readnoisePerBin[~self.coverage]==0), \
-            "Readnoise nonzero outside coverage"
-
-        # Calculate the dark current in electrons/s per wavelength bin.
-        self.darkCurrentPerBin = self.darkCurrentPerPixel*nEffectivePixels
-
 
 class Quick(object):
     """
@@ -189,12 +155,19 @@ class Quick(object):
         for camera in self.instrument.cameras:
             quick_camera = QuickCamera(
                 (camera.wavelength_min.value, camera.wavelength_max.value),
-                config.wavelength.value, camera.throughput,
-                camera.sigma_wave.value,
-                camera.angstroms_per_row.value, camera.neff_spatial.value,
-                camera.read_noise.to('electron').value,
-                camera.dark_current.to('electron/(pixel**2 s)').value,
-                photonRatePerBin, skyPhotonRate)
+                config.wavelength.value, camera.sigma_wave.value,
+                camera.throughput, camera.dark_current_per_bin.value,
+                camera.read_noise_per_bin.value)
+
+            # Rescale the mean rate (Hz) of photons to account for this camera's
+            # throughput. We are including camera throughput but not
+            # fiber acceptance losses or atmostpheric absorption here.
+            quick_camera.photonRatePerBin = camera.throughput * photonRatePerBin
+
+            # Apply resolution smoothing and throughput to the sky photon rate.
+            quick_camera.skyPhotonRateSmooth = quick_camera.sparseKernel.dot(
+                camera.throughput * skyPhotonRate)
+
             self.cameras.append(quick_camera)
 
 

@@ -24,7 +24,10 @@ atmosphere:
             format: ascii
             columns:
                 wavelength: { index: 0, unit: Angstrom }
-                surface_brightness: { index: 1, unit: 'erg / (Angstrom arcsec2 cm2 s)' }
+                surface_brightness:
+                    index: 1
+                    # Note the factor of 1e-17 in the units!
+                    unit: 1e-17 erg / (Angstrom arcsec2 cm2 s)
             path:
                 # Select one of these based on the observing conditions.
                 spectra/spec-sky.dat

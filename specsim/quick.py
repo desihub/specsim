@@ -134,15 +134,15 @@ class Quick(object):
         # Lookup the fiber area in arcsec^2.
         self.fiberArea = self.instrument.fiber_area.to(u.arcsec**2).value
 
-        self.wavelengthGrid = config.wavelength.value
+        self.wavelengthGrid = config.wavelength.to(u.Angstrom).value
 
-        # Calculate the mean rate (Hz) of photons per wavelength bin for a flux
-        # of 1e-17 erg/cm^2/s/Ang. We are assuming 100% throughput here.
-        photonRatePerBin = 1e-17 * self.instrument.photons_per_bin.value
+        # Convert the photon response in our canonical flux units.
+        photonRatePerBin = self.instrument.photons_per_bin.to(
+            1e17 * u.Angstrom * u.cm**2 / u.erg).value
 
-        # Resample the sky spectrum.
+        # Convert the sky spectrum to our canonical units.
         sky = self.atmosphere.surface_brightness.to(
-            u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)).value
+            1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)).value
 
         # Integrate the sky flux over the fiber area and convert to a total
         # photon rate (Hz).

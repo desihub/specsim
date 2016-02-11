@@ -79,7 +79,7 @@ instrument:
                             name: angstroms_per_row
                             # The units are already correct in the file but
                             # not propagated since they are not valid for FITS.
-                            unit: Angstrom
+                            unit: Angstrom / pixel
                             override_unit: yes
                         fwhm_wave: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }

@@ -25,13 +25,15 @@ from __future__ import print_function, division
 
 import numpy as np
 
+import astropy.units as u
+
 
 class Atmosphere(object):
     """Implement an atmosphere model based on tabulated data read from files.
     """
-    def __init__(self, surface_brightness, extinction_coefficient,
+    def __init__(self, wavelength, surface_brightness, extinction_coefficient,
                  extinct_emission, airmass):
-
+        self.wavelength = wavelength
         self.surface_brightness = surface_brightness
         self.extinction_coefficient = extinction_coefficient
         self.extinct_emission = extinct_emission
@@ -52,6 +54,48 @@ class Atmosphere(object):
         if extinct_emission:
             sky *= self.extinction
         return sky + source_flux * self.extinction
+
+
+    def plot(self):
+        """Plot a summary of this atmosphere model.
+
+        Requires that the matplotlib package is installed.
+        """
+        import matplotlib.pyplot as plt
+
+        fig, ax1 = plt.subplots(figsize=(8, 4))
+        ax1_rhs = ax1.twinx()
+
+        wave = self.wavelength.to(u.Angstrom).value
+        wave_unit = u.Angstrom
+
+        sky_unit = 1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)
+        sky = self.surface_brightness.to(sky_unit).value
+        sky_min, sky_max = np.percentile(sky, (1, 99))
+
+        ext = self.extinction_coefficient
+        ext_min, ext_max = np.percentile(ext, (1, 99))
+
+        ax1.scatter(wave, sky, color='g', lw=0, s=1.)
+        ax1_rhs.scatter(wave, ext, color='r', lw=0, s=1.)
+
+        ax1.set_yscale('log')
+        ax1_rhs.set_yscale('log')
+
+        ax1.set_ylabel(
+            'Surface Brightness [$10^{-17}\mathrm{erg}/(\mathrm{cm}^2' +
+            '\mathrm{s} \AA)/\mathrm{arcsec}^2$]')
+        ax1.set_ylim(0.5 * sky_min, 1.5 * sky_max)
+        ax1_rhs.set_ylabel('Zenith Extinction')
+        ax1_rhs.set_ylim(0.5 * ext_min, 1.5 * ext_max)
+
+        ax1.set_xlabel('Wavelength [$\AA$]')
+        ax1.set_xlim(wave[0], wave[-1])
+
+        ax1.plot([], [], 'g-', label='Surface Brightness')
+        ax1.plot([], [], 'r-', label='Zenith Extinction Coefficient')
+        ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
+                   ncol=2, mode="expand", borderaxespad=0.)
 
 
 def initialize(config):
@@ -82,5 +126,5 @@ def initialize(config):
         extinction, 'extinction_coefficient')
 
     return Atmosphere(
-        surface_brightness, extinction_coefficient,
+        config.wavelength, surface_brightness, extinction_coefficient,
         extinct_emission, airmass)

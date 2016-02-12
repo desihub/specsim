@@ -15,7 +15,7 @@ wavelength:
     unit: Angstrom
     min: 4000.0
     max: 9000.0
-    step: 0.2
+    step: 0.1
 
 # The atmosphere configuration is interpreted and validated by the
 # specsim.atmosphere module.
@@ -97,3 +97,9 @@ source:
         columns:
             wavelength: { name: wavelength }
             flux: { name: flux }
+
+# The simulator configuration is interpreted and validated by the
+# specsim.simulator module.
+simulator:
+    # Number of simulation wavelength bins to combine into the output bins.
+    downsampling: 5

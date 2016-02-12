@@ -171,24 +171,8 @@ class Quick(object):
             self.cameras.append(quick_camera)
 
 
-    def simulate(self,source,airmass=1.,nread=1.,
-                 expTime=None,downsampling=5):
-        """
-        simulate
-
-        Simulates an observation of the specified source type and spectrum and at the specified
-        air mass. The source type must be supported by the instrument model (as specified by
-        Instrument.getSourceTypes). The source spectrum should either be a SpectralFluxDensity
-        object, or else should contain equal-length arrays of wavelength in Angstroms
-        and flux in units of 1e-17 erg/(cm^2*s*Ang) as sourceSpectrum[0:1].
-
-        Uses the specified exposure time (secs) or the instrument's nominal exposure time if expTime
-        is None. The read noise is scaled by sqrt(nread).
-
-        Use the setWavelengthGrid() method to specify the grid of wavelengths used for
-        this simulation, otherwise the default is to use the atmosphere's sky spectrum
-        wavelength grid. After applying resolution smoothing, the results are downsampled in
-        wavelength using the specified factor.
+    def simulate(self, source, downsampling):
+        """Simulate a single exposure.
 
         Returns a numpy array of results with one row per downsampled wavelength bin containing
         the following named columns in a numpy.recarray:
@@ -206,12 +190,6 @@ class Quick(object):
          - camivar[j]: inverse variance of source flux in (1e-17 erg/s/cm^2/Ang)^-2 in camera j
          - camflux[j]: source flux in 1e-17 erg/s/cm^2/Ang in camera j
                      (different for each camera because of change of resolution)
-
-
-
-        Note that the number of cameras (indexed by j) in the returned results is not hard coded
-        but determined by the instrument we were initialized with. Cameras are indexed in order
-        of increasing wavelength.
 
         After calling this method the following high-resolution (pre-downsampling) arrays are also
         available as data members:
@@ -231,6 +209,7 @@ class Quick(object):
 
         These are accessible using the same camera index j, e.g. qsim.cameras[j].throughput.
         """
+        airmass = self.atmosphere.airmass
         expTime = self.instrument.exposure_time.to(u.s).value
 
         # Resample the source spectrum to our simulation grid, if necessary.
@@ -259,7 +238,7 @@ class Quick(object):
             # for this camera.
             camera.nElecVariance = (
                 camera.sourcePhotonsSmooth + camera.skyPhotonRateSmooth*expTime +
-                (camera.readnoisePerBin*nread)**2 + camera.darkCurrentPerBin*expTime)
+                (camera.readnoisePerBin)**2 + camera.darkCurrentPerBin*expTime)
 
             # Estimate this camera's contribution to the coadded observed source flux.
             self.observedFlux += camera.throughput*camera.sparseKernel.dot(self.sourceFlux)
@@ -314,8 +293,8 @@ class Quick(object):
             (results.nobj)[:,j] = np.sum(camera.sourcePhotonsSmooth[:last].reshape(downShape),axis=1)
             # Scale the sky photon rate by the exposure time.
             (results.nsky)[:,j] = np.sum(camera.skyPhotonRateSmooth[:last].reshape(downShape),axis=1)*expTime
-            # Calculate readnoise squared, scaled by the optional nread parameter (nominally 1).
-            rdnoiseSq = np.sum(camera.readnoisePerBin[:last].reshape(downShape)**2,axis=1)*nread
+            # Calculate readnoise squared.
+            rdnoiseSq = np.sum(camera.readnoisePerBin[:last].reshape(downShape)**2,axis=1)
             # Calculate the dark current shot noise variance.
             dknoiseSq = np.sum(camera.darkCurrentPerBin[:last].reshape(downShape),axis=1)*expTime
             # Save the noise contributions to the results.

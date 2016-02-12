@@ -133,8 +133,8 @@ def main(args=None):
     # Perform a quick simulation of the observed spectrum.
     if args.verbose:
         print('Running quick simulation.')
-    results = qsim.simulate(source,
-        airmass=args.airmass,expTime=args.exptime,downsampling=args.downsampling)
+    results = qsim.simulate(
+        source, downsampling=config.get('simulator.downsampling').value)
 
     # Calculate the median total SNR in bins with some observed flux.
     medianSNR = np.median(results[results.obsflux > 0].snrtot)

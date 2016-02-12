@@ -182,3 +182,9 @@ source:
                 index: 1
                 # Note the factor of 1e-17 in the units!
                 unit: 1e-17 erg / (Angstrom cm2 s)
+
+# The simulator configuration is interpreted and validated by the
+# specsim.simulator module.
+simulator:
+    # Number of simulation wavelength bins to combine into the output bins.
+    downsampling: 5

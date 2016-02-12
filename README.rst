@@ -15,6 +15,9 @@ The following recipe gives identical results to the original desimodel quicksim:
     ln -s $SPECSIM_MODEL/data/spectra specsim/data/spectra
     quickspecsim --infile specsim/data/spectra/spec-ABmag22.0.dat --model qso --verbose --show-plot --outfile ab22.dat
 
+    # Using specsim v0.3
+    quickspecsim --show-plot --outfile ab22.dat -c desi
+
 
 Status reports for developers
 -----------------------------

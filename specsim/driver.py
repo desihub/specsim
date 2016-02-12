@@ -32,18 +32,9 @@ def main(args=None):
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-v','--verbose', action = 'store_true',
         help = 'provide verbose output on progress')
-    parser.add_argument('-c', '--config', default = 'desi',
+    parser.add_argument('-c', '--config', default = 'test',
         help = 'name of the simulation configuration to use')
-    parser.add_argument('--model', choices=['lrg','elg','star','qso','sky'],
-        help = 'throughput model for light entering the fiber')
-    parser.add_argument('--infile', type = str, default = None,
-        help = 'name of file containing wavelength (Ang) and flux (1e-17 erg/cm^2/s/Ang) columns')
-    parser.add_argument('--infile-wavecol', type = int, default = 0,
-        help = 'index of infile column containing wavelengths (starting from 0)')
-    parser.add_argument('--infile-fluxcol', type = int, default = 1,
-        help = 'index of infile column containing fluxes (starting from 0)')
-    parser.add_argument('--truncated', action = 'store_true',
-        help = 'assumed zero flux outside of source spectrum wavelength range')
+    '''
     parser.add_argument('--ab-magnitude', type = str, default = None,
         help = 'source spectrum flux rescaling, e.g. g=22.0 or r=21.5')
     parser.add_argument('--redshift-to', type = float, default = None,
@@ -52,20 +43,7 @@ def main(args=None):
         help = 'redshift source spectrum from this value (ignored unless redshift-to is set)')
     parser.add_argument('--save-spectrum', type = str, default = None,
         help = 'filename for saving the spectrum after any rescaling or redshift')
-    parser.add_argument('--sky', choices=['dark','grey','bright'], default = 'dark',
-        help = 'sky conditions to simulate')
-    parser.add_argument('--airmass', type = float, default = 1.0,
-        help = 'airmass for atmospheric extinction')
-    parser.add_argument('--exptime', type = float, default = 1000.0,
-        help = 'overrides exposure time specified in the parameter file (secs)')
-    parser.add_argument('--min-wavelength', type = float, default = 3500.3,
-        help = 'minimum wavelength to simulate in Angstroms')
-    parser.add_argument('--max-wavelength', type = float, default = 9999.7,
-        help = 'maximum wavelength to simulate in Angstroms')
-    parser.add_argument('--wavelength-step', type = float, default = 0.1,
-        help = 'step size of simulation wavelength grid in Anstroms')
-    parser.add_argument('--nread', type = float, default = 1.0,
-        help = 'readout noise is scaled by sqrt(nread)')
+    '''
     parser.add_argument('--outfile', type = str, default = None,
         help = 'optional output file name')
     parser.add_argument('--show-plot', action = 'store_true',
@@ -76,21 +54,17 @@ def main(args=None):
         help = 'minimum wavelength to include in plot (default is full range)')
     parser.add_argument('--plot-max', type = float, default = None,
         help = 'maximum wavelength to include in plot (default is full range)')
-    parser.add_argument('--downsampling', type = int, default = 5,
-        help = 'wavelength downsampling factor to use for SNR calculations')
     args = parser.parse_args(args)
 
     # Read the required configuration file.
     config = specsim.config.load_config(args.config)
 
     # Update configuration options from command-line options.
-    ## verbose -> config.verbose
+    config.get('verbose').value = args.verbose
+    print(args.verbose, config.get('verbose').value)
     ## airmass -> config.atmosphere.airmass
     ## exptime -> config.instrument.constants.exposure_time
     ## source_type -> config.instrument.fiberloss.table.path
-    assert args.airmass == 1.0
-    assert args.exptime == 1000.0
-    assert args.model == 'qso'
 
     # Initialize the source to simulate.
     source = specsim.source.initialize(config)
@@ -126,6 +100,7 @@ def main(args=None):
             specSummary += ' %s=%.2f' % (band,mags[band])
     print(specSummary)
     '''
+    specSummary = 'Summary Line #1'
 
     # Initialize the simulator.
     qsim = specsim.quick.Quick(config)
@@ -153,7 +128,6 @@ def main(args=None):
         nsky = np.sum(results.nsky,axis=1)
         # Try opening the requested output file.
         with open(args.outfile,'w') as out:
-            print('# INFILE=',args.infile,file=out)
             print('# AIRMASS=',qsim.airmass,file=out)
             print('# EXPTIME=',qsim.expTime,file=out)
             print('#',file=out)

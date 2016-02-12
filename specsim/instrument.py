@@ -1,5 +1,13 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Model an instrument response for spectroscopic simulations.
+
+An instrument model is usually initialized from a configuration, for example:
+
+    >>> import specsim.config
+    >>> config = specsim.config.load_config('test')
+    >>> instrument = initialize(config)
+    >>> print(np.round(instrument.exposure_time, 1))
+    1000.0 s
 """
 from __future__ import print_function, division
 
@@ -204,7 +212,7 @@ def initialize(config):
     """
     name = config.instrument.name
     cameras = config.instrument.cameras
-    camera_names = cameras._value.keys()
+    camera_names = cameras.keys()
     initialized_cameras = []
     for camera_name in camera_names:
         camera = getattr(cameras, camera_name)

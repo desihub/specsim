@@ -20,6 +20,14 @@ where :math:`s(\lambda)` is the source flux entering the atmosphere,
 :math:`e(\lambda)` is the zenith extinction, :math:`X` is the airmass,
 :math:`a` is the fiber entrance face area, and :math:`b(\lambda)` is the
 sky emission surface brightness.
+
+An atmosphere model is usually initialized from a configuration, for example:
+
+    >>> import specsim.config
+    >>> config = specsim.config.load_config('test')
+    >>> atmosphere = initialize(config)
+    >>> atmosphere.airmass
+    1.0
 """
 from __future__ import print_function, division
 

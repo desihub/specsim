@@ -5,16 +5,22 @@ Configuration data is normally loaded from a yaml file. Some standard
 configurations are included with this package and can be loaded by name,
 for example:
 
->>> test_config = load_config('test')
+    >>> test_config = load_config('test')
 
 Otherwise any filename with extension .yaml can be loaded::
 
-    test_config('path/my_config.yaml')
+    my_config = load_config('path/my_config.yaml')
 
 Configuration data is accessed using attribute notation to specify a
 sequence of keys:
 
-    test_config.name
+    >>> test_config.name
+    'Test Simulation'
+    >>> test_config.atmosphere.airmass
+    1.0
+
+Use :meth:`Configuration.get_constants` to parse values with dimensions and
+:meth:`Configuration.load_table` to load and interpolate tabular data.
 """
 from __future__ import print_function, division
 
@@ -39,6 +45,10 @@ class Node(object):
     def __init__(self, value, path=[]):
         self._assign('_value', value)
         self._assign('_path', path)
+
+
+    def keys(self):
+        return self._value.keys()
 
 
     def _assign(self, name, value):
@@ -131,7 +141,7 @@ class Configuration(Node):
         """
         constants = {}
         node = parent.constants
-        names = sorted(node._value.keys())
+        names = sorted(node.keys())
         if required_names is not None and sorted(required_names) != names:
             raise RuntimeError(
                 'Expected {0} for "{1}"'.format(required_names, node))
@@ -169,16 +179,17 @@ class Configuration(Node):
         required_names = sorted(required_names)
 
         columns = node.columns
-        config_column_names = sorted(columns._value.keys())
+        config_column_names = sorted(columns.keys())
         if required_names != config_column_names:
             raise RuntimeError(
                 'Expected {0} for "{1}"'.format(required_names, columns))
 
         # Prepare the arguments we will send to astropy.table.Table.read()
         read_args = {}
+        keys = node.keys()
         for key in ('format', 'hdu'):
-            if key in node._value:
-                read_args[key] = node._value[key]
+            if key in keys:
+                read_args[key] = getattr(node, key)
 
         table = astropy.table.Table.read(path, **read_args)
         if self.verbose:

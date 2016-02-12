@@ -80,21 +80,21 @@ instrument:
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 3.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
-            psf:
+            ccd:
                 table:
                     path: specpsf/psf-quicksim.fits
                     hdu: QUICKSIM-B
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
-                        angstroms_per_row:
+                        row_size:
                             name: angstroms_per_row
                             # The file uses Angstrom / row but "row" is not
                             # recognized by astropy.units so we replace it with
                             # the linear "pixel" unit.
                             unit: Angstrom / pixel
                             override_unit: yes
-                        fwhm_wave: { name: fwhm_wave }
+                        fwhm_resolution: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
@@ -112,21 +112,21 @@ instrument:
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
-            psf:
+            ccd:
                 table:
                     path: specpsf/psf-quicksim.fits
                     hdu: QUICKSIM-R
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
-                        angstroms_per_row:
+                        row_size:
                             name: angstroms_per_row
                             # The file uses Angstrom / row but "row" is not
                             # recognized by astropy.units so we replace it with
                             # the linear "pixel" unit.
                             unit: Angstrom / pixel
                             override_unit: yes
-                        fwhm_wave: { name: fwhm_wave }
+                        fwhm_resolution: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
@@ -144,21 +144,21 @@ instrument:
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
-            psf:
+            ccd:
                 table:
                     path: specpsf/psf-quicksim.fits
                     hdu: QUICKSIM-Z
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
-                        angstroms_per_row:
+                        row_size:
                             name: angstroms_per_row
                             # The file uses Angstrom / row but "row" is not
                             # recognized by astropy.units so we replace it with
                             # the linear "pixel" unit.
                             unit: Angstrom / pixel
                             override_unit: yes
-                        fwhm_wave: { name: fwhm_wave }
+                        fwhm_resolution: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:

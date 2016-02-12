@@ -123,7 +123,7 @@ class Instrument(object):
                 cwave, camera.sigma_wave.to(wave_unit).value,
                 ls='-', color=color)
             ax2.plot(
-                cwave, camera.angstroms_per_row.to(wave_unit / u.pixel).value,
+                cwave, camera.row_size.to(wave_unit / u.pixel).value,
                 ls='--', color=color)
 
             ax2_rhs.plot(cwave, camera.neff_spatial, ls=':', color=color)
@@ -157,14 +157,14 @@ class Instrument(object):
 class Camera(object):
     """
     """
-    def __init__(self, name, wavelength, throughput, angstroms_per_row,
-                 fwhm_wave, neff_spatial, wavelength_min,
+    def __init__(self, name, wavelength, throughput, row_size,
+                 fwhm_resolution, neff_spatial, wavelength_min,
                  wavelength_max, read_noise, dark_current, gain):
         self.name = name
         self.wavelength = wavelength
         self.throughput = throughput
-        self.angstroms_per_row = angstroms_per_row
-        self.fwhm_wave = fwhm_wave
+        self.row_size = row_size
+        self.fwhm_resolution = fwhm_resolution
         self.neff_spatial = neff_spatial
         self.wavelength_min = wavelength_min
         self.wavelength_max = wavelength_max
@@ -174,14 +174,14 @@ class Camera(object):
 
         # Calculate the RMS resolution assuming a Gaussian PSF.
         fwhm_to_sigma = 1. / (2 * math.sqrt(2 * math.log(2)))
-        self.sigma_wave = fwhm_to_sigma * self.fwhm_wave
+        self.sigma_wave = fwhm_to_sigma * self.fwhm_resolution
 
         # Calculate the size of each wavelength bin in units of pixel rows.
         wavelength_bin_size = np.gradient(self.wavelength)
-        mask = self.angstroms_per_row.value > 0
+        mask = self.row_size.value > 0
         neff_wavelength = np.zeros_like(self.neff_spatial)
         neff_wavelength[mask] = (
-            wavelength_bin_size[mask] / self.angstroms_per_row[mask]
+            wavelength_bin_size[mask] / self.row_size[mask]
             ).to(u.pixel)
 
         # Calculate the effective pixel area contributing to the signal
@@ -220,16 +220,16 @@ def initialize(config):
     initialized_cameras = []
     for camera_name in camera_names:
         camera = getattr(cameras, camera_name)
-        psf = config.load_table(
-            camera.psf, ['angstroms_per_row', 'fwhm_wave', 'neff_spatial'])
+        ccd = config.load_table(
+            camera.ccd, ['row_size', 'fwhm_resolution', 'neff_spatial'])
         throughput = config.load_table(camera.throughput, 'throughput')
         constants = config.get_constants(camera,
             ['wavelength_min', 'wavelength_max',
              'read_noise', 'dark_current', 'gain'])
         initialized_cameras.append(Camera(
             camera_name, config.wavelength, throughput,
-            psf['angstroms_per_row'], psf['fwhm_wave'],
-            psf['neff_spatial'], constants['wavelength_min'],
+            ccd['row_size'], ccd['fwhm_resolution'],
+            ccd['neff_spatial'], constants['wavelength_min'],
             constants['wavelength_max'], constants['read_noise'],
             constants['dark_current'], constants['gain']))
 

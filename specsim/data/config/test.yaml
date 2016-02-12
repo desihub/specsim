@@ -68,15 +68,15 @@ instrument:
                 read_noise: 2.9 electron
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
-            psf:
+            ccd:
                 table:
                     format: ascii.ecsv
                     path: test/test_psf.ecsv
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
-                        angstroms_per_row: { name: angstroms_per_row }
-                        fwhm_wave: { name: fwhm_wave }
+                        row_size: { name: angstroms_per_row }
+                        fwhm_resolution: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:

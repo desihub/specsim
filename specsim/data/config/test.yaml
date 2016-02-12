@@ -63,8 +63,6 @@ instrument:
     cameras:
         r:
             constants:
-                wavelength_min: 5600 Angstrom
-                wavelength_max: 7400 Angstrom
                 read_noise: 2.9 electron
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu

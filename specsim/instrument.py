@@ -120,7 +120,7 @@ class Instrument(object):
             ax1_rhs.plot(cwave, total_noise / dwave, ls='-.', color=color)
 
             ax2.plot(
-                cwave, camera.sigma_wave.to(wave_unit).value,
+                cwave, camera.rms_resolution.to(wave_unit).value,
                 ls='-', color=color)
             ax2.plot(
                 cwave, camera.row_size.to(wave_unit / u.pixel).value,
@@ -158,23 +158,53 @@ class Camera(object):
     """
     """
     def __init__(self, name, wavelength, throughput, row_size,
-                 fwhm_resolution, neff_spatial, wavelength_min,
-                 wavelength_max, read_noise, dark_current, gain):
+                 fwhm_resolution, neff_spatial, read_noise, dark_current, gain):
         self.name = name
         self.wavelength = wavelength
         self.throughput = throughput
         self.row_size = row_size
         self.fwhm_resolution = fwhm_resolution
         self.neff_spatial = neff_spatial
-        self.wavelength_min = wavelength_min
-        self.wavelength_max = wavelength_max
         self.read_noise = read_noise
         self.dark_current = dark_current
         self.gain = gain
 
         # Calculate the RMS resolution assuming a Gaussian PSF.
         fwhm_to_sigma = 1. / (2 * math.sqrt(2 * math.log(2)))
-        self.sigma_wave = fwhm_to_sigma * self.fwhm_resolution
+        self.rms_resolution = fwhm_to_sigma * self.fwhm_resolution
+
+        # The CCD properties should all have consistent coverage.
+        ccd_nonzero = np.where(self.row_size > 0)[0]
+        ccd_first, ccd_last = ccd_nonzero[0], ccd_nonzero[-1] + 1
+        if (np.any(self.fwhm_resolution[:ccd_first] != 0) or
+            np.any(self.fwhm_resolution[ccd_last:] != 0)):
+            raise RuntimeError('Resolution extends beyond CCD coverage.')
+        if (np.any(self.neff_spatial[:ccd_first] != 0) or
+            np.any(self.neff_spatial[ccd_last:] != 0)):
+            raise RuntimeError('Spatial Neff extends beyond CCD coverage.')
+        if np.any(self.row_size[ccd_first:ccd_last] <= 0.):
+            raise RuntimeError('CCD coverage has holes.')
+        if np.any(self.fwhm_resolution[ccd_first:ccd_last] <= 0.):
+            raise RuntimeError('CCD resolution has holes.')
+        if np.any(self.neff_spatial[ccd_first:ccd_last] <= 0.):
+            raise RuntimeError('CCD spatial Neff has holes.')
+
+        self.ccd_coverage = slice(ccd_first, ccd_last)
+        self.wavelength_min = self.wavelength[ccd_first]
+        self.wavelength_max = self.wavelength[ccd_last - 1]
+
+        # The camera throughput should have no holes and extend beyond the
+        # CCD coverage to allow for dispersion at the edges.
+        thru_nonzero = np.where(self.throughput > 0)[0]
+        thru_first, thru_last = thru_nonzero[0], thru_nonzero[-1] + 1
+        if np.any(self.throughput[thru_first:thru_last] <= 0.):
+            raise RuntimeError('Camera throughput has holes.')
+        thru_min = self.wavelength[thru_first]
+        thru_max = self.wavelength[thru_last - 1]
+        if thru_min > self.wavelength_min - self.rms_resolution[ccd_first]:
+            raise RuntimeError('Throughput does not allow for edge dispersion.')
+        if thru_max < self.wavelength_max + self.rms_resolution[ccd_last - 1]:
+            raise RuntimeError('Throughput does not allow for edge dispersion.')
 
         # Calculate the size of each wavelength bin in units of pixel rows.
         wavelength_bin_size = np.gradient(self.wavelength)
@@ -224,13 +254,11 @@ def initialize(config):
             camera.ccd, ['row_size', 'fwhm_resolution', 'neff_spatial'])
         throughput = config.load_table(camera.throughput, 'throughput')
         constants = config.get_constants(camera,
-            ['wavelength_min', 'wavelength_max',
-             'read_noise', 'dark_current', 'gain'])
+            ['read_noise', 'dark_current', 'gain'])
         initialized_cameras.append(Camera(
             camera_name, config.wavelength, throughput,
             ccd['row_size'], ccd['fwhm_resolution'],
-            ccd['neff_spatial'], constants['wavelength_min'],
-            constants['wavelength_max'], constants['read_noise'],
+            ccd['neff_spatial'], constants['read_noise'],
             constants['dark_current'], constants['gain']))
 
     constants = config.get_constants(

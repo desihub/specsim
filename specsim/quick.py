@@ -20,10 +20,10 @@ class QuickCamera(object):
     """
     A class representing one camera in a quick simulation.
     """
-    def __init__(self, wavelengthRange, wavelengthGrid, sigma_wave,
+    def __init__(self, wavelengthRange, wavelengthGrid, rms_resolution,
                  throughput, dark_current_per_bin, read_noise_per_bin):
         self.wavelengthRange = wavelengthRange
-        self.sigmaWavelength = sigma_wave
+        self.sigmaWavelength = rms_resolution
         self.throughput = throughput
         self.readnoisePerBin = read_noise_per_bin
         self.darkCurrentPerBin = dark_current_per_bin
@@ -155,7 +155,7 @@ class Quick(object):
         for camera in self.instrument.cameras:
             quick_camera = QuickCamera(
                 (camera.wavelength_min.value, camera.wavelength_max.value),
-                config.wavelength.value, camera.sigma_wave.value,
+                config.wavelength.value, camera.rms_resolution.value,
                 camera.throughput, camera.dark_current_per_bin.value,
                 camera.read_noise_per_bin.value)
 

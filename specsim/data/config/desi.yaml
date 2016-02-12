@@ -74,8 +74,6 @@ instrument:
     cameras:
         b:
             constants:
-                wavelength_min: 3569 Angstrom
-                wavelength_max: 5949 Angstrom
                 read_noise: 3.0 electron
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 3.0 electron/(hour pixel**2)
@@ -106,8 +104,6 @@ instrument:
                         throughput: { name: throughput }
         r:
             constants:
-                wavelength_min: 5625 Angstrom
-                wavelength_max: 7741 Angstrom
                 read_noise: 2.9 electron
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)
@@ -138,8 +134,6 @@ instrument:
                         throughput: { name: throughput }
         z:
             constants:
-                wavelength_min: 7435 Angstrom
-                wavelength_max: 9834 Angstrom
                 read_noise: 2.9 electron
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)

@@ -5,7 +5,7 @@
 # - {name: throughput, datatype: float64}
 # meta: !!omap
 # - {description: Constant 35% r-band throughput model for testing.}
-wavelength fiberloss
+wavelength throughput
 5500.0 0.0
 5700.0 0.35
 7300.0 0.35

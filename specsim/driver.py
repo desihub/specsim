@@ -92,23 +92,10 @@ def main(args=None):
     assert args.exptime == 1000.0
     assert args.model == 'qso'
 
-    # Check for required arguments.
-    if args.infile is None:
-        print('A source spectrum must be specified with the --infile option.')
-        return -1
-    if args.model is None:
-        print('A source model type must be specified with the --model option.')
-        return -1
+    # Initialize the source to simulate.
+    source = specsim.source.initialize(config)
 
-    # Load the source spectrum to use.
-    if not os.path.isfile(args.infile):
-        print('No such infile: %s' % args.infile)
-        return -1
-    srcSpectrum = specsim.spectrum.SpectralFluxDensity.load(
-        args.infile, wavelength_column=args.infile_wavecol,
-        values_column=args.infile_fluxcol,
-        extrapolated_value=(0. if args.truncated else None))
-
+    '''
     # Rescale the source flux if requested.
     if args.ab_magnitude is not None:
         try:
@@ -138,14 +125,15 @@ def main(args=None):
         if mags[band] is not None:
             specSummary += ' %s=%.2f' % (band,mags[band])
     print(specSummary)
+    '''
 
-    # Create a quick simulator using the default instrument model.
+    # Initialize the simulator.
     qsim = specsim.quick.Quick(config)
 
     # Perform a quick simulation of the observed spectrum.
     if args.verbose:
         print('Running quick simulation.')
-    results = qsim.simulate(sourceType=args.model,sourceSpectrum=srcSpectrum,
+    results = qsim.simulate(source,
         airmass=args.airmass,expTime=args.exptime,downsampling=args.downsampling)
 
     # Calculate the median total SNR in bins with some observed flux.
@@ -167,7 +155,6 @@ def main(args=None):
         with open(args.outfile,'w') as out:
             print('# INFILE=',args.infile,file=out)
             print('# AIRMASS=',qsim.airmass,file=out)
-            print('# MODEL=',qsim.sourceType,file=out)
             print('# EXPTIME=',qsim.expTime,file=out)
             print('#',file=out)
             print('# Median (S/N)=',medianSNR,file=out)

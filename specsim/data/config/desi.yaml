@@ -168,3 +168,17 @@ instrument:
                     columns:
                         wavelength: { name: wavelength, unit: Angstrom }
                         throughput: { name: throughput }
+
+# The source configuration is interpreted and validated by the
+# specsim.source module.
+source:
+    name: 22nd AB magnitude reference
+    table:
+        format: ascii
+        path: spectra/spec-ABmag22.0.dat
+        columns:
+            wavelength: { index: 0, unit: Angstrom }
+            flux:
+                index: 1
+                # Note the factor of 1e-17 in the units!
+                unit: 1e-17 erg / (Angstrom cm2 s)

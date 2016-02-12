@@ -84,5 +84,16 @@ instrument:
                     path: test/test_throughput.ecsv
                     extrapolated_value: 0.0
                     columns:
-                        wavelength: { name: wavelength, unit: Angstrom }
+                        wavelength: { name: wavelength }
                         throughput: { name: throughput }
+
+# The source configuration is interpreted and validated by the
+# specsim.source module.
+source:
+    name: Constant flux density test source
+    table:
+        format: ascii.ecsv
+        path: test/test_source.ecsv
+        columns:
+            wavelength: { name: wavelength }
+            flux: { name: flux }

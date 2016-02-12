@@ -171,7 +171,7 @@ class Quick(object):
             self.cameras.append(quick_camera)
 
 
-    def simulate(self,sourceType,sourceSpectrum,airmass=1.,nread=1.,
+    def simulate(self,source,airmass=1.,nread=1.,
                  expTime=None,downsampling=5):
         """
         simulate
@@ -233,16 +233,9 @@ class Quick(object):
         """
         expTime = self.instrument.exposure_time.to(u.s).value
 
-        # Convert the source to a SpectralFluxDensity if necessary, setting the flux to zero
-        # outside the input source spectrum's range.
-        if not isinstance(sourceSpectrum,specsim.spectrum.SpectralFluxDensity):
-            sourceSpectrum = specsim.spectrum.SpectralFluxDensity(
-                sourceSpectrum[0],sourceSpectrum[1],extrapolatedValue=0.)
-
         # Resample the source spectrum to our simulation grid, if necessary.
-        self.sourceFlux = sourceSpectrum.values
-        if not np.array_equal(self.wavelengthGrid,sourceSpectrum.wavelength):
-            self.sourceFlux = sourceSpectrum.getResampledValues(self.wavelengthGrid)
+        self.sourceFlux = source.flux.to(
+            1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom)).value
 
         # Loop over cameras.
         sourcePhotonsSmooth = { }
@@ -375,7 +368,6 @@ class Quick(object):
 
         # Remember the parameters used for this simulation.
         self.airmass = airmass
-        self.sourceType = sourceType
         self.expTime = expTime
 
         # Return the downsampled vectors

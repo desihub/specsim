@@ -57,15 +57,19 @@ class Instrument(object):
             self.effective_area * wavelength_bin_size / energy_per_photon
             ).to((u.cm**2 * u.Angstrom) / u.erg)
 
+        wave_mid = []
         for i, camera in enumerate(self.cameras):
+            wave_min, wave_max = camera.wavelength_min, camera.wavelength_max
+            wave_mid.append(0.5 * (wave_min + wave_max))
             if i == 0:
-                self.wavelength_min = camera.wavelength_min
-                self.wavelength_max = camera.wavelength_max
+                self.wavelength_min = wave_min
+                self.wavelength_max = wave_max
             else:
-                self.wavelength_min = min(
-                    self.wavelength_min, camera.wavelength_min)
-                self.wavelength_max = max(
-                    self.wavelength_max, camera.wavelength_max)
+                self.wavelength_min = min(self.wavelength_min, wave_min)
+                self.wavelength_max = max(self.wavelength_max, wave_max)
+
+        # Sort cameras in order of increasing wavelength.
+        self.cameras = [x for (y, x) in sorted(zip(wave_mid, self.cameras))]
 
 
     def plot(self, flux=1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom),

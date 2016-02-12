@@ -4,7 +4,7 @@
 # - {name: wavelength, unit: Angstrom, datatype: float64}
 # - {name: throughput, datatype: float64}
 # meta: !!omap
-# - {description: Constant 60% fiberloss model for testing.}
+# - {description: Constant 35% r-band throughput model for testing.}
 wavelength fiberloss
 5500.0 0.0
 5700.0 0.35

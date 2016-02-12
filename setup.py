@@ -78,6 +78,7 @@ package_info = get_package_info()
 package_info['package_data'].setdefault(PACKAGENAME, [])
 package_info['package_data'][PACKAGENAME].append('data/README.rst')
 package_info['package_data'][PACKAGENAME].append('data/config/*')
+package_info['package_data'][PACKAGENAME].append('data/test/*')
 
 # Define entry points for command-line scripts
 entry_points = {'console_scripts': []}

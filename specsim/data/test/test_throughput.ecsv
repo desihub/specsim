@@ -2,9 +2,11 @@
 # ---
 # datatype:
 # - {name: wavelength, unit: Angstrom, datatype: float64}
-# - {name: fiberloss, datatype: float64}
+# - {name: throughput, datatype: float64}
 # meta: !!omap
 # - {description: Constant 60% fiberloss model for testing.}
 wavelength fiberloss
- 3000.0 0.5
-10000.0 0.6
+5500.0 0.0
+5700.0 0.35
+7300.0 0.35
+7500.0 0.0

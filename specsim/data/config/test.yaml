@@ -63,30 +63,25 @@ instrument:
     cameras:
         r:
             constants:
-                wavelength_min: 5625 Angstrom
-                wavelength_max: 7741 Angstrom
+                wavelength_min: 5600 Angstrom
+                wavelength_max: 7400 Angstrom
                 read_noise: 2.9 electron
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
             psf:
                 table:
-                    path: /Users/david/Cosmo/DESI/code/desimodel/data/specpsf/psf-quicksim.fits
-                    hdu: QUICKSIM-R
+                    format: ascii.ecsv
+                    path: test/test_psf.ecsv
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
-                        angstroms_per_row:
-                            name: angstroms_per_row
-                            # The units are already correct in the file but
-                            # not propagated since they are not valid for FITS.
-                            unit: Angstrom / pixel
-                            override_unit: yes
+                        angstroms_per_row: { name: angstroms_per_row }
                         fwhm_wave: { name: fwhm_wave }
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: /Users/david/Cosmo/DESI/code/desimodel/data/throughput/thru-R.fits
-                    hdu: THROUGHPUT
+                    format: ascii.ecsv
+                    path: test/test_throughput.ecsv
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength, unit: Angstrom }

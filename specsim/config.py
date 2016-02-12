@@ -1,11 +1,27 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Manage simulation configuration data.
+
+Configuration data is normally loaded from a yaml file. Some standard
+configurations are included with this package and can be loaded by name,
+for example:
+
+>>> test_config = load_config('test')
+
+Otherwise any filename with extension .yaml can be loaded::
+
+    test_config('path/my_config.yaml')
+
+Configuration data is accessed using attribute notation to specify a
+sequence of keys:
+
+    test_config.name
 """
 from __future__ import print_function, division
 
 import os
 import os.path
 import math
+import re
 
 import yaml
 
@@ -18,32 +34,53 @@ import astropy.utils.data
 
 
 class Node(object):
-
+    """A single node of a configuration data structure.
+    """
     def __init__(self, value, path=[]):
-        self.value = value
-        self.path = path
+        self._assign('_value', value)
+        self._assign('_path', path)
+
+
+    def _assign(self, name, value):
+        # Bypass our __setattr__
+        super(Node, self).__setattr__(name, value)
 
 
     def __str__(self):
-        return '.'.join(self.path)
+        return '.'.join(self._path)
 
 
-    def get(self, path, required=True, default=None):
-        """Get the value of a configuration parameter.
-        """
-        node = self.value
-        node_path = self.path[:]
-        for name in path.split('.'):
-            node_path.append(name)
-            if name not in node:
-                if required:
-                    raise KeyError(
-                        'Missing required config node "{0}".'
-                        .format('.'.join(node_path)))
-                else:
-                    return default
-            node = node[name]
-        return Node(node, node_path)
+    def __getattr__(self, name):
+        # This method is only called when self.name fails.
+        child_path = self._path[:]
+        child_path.append(name)
+        if name in self._value:
+            child_value = self._value[name]
+            if isinstance(child_value, dict):
+                return Node(child_value, child_path)
+            else:
+                # Return the actual value for leaf nodes.
+                return child_value
+        else:
+            raise AttributeError(
+                'No such config node: {0}'.format('.'.join(child_path)))
+
+
+    def __setattr__(self, name, value):
+        # This method is always triggered by self.name = ...
+        child_path = self._path[:]
+        child_path.append(name)
+        if name in self._value:
+            child_value = self._value[name]
+            if isinstance(child_value, dict):
+                raise AttributeError(
+                    'Cannot assign to non-leaf config node: {0}'
+                    .format('.'.join(child_path)))
+            else:
+                self._value[name] = value
+        else:
+            raise AttributeError(
+                'No such config node: {0}'.format('.'.join(child_path)))
 
 
 class Configuration(Node):
@@ -66,49 +103,40 @@ class Configuration(Node):
     def __init__(self, config):
 
         Node.__init__(self, config)
-        self.name = self.get('name').value
 
         # Initialize our wavelength grid.
-        wave_config = self.get('wavelength')
-        wave_min = wave_config.get('min').value
-        wave_max = wave_config.get('max').value
-        wave_step = wave_config.get('step').value
-        nwave = 1 + int(math.floor((wave_max - wave_min) / wave_step))
+        grid = self.wavelength_grid
+        nwave = 1 + int(math.floor(
+            (grid.max - grid.min) / grid.step))
         if nwave <= 0:
             raise ValueError('Invalid wavelength grid.')
-        try:
-            wave_unit = astropy.units.Unit(wave_config.get('unit').value)
-        except exception as e:
-            raise e
-        self.wavelength = (wave_min + wave_step * np.arange(nwave)) * wave_unit
+        wave_unit = astropy.units.Unit(grid.unit)
+        wave = (grid.min + grid.step * np.arange(nwave)) * wave_unit
+        self._assign('wavelength', wave)
 
         # Use environment variables to interpolate {NAME} in the base path.
-        base_path = self.get('base_path').value
+        base_path = self.base_path
         if base_path == '<PACKAGE_DATA>':
-            self.base_path = astropy.utils.data._find_pkg_data_path('data')
+            self._assign(
+                '_base_path', astropy.utils.data._find_pkg_data_path('data'))
         else:
             try:
-                self.base_path = base_path.format(**os.environ)
+                self._assign('_base_path', base_path.format(**os.environ))
             except KeyError as e:
                 raise ValueError('Environment variable not set: {0}.'.format(e))
-
-        self.verbose = self.get('verbose').value
-        if self.verbose:
-            print('Using config "{0}" with base path "{1}".'
-                  .format(self.name, self.base_path))
 
 
     def get_constants(self, parent, required_names=None):
         """
         """
         constants = {}
-        node = parent.get('constants')
-        names = sorted(node.value.keys())
+        node = parent.constants
+        names = sorted(node._value.keys())
         if required_names is not None and sorted(required_names) != names:
             raise RuntimeError(
                 'Expected {0} for "{1}"'.format(required_names, node))
         for name in names:
-            value = node.get(name).value
+            value = getattr(node, name)
             unit = None
             if isinstance(value, basestring):
                 # A white space delimeter is required between value and units.
@@ -123,10 +151,10 @@ class Configuration(Node):
     def load_table(self, parent, column_names, interpolate=True):
         """
         """
-        node = parent.get('table')
+        node = parent.table
 
         # Prepend our base path if this node's path is not already absolute.
-        path = os.path.join(self.base_path, node.get('path').value)
+        path = os.path.join(self._base_path, node.path)
 
         # Check that the required column names are present.
         if isinstance(column_names, basestring):
@@ -140,8 +168,8 @@ class Configuration(Node):
             required_names.append('wavelength')
         required_names = sorted(required_names)
 
-        columns = node.get('columns')
-        config_column_names = sorted(columns.value.keys())
+        columns = node.columns
+        config_column_names = sorted(columns._value.keys())
         if required_names != config_column_names:
             raise RuntimeError(
                 'Expected {0} for "{1}"'.format(required_names, columns))
@@ -149,8 +177,8 @@ class Configuration(Node):
         # Prepare the arguments we will send to astropy.table.Table.read()
         read_args = {}
         for key in ('format', 'hdu'):
-            if key in node.value:
-                read_args[key] = node.value[key]
+            if key in node._value:
+                read_args[key] = node._value[key]
 
         table = astropy.table.Table.read(path, **read_args)
         if self.verbose:
@@ -160,22 +188,23 @@ class Configuration(Node):
         # Loop over columns to read.
         loaded_columns = {}
         for config_name in config_column_names:
-            column = columns.get(config_name)
+            column = getattr(columns, config_name)
             # Look up the column data by index first, then by name.
-            column_index = column.get('index', required=False)
-            if column_index is not None:
-                column_data = table.columns[column_index.value]
-            else:
-                column_data = table[column.get('name').value]
+            try:
+                column_data = table.columns[column.index]
+            except AttributeError:
+                column_data = table[column.name]
             column_values = column_data.data
             # Resolve column units.
-            column_unit = column.get('unit', required=False)
-            if column_unit is not None:
-                column_unit = astropy.units.Unit(column_unit.value)
-            override_unit = column.get(
-                'override_unit', required=False, default=False)
-            if override_unit:
-                override_unit = override_unit.value # boolean
+            try:
+                column_unit = astropy.units.Unit(column.unit)
+            except AttributeError:
+                column_unit = None
+            try:
+                override_unit = column.override_unit
+                assert override_unit in (True, False)
+            except AttributeError:
+                override_unit = False
 
             if override_unit or column_data.unit is None:
                 if column_unit is not None:
@@ -200,12 +229,12 @@ class Configuration(Node):
                 wavelength = wavelength.to(self.wavelength.unit)
 
             # Initialize extrapolation if requested.
-            fill_value = node.get('extrapolated_value', required=False)
-            if fill_value is None:
-                bounds_error = True
-            else:
-                fill_value = fill_value.value
+            try:
+                fill_value = node.extrapolated_value
                 bounds_error = False
+            except AttributeError:
+                fill_value = None
+                bounds_error = True
 
             # Loop over other columns to interpolate onto our wavelength grid.
             for column_name in column_names:
@@ -231,8 +260,12 @@ class Configuration(Node):
             return loaded_columns
 
 
-def load_config(name):
+def load_config(name, config_type=Configuration):
     """Load configuration data from a YAML file.
+
+    Valid configuration files are YAML files containing no custom types, no
+    sequences (lists), and with all mapping (dict) keys being valid python
+    identifiers.
 
     Parameters
     ----------
@@ -246,6 +279,13 @@ def load_config(name):
     -------
     Configuration
         Initialized configuration object.
+
+    Raises
+    ------
+    ValueError
+        File name has wrong extension or does not exist.
+    RuntimeError
+        Configuration data failed a validation test.
     """
     base_name, extension = os.path.splitext(name)
     if extension not in ('', '.yaml'):
@@ -257,5 +297,24 @@ def load_config(name):
             'data/config/{0}.yaml'.format(name))
     if not os.path.isfile(file_name):
         raise ValueError('No such config file "{0}".'.format(file_name))
+
+    # Validate that all mapping keys are valid python identifiers.
+    valid_key = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*\Z')
     with open(file_name) as f:
-        return Configuration(yaml.safe_load(f))
+        next_value_is_key = False
+        for token in yaml.scan(f):
+            if isinstance(
+                token,
+                (yaml.BlockSequenceStartToken, yaml.FlowSequenceStartToken)):
+                raise RuntimeError('Config sequences not implemented yet.')
+            if next_value_is_key:
+                if not isinstance(token, yaml.ScalarToken):
+                    raise RuntimeError(
+                        'Invalid config key type: {0}'.format(token))
+                if not valid_key.match(token.value):
+                    raise RuntimeError(
+                        'Invalid config key name: {0}'.format(token.value))
+            next_value_is_key = isinstance(token, yaml.KeyToken)
+
+    with open(file_name) as f:
+        return config_type(yaml.safe_load(f))

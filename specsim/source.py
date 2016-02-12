@@ -30,7 +30,5 @@ def initialize(config):
         An initialized source model.
     """
     # Check for required top-level config nodes.
-    source = config.get('source')
-    flux = config.load_table(source, 'flux')
-
+    flux = config.load_table(config.source, 'flux')
     return Source(config.wavelength, flux)

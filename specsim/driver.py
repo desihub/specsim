@@ -34,6 +34,10 @@ def main(args=None):
         help = 'provide verbose output on progress')
     parser.add_argument('-c', '--config', default = 'test',
         help = 'name of the simulation configuration to use')
+    parser.add_argument('--exposure-time', type=float, default=1000.,
+        help = 'exposure time in seconds to use.')
+    parser.add_argument('--airmass', type=float, default=1.,
+        help = 'atmosphere airmass to use.')
     '''
     parser.add_argument('--ab-magnitude', type = str, default = None,
         help = 'source spectrum flux rescaling, e.g. g=22.0 or r=21.5')
@@ -60,11 +64,10 @@ def main(args=None):
     config = specsim.config.load_config(args.config)
 
     # Update configuration options from command-line options.
-    config.get('verbose').value = args.verbose
-    print(args.verbose, config.get('verbose').value)
-    ## airmass -> config.atmosphere.airmass
-    ## exptime -> config.instrument.constants.exposure_time
-    ## source_type -> config.instrument.fiberloss.table.path
+    config.verbose = args.verbose
+    config.atmosphere.airmass = args.airmass
+    config.instrument.constants.exposure_time = (
+        '{0} s'.format(args.exposure_time))
 
     # Initialize the source to simulate.
     source = specsim.source.initialize(config)
@@ -109,7 +112,7 @@ def main(args=None):
     if args.verbose:
         print('Running quick simulation.')
     results = qsim.simulate(
-        source, downsampling=config.get('simulator.downsampling').value)
+        source, downsampling=config.simulator.downsampling)
 
     # Calculate the median total SNR in bins with some observed flux.
     medianSNR = np.median(results[results.obsflux > 0].snrtot)

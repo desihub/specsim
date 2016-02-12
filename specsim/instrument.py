@@ -202,17 +202,15 @@ def initialize(config):
     Instrument
         An initialized instrument model.
     """
-    name = config.get('instrument.name').value
-    cameras = config.get('instrument.cameras')
-    camera_names = cameras.value.keys()
+    name = config.instrument.name
+    cameras = config.instrument.cameras
+    camera_names = cameras._value.keys()
     initialized_cameras = []
     for camera_name in camera_names:
-        camera = cameras.get(camera_name)
+        camera = getattr(cameras, camera_name)
         psf = config.load_table(
-            camera.get('psf'),
-            ['angstroms_per_row', 'fwhm_wave', 'neff_spatial'])
-        throughput = config.load_table(
-            camera.get('throughput'), 'throughput')
+            camera.psf, ['angstroms_per_row', 'fwhm_wave', 'neff_spatial'])
+        throughput = config.load_table(camera.throughput, 'throughput')
         constants = config.get_constants(camera,
             ['wavelength_min', 'wavelength_max',
              'read_noise', 'dark_current', 'gain'])
@@ -224,12 +222,12 @@ def initialize(config):
             constants['dark_current'], constants['gain']))
 
     constants = config.get_constants(
-        config.get('instrument'),
+        config.instrument,
         ['exposure_time', 'primary_mirror_diameter', 'obscuration_diameter',
          'support_width', 'fiber_diameter'])
 
     fiber_acceptance = config.load_table(
-        config.get('instrument.fiberloss'), 'fiber_acceptance')
+        config.instrument.fiberloss, 'fiber_acceptance')
 
     instrument = Instrument(
         name, config.wavelength, fiber_acceptance, initialized_cameras,
@@ -238,7 +236,10 @@ def initialize(config):
         constants['exposure_time'])
 
     if config.verbose:
-        print('Telescope effective area: {0}'.format(instrument.effective_area))
-        print('Fiber entrance area: {0}'.format(instrument.fiber_area))
+        # Print some derived quantities.
+        print('Telescope effective area: {0:.3f}'
+              .format(instrument.effective_area))
+        print('Fiber entrance area: {0:.3f}'
+              .format(instrument.fiber_area))
 
     return instrument

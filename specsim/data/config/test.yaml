@@ -8,10 +8,10 @@ name: Test Simulation
 base_path: <PACKAGE_DATA>
 
 # Be verbose during the simulation?
-verbose: yes
+verbose: no
 
 # Specify the wavelength grid to use for simulation.
-wavelength:
+wavelength_grid:
     unit: Angstrom
     min: 4000.0
     max: 9000.0

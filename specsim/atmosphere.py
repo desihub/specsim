@@ -111,20 +111,14 @@ def initialize(config):
     Atmosphere
         An initialized atmosphere model.
     """
-    # Check for required top-level config nodes.
-    atmosphere = config.get('atmosphere')
-    sky = atmosphere.get('sky')
-    extinction = atmosphere.get('extinction')
-
-    # Look up option values.
-    extinct_emission = atmosphere.get('extinct_emission').value
-    airmass = atmosphere.get('airmass').value
+    atmosphere = config.atmosphere
 
     # Load tabulated data.
-    surface_brightness = config.load_table(sky, 'surface_brightness')
+    surface_brightness = config.load_table(
+        atmosphere.sky, 'surface_brightness')
     extinction_coefficient = config.load_table(
-        extinction, 'extinction_coefficient')
+        atmosphere.extinction, 'extinction_coefficient')
 
     return Atmosphere(
         config.wavelength, surface_brightness, extinction_coefficient,
-        extinct_emission, airmass)
+        atmosphere.extinct_emission, atmosphere.airmass)

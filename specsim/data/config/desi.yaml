@@ -5,10 +5,10 @@ name: DESI QuickSim
 base_path: '{DESIMODEL}/data'
 
 # Be verbose during the simulation?
-verbose: yes
+verbose: no
 
 # Specify the wavelength grid to use for simulation.
-wavelength:
+wavelength_grid:
     unit: Angstrom
     min: 3500.3
     max: 9999.7

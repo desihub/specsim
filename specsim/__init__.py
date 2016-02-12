@@ -15,6 +15,7 @@ if not _ASTROPY_SETUP_:
     import config
     import atmosphere
     import instrument
+    import source
     import quick
     import spectrum
     import transform

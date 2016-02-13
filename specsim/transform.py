@@ -486,7 +486,7 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
     >>> polaris = astropy.coordinates.ICRS(ra=37.95 * u.deg, dec=89.25 * u.deg)
     >>> when = adjust_time_to_hour_angle(night, polaris.ra, 0 * u.deg)
     >>> print('MJD %.3f' % when.mjd)
-    MJD 55099.401
+    MJD 55100.401
 
     Parameters
     ----------

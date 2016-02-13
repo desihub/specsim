@@ -109,11 +109,29 @@ class Configuration(Node):
     ------
     ValueError
         Missing required top-level configuration key.
+
+    Attributes
+    ----------
+    wavelength : astropy.units.Quantity
+        Array of linearly increasing wavelength values used for all simulation
+        calculations.  Determined by the wavelength_grid configuration
+        parameters.
+    abs_base_path : str
+        Absolute base path used for loading tabulated data.  Determined by
+        the basepath configuration parameter.
     """
     def __init__(self, config):
 
         Node.__init__(self, config)
+        self.update()
 
+
+    def update(self):
+        """Update this configuration.
+
+        Updates the wavelength and abs_base_path attributes based on
+        the current settings of the wavelength_grid and base_path nodes.
+        """
         # Initialize our wavelength grid.
         grid = self.wavelength_grid
         nwave = 1 + int(math.floor(
@@ -128,10 +146,10 @@ class Configuration(Node):
         base_path = self.base_path
         if base_path == '<PACKAGE_DATA>':
             self._assign(
-                '_base_path', astropy.utils.data._find_pkg_data_path('data'))
+                'abs_base_path', astropy.utils.data._find_pkg_data_path('data'))
         else:
             try:
-                self._assign('_base_path', base_path.format(**os.environ))
+                self._assign('abs_base_path', base_path.format(**os.environ))
             except KeyError as e:
                 raise ValueError('Environment variable not set: {0}.'.format(e))
 
@@ -164,7 +182,7 @@ class Configuration(Node):
         node = parent.table
 
         # Prepend our base path if this node's path is not already absolute.
-        path = os.path.join(self._base_path, node.path)
+        path = os.path.join(self.abs_base_path, node.path)
 
         # Check that the required column names are present.
         if isinstance(column_names, basestring):

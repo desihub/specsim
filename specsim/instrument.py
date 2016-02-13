@@ -189,7 +189,9 @@ class Camera(object):
         if np.any(self.neff_spatial[ccd_first:ccd_last] <= 0.):
             raise RuntimeError('CCD spatial Neff has holes.')
 
-        self.ccd_coverage = slice(ccd_first, ccd_last)
+        #self.ccd_slice = slice(ccd_first, ccd_last)
+        self.ccd_coverage = np.zeros_like(self.wavelength.value, dtype=bool)
+        self.ccd_coverage[ccd_first:ccd_last] = True
         self.wavelength_min = self.wavelength[ccd_first]
         self.wavelength_max = self.wavelength[ccd_last - 1]
 

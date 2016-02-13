@@ -8,7 +8,6 @@ import math
 import numpy as np
 import scipy.sparse as sp
 import scipy.interpolate
-from scipy.special import exp10
 from astropy import units as u
 
 import specsim.spectrum
@@ -20,30 +19,16 @@ class QuickCamera(object):
     """
     A class representing one camera in a quick simulation.
     """
-    def __init__(self, wavelengthRange, wavelengthGrid, rms_resolution,
-                 throughput, dark_current_per_bin, read_noise_per_bin):
-        self.wavelengthRange = wavelengthRange
-        self.sigmaWavelength = rms_resolution
-        self.throughput = throughput
-        self.readnoisePerBin = read_noise_per_bin
-        self.darkCurrentPerBin = dark_current_per_bin
+    def __init__(self, camera):
+        wavelengthGrid = camera.wavelength.value
+        self.sigmaWavelength = camera.rms_resolution.value
+        self.throughput = camera.throughput
+        self.readnoisePerBin = camera.read_noise_per_bin.value
+        self.darkCurrentPerBin = camera.dark_current_per_bin.value
+        self.coverage = camera.ccd_coverage
 
         # Truncate our throughput to the wavelength range covered by all fibers.
-        self.coverage = np.logical_and(
-            wavelengthGrid >= self.wavelengthRange[0],
-            wavelengthGrid <= self.wavelengthRange[1])
         self.throughput[~self.coverage] = 0.
-        assert np.all(self.throughput[self.coverage] > 0), \
-            "Camera has zero throughput within wavelength limits"
-        assert np.all(self.readnoisePerBin[~self.coverage]==0), \
-            "Readnoise nonzero outside coverage"
-
-        # extrapolate null values
-        mask=np.where(self.sigmaWavelength<=0)[0]
-        if mask.size > 0 and mask.size != wavelengthGrid.size:
-            self.sigmaWavelength[mask] = np.interp(
-                wavelengthGrid[mask], wavelengthGrid[self.sigmaWavelength>0],
-                self.sigmaWavelength[self.sigmaWavelength>0])
 
         # Build a sparse matrix representation of the co-added resolution
         # smoothing kernel. Tabulate a Gaussian approximation of the PSF at each
@@ -95,22 +80,6 @@ class QuickCamera(object):
         #self.sparseKernel = sp.csr_matrix(
         #   (sparseData,sparseIndices,sparseIndPtr),(nbins,nbins))
 
-        '''
-        # Build a non-sparse matrix as a cross check of the sparse version. This is only practical
-        # for small wavelength grids and so is commented out by default.
-        kernel = np.zeros((nbins,nbins))
-        for bin in range(nhalf,nbins-nhalf):
-            if self.throughput[bin] > 0:
-                lam = wavelengthGrid[bin]
-                sigma = self.sigmaWavelength[bin]
-                if sigma > 0:
-                    sup = slice(bin-nhalf,bin+nhalf)
-                    psf = np.exp(-0.5*((wavelengthGrid[sup]-lam)/sigma)**2)
-                    # I think [bin,sup] should be [sup,bin] here, but this matches the IDL
-                    kernel[bin,sup] = psf/np.sum(psf)
-        print('sparse ok?',np.array_equal(kernel,self.sparseKernel.T.todense()))
-        '''
-
 
 class Quick(object):
     """
@@ -153,11 +122,7 @@ class Quick(object):
 
         self.cameras = [ ]
         for camera in self.instrument.cameras:
-            quick_camera = QuickCamera(
-                (camera.wavelength_min.value, camera.wavelength_max.value),
-                config.wavelength.value, camera.rms_resolution.value,
-                camera.throughput, camera.dark_current_per_bin.value,
-                camera.read_noise_per_bin.value)
+            quick_camera = QuickCamera(camera)
 
             # Rescale the mean rate (Hz) of photons to account for this camera's
             # throughput. We are including camera throughput but not
@@ -225,7 +190,7 @@ class Quick(object):
             # Calculate the calibration from source flux to mean number of detected photons
             # before resolution smearing in this camera's CCD.
             camera.sourceCalib = (expTime*camera.photonRatePerBin*
-                self.fiberAcceptanceFraction*exp10(-self.extinction*airmass/2.5))
+                self.fiberAcceptanceFraction * 10 ** (-self.extinction*airmass/2.5))
 
             # Apply resolution smoothing to the detected source photons.
             camera.sourcePhotonsSmooth = camera.sparseKernel.dot(

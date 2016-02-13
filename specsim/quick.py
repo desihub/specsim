@@ -1,16 +1,21 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-"""
-Provides Quick class for quick simulations of DESI observations.
+"""Top-level manager for spectroscopic simulation.
+
+A simulator is usually initialized from a configuration, for example:
+
+    >>> import specsim.config
+    >>> config = specsim.config.load_config('test')
+    >>> qsim = Quick(config)
 """
 from __future__ import print_function, division
 
 import math
+
 import numpy as np
 import scipy.sparse as sp
-import scipy.interpolate
+
 from astropy import units as u
 
-import specsim.spectrum
 import specsim.atmosphere
 import specsim.instrument
 

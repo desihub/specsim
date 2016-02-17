@@ -39,13 +39,27 @@ import astropy.units as u
 class Atmosphere(object):
     """Implement an atmosphere model based on tabulated data read from files.
     """
-    def __init__(self, wavelength, surface_brightness, extinction_coefficient,
-                 extinct_emission, airmass):
+    def __init__(self, wavelength, surface_brightness_dict,
+                 extinction_coefficient, extinct_emission, condition, airmass):
         self.wavelength = wavelength
-        self.surface_brightness = surface_brightness
+        self.surface_brightness_dict = surface_brightness_dict
         self.extinction_coefficient = extinction_coefficient
         self.extinct_emission = extinct_emission
+        self.condition_names = surface_brightness_dict.keys()
+
+        self.set_condition(condition)
         self.set_airmass(airmass)
+
+
+    def set_condition(self, name):
+        """
+        """
+        if name not in self.condition_names:
+            raise ValueError(
+                "Invalid condition '{0}'. Pick one of {1}."
+                .format(name, self.condition_names))
+        self.condition = name
+        self.surface_brightness = self.surface_brightness_dict[name]
 
 
     def set_airmass(self, airmass):
@@ -119,14 +133,22 @@ def initialize(config):
     Atmosphere
         An initialized atmosphere model.
     """
-    atmosphere = config.atmosphere
+    atm_config = config.atmosphere
 
     # Load tabulated data.
-    surface_brightness = config.load_table(
-        atmosphere.sky, 'surface_brightness')
+    surface_brightness_dict = config.load_table(
+        atm_config.sky, 'surface_brightness', as_dict=True)
     extinction_coefficient = config.load_table(
-        atmosphere.extinction, 'extinction_coefficient')
+        atm_config.extinction, 'extinction_coefficient')
 
-    return Atmosphere(
-        config.wavelength, surface_brightness, extinction_coefficient,
-        atmosphere.extinct_emission, atmosphere.airmass)
+    atmosphere = Atmosphere(
+        config.wavelength, surface_brightness_dict, extinction_coefficient,
+        atm_config.extinct_emission, atm_config.sky.condition,
+        atm_config.airmass)
+
+    if config.verbose:
+        print(
+            "Atmosphere initialized with condition '{0}' from {1}."
+            .format(atmosphere.condition, atmosphere.condition_names))
+
+    return atmosphere

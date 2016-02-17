@@ -36,6 +36,8 @@ def main(args=None):
         help = 'name of the simulation configuration to use')
     parser.add_argument('--exposure-time', type=float, default=1000.,
         help = 'exposure time in seconds to use.')
+    parser.add_argument('--sky-condition', type=str, default=None,
+        help = 'sky condition to use (uses default if not set)')
     parser.add_argument('--airmass', type=float, default=1.,
         help = 'atmosphere airmass to use.')
     '''
@@ -65,6 +67,7 @@ def main(args=None):
 
     # Update configuration options from command-line options.
     config.verbose = args.verbose
+    config.atmosphere.sky.condition = args.sky_condition
     config.atmosphere.airmass = args.airmass
     config.instrument.constants.exposure_time = (
         '{0} s'.format(args.exposure_time))

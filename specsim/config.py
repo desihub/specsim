@@ -176,13 +176,14 @@ class Configuration(Node):
         return constants
 
 
-    def load_table(self, parent, column_names, interpolate=True):
+    def load_table(self, parent, column_names, interpolate=True, as_dict=False):
         """
+        Reads a single file if parent.table.path exists, or else reads
+        multiple files if parent.table.paths exists (and returns a dictionary).
+        If as_dict is True, always return a dictionary using the 'default' key
+        when only a single parent.table.path is present.
         """
         node = parent.table
-
-        # Prepend our base path if this node's path is not already absolute.
-        path = os.path.join(self.abs_base_path, node.path)
 
         # Check that the required column names are present.
         if isinstance(column_names, basestring):
@@ -209,84 +210,107 @@ class Configuration(Node):
             if key in keys:
                 read_args[key] = getattr(node, key)
 
-        table = astropy.table.Table.read(path, **read_args)
-        if self.verbose:
-            print('Loaded {0} rows from {1} with args {2}'
-                  .format(len(table), path, read_args))
+        # Prepare a list of paths we will load tables from.
+        paths = []
+        path_keys = None
+        try:
+            # Look for parent.table.path first.
+            paths.append(os.path.join(self.abs_base_path, node.path))
+        except AttributeError:
+            path_keys = node.paths.keys()
+            for key in path_keys:
+                path = getattr(node.paths, key)
+                paths.append(os.path.join(self.abs_base_path, path))
 
-        # Loop over columns to read.
-        loaded_columns = {}
-        for config_name in config_column_names:
-            column = getattr(columns, config_name)
-            # Look up the column data by index first, then by name.
-            try:
-                column_data = table.columns[column.index]
-            except AttributeError:
-                column_data = table[column.name]
-            column_values = column_data.data
-            # Resolve column units.
-            try:
-                column_unit = astropy.units.Unit(column.unit)
-            except AttributeError:
-                column_unit = None
-            try:
-                override_unit = column.override_unit
-                assert override_unit in (True, False)
-            except AttributeError:
-                override_unit = False
+        tables = {}
+        # Loop over tables to load.
+        for i, path in enumerate(paths):
+            key = path_keys[i] if path_keys else 'default'
 
-            if override_unit or column_data.unit is None:
-                if column_unit is not None:
-                    # Assign the unit specified in our config.
-                    column_data.unit = column_unit
-            else:
-                if ((column_unit is not None) and
-                    (column_unit != column_data.unit)):
+            table = astropy.table.Table.read(path, **read_args)
+            if self.verbose:
+                print('Loaded {0} rows from {1} with args {2}'
+                      .format(len(table), path, read_args))
+
+            # Loop over columns to read.
+            loaded_columns = {}
+            for config_name in config_column_names:
+                column = getattr(columns, config_name)
+                # Look up the column data by index first, then by name.
+                try:
+                    column_data = table.columns[column.index]
+                except AttributeError:
+                    column_data = table[column.name]
+                column_values = column_data.data
+                # Resolve column units.
+                try:
+                    column_unit = astropy.units.Unit(column.unit)
+                except AttributeError:
+                    column_unit = None
+                try:
+                    override_unit = column.override_unit
+                    assert override_unit in (True, False)
+                except AttributeError:
+                    override_unit = False
+
+                if override_unit or column_data.unit is None:
+                    if column_unit is not None:
+                        # Assign the unit specified in our config.
+                        column_data.unit = column_unit
+                else:
+                    if ((column_unit is not None) and
+                        (column_unit != column_data.unit)):
+                        raise RuntimeError(
+                            'Units do not match for "{0}".'.format(column))
+
+                loaded_columns[config_name] = column_data
+
+            if interpolate:
+                wavelength_column = loaded_columns['wavelength']
+                # Convert wavelength column units if necesary.
+                if wavelength_column.unit is None:
                     raise RuntimeError(
-                        'Units do not match for "{0}".'.format(column))
+                        'Wavelength units required for "{0}"'.format(columns))
+                wavelength = wavelength_column.data * wavelength_column.unit
+                if wavelength.unit != self.wavelength.unit:
+                    wavelength = wavelength.to(self.wavelength.unit)
 
-            loaded_columns[config_name] = column_data
+                # Initialize extrapolation if requested.
+                try:
+                    fill_value = node.extrapolated_value
+                    bounds_error = False
+                except AttributeError:
+                    fill_value = None
+                    bounds_error = True
 
-        if interpolate:
-            wavelength_column = loaded_columns['wavelength']
-            # Convert wavelength column units if necesary.
-            if wavelength_column.unit is None:
-                raise RuntimeError(
-                    'Wavelength units required for "{0}"'.format(columns))
-            wavelength = wavelength_column.data * wavelength_column.unit
-            if wavelength.unit != self.wavelength.unit:
-                wavelength = wavelength.to(self.wavelength.unit)
+                # Loop over other columns to interpolate onto our
+                # wavelength grid.
+                for column_name in column_names:
+                    interpolator = scipy.interpolate.interp1d(
+                        wavelength.value, loaded_columns[column_name].data,
+                        kind='linear', copy=False,
+                        bounds_error=bounds_error, fill_value=fill_value)
+                    interpolated_values = interpolator(self.wavelength.value)
+                    unit = loaded_columns[column_name].unit
+                    if unit:
+                        interpolated_values = interpolated_values * unit
+                    loaded_columns[column_name] = interpolated_values
 
-            # Initialize extrapolation if requested.
-            try:
-                fill_value = node.extrapolated_value
-                bounds_error = False
-            except AttributeError:
-                fill_value = None
-                bounds_error = True
+                # Delete the temporary wavelength column now we have
+                # finished using it for interpolation.
+                del loaded_columns['wavelength']
 
-            # Loop over other columns to interpolate onto our wavelength grid.
-            for column_name in column_names:
-                interpolator = scipy.interpolate.interp1d(
-                    wavelength.value, loaded_columns[column_name].data,
-                    kind='linear', copy=False,
-                    bounds_error=bounds_error, fill_value=fill_value)
-                interpolated_values = interpolator(self.wavelength.value)
-                unit = loaded_columns[column_name].unit
-                if unit:
-                    interpolated_values = interpolated_values * unit
-                loaded_columns[column_name] = interpolated_values
+            if return_scalar:
+                # Return just the one column that was requested.
+                tables[key] = loaded_columns[column_names[0]]
+            else:
+                # Return a dictionary of all requested columns.
+                tables[key] = loaded_columns
 
-            # Delete the temporary wavelength column now we have
-            # finished using it for interpolation.
-            del loaded_columns['wavelength']
-
-        if return_scalar:
-            # Return just the one column that was requested.
-            return loaded_columns[column_names[0]]
+        if path_keys is None and not as_dict:
+            return tables['default']
         else:
-            # Return a dictionary of all requested columns.
-            return loaded_columns
+            return tables
 
 
 def load_config(name, config_type=Configuration):

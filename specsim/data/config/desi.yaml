@@ -28,11 +28,13 @@ atmosphere:
                     index: 1
                     # Note the factor of 1e-17 in the units!
                     unit: 1e-17 erg / (Angstrom arcsec2 cm2 s)
-            path:
-                # Select one of these based on the observing conditions.
-                spectra/spec-sky.dat
-                ##spectra/spec-sky-grey.dat
-                ##spectra/spec-sky-bright.dat
+            paths:
+                # Each path defines a possible condition.
+                dark: spectra/spec-sky.dat
+                grey: spectra/spec-sky-grey.dat
+                bright: spectra/spec-sky-bright.dat
+        # Specify the current condition.
+        condition: dark
     # Zenith extinction coefficients.
     extinction:
         table:

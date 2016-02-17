@@ -29,6 +29,7 @@ atmosphere:
                 wavelength: { name: wavelength }
                 surface_brightness: { name: flux }
             path: test/test_sky.ecsv
+        condition: default
     # Zenith extinction coefficients.
     extinction:
         table:

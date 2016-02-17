@@ -35,6 +35,13 @@ class QuickCamera(object):
         # Truncate our throughput to the wavelength range covered by all fibers.
         self.throughput[~self.coverage] = 0.
 
+        # extrapolate null values
+        mask=np.where(self.sigmaWavelength<=0)[0]
+        if mask.size > 0 and mask.size != wavelengthGrid.size:
+            self.sigmaWavelength[mask] = np.interp(
+                wavelengthGrid[mask], wavelengthGrid[self.sigmaWavelength>0],
+                self.sigmaWavelength[self.sigmaWavelength>0])
+
         # Build a sparse matrix representation of the co-added resolution
         # smoothing kernel. Tabulate a Gaussian approximation of the PSF at each
         # simulation wavelength, truncated at 5x the maximum sigma.

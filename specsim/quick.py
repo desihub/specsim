@@ -107,8 +107,6 @@ class Quick(object):
 
         self.instrument = specsim.instrument.initialize(config)
 
-        self.fiberAcceptanceFraction = self.instrument.fiber_acceptance
-
         # Lookup the telescope's effective area in cm^2.
         self.effArea = self.instrument.effective_area.to(u.cm**2).value
 
@@ -188,6 +186,8 @@ class Quick(object):
         """
         airmass = self.atmosphere.airmass
         expTime = self.instrument.exposure_time.to(u.s).value
+
+        self.fiberAcceptanceFraction = self.instrument.get_fiber_acceptance(source)
 
         # Resample the source spectrum to our simulation grid, if necessary.
         self.sourceFlux = source.flux.to(

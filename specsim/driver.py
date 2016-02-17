@@ -40,6 +40,8 @@ def main(args=None):
         help = 'sky condition to use (uses default if not set)')
     parser.add_argument('--airmass', type=float, default=1.,
         help = 'atmosphere airmass to use.')
+    parser.add_argument('--model', type=str, default=None,
+        help = 'source fiberloss model to use (uses default if not set)')
     '''
     parser.add_argument('--ab-magnitude', type = str, default = None,
         help = 'source spectrum flux rescaling, e.g. g=22.0 or r=21.5')
@@ -67,8 +69,11 @@ def main(args=None):
 
     # Update configuration options from command-line options.
     config.verbose = args.verbose
-    config.atmosphere.sky.condition = args.sky_condition
+    if args.sky_condition is not None:
+        config.atmosphere.sky.condition = args.sky_condition
     config.atmosphere.airmass = args.airmass
+    if args.model is not None:
+        config.source.type = args.model
     config.instrument.constants.exposure_time = (
         '{0} s'.format(args.exposure_time))
 
@@ -135,6 +140,7 @@ def main(args=None):
         # Try opening the requested output file.
         with open(args.outfile,'w') as out:
             print('# AIRMASS=',qsim.airmass,file=out)
+            print('# MODEL=', source.type_name, file=out)
             print('# EXPTIME=',qsim.expTime,file=out)
             print('#',file=out)
             print('# Median (S/N)=',medianSNR,file=out)

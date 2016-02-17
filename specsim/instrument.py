@@ -22,18 +22,20 @@ import astropy.units as u
 class Instrument(object):
     """
     """
-    def __init__(self, name, wavelength, fiber_acceptance, cameras,
+    def __init__(self, name, wavelength, fiber_acceptance_dict, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
                  fiber_diameter, exposure_time):
         self.name = name
         self.wavelength = wavelength
-        self.fiber_acceptance = fiber_acceptance
+        self.fiber_acceptance_dict = fiber_acceptance_dict
         self.cameras = cameras
         self.primary_mirror_diameter = primary_mirror_diameter
         self.obscuration_diameter = obscuration_diameter
         self.support_width = support_width
         self.fiber_diameter = fiber_diameter
         self.exposure_time = exposure_time
+
+        self.source_types = self.fiber_acceptance_dict.keys()
 
         # Calculate the geometric area.
         D = self.primary_mirror_diameter
@@ -70,6 +72,16 @@ class Instrument(object):
 
         # Sort cameras in order of increasing wavelength.
         self.cameras = [x for (y, x) in sorted(zip(wave_mid, self.cameras))]
+
+
+    def get_fiber_acceptance(self, source):
+        """
+        """
+        if source.type_name not in self.source_types:
+            raise ValueError(
+                "Invalid source type '{0}'. Pick one of {1}."
+                .format(source.type_name, self.source_types))
+        return self.fiber_acceptance_dict[source.type_name]
 
 
     def plot(self, flux=1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom),
@@ -268,11 +280,11 @@ def initialize(config):
         ['exposure_time', 'primary_mirror_diameter', 'obscuration_diameter',
          'support_width', 'fiber_diameter'])
 
-    fiber_acceptance = config.load_table(
-        config.instrument.fiberloss, 'fiber_acceptance')
+    fiber_acceptance_dict = config.load_table(
+        config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
 
     instrument = Instrument(
-        name, config.wavelength, fiber_acceptance, initialized_cameras,
+        name, config.wavelength, fiber_acceptance_dict, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['exposure_time'])
@@ -283,5 +295,6 @@ def initialize(config):
               .format(instrument.effective_area))
         print('Fiber entrance area: {0:.3f}'
               .format(instrument.fiber_area))
+        print('Source types: {0}.'.format(instrument.source_types))
 
     return instrument

@@ -62,14 +62,14 @@ instrument:
     fiberloss:
         table:
             format: ascii
-            path:
-                # Select one of these based on the source type.
-                throughput/fiberloss-qso.dat
-                ##throughput/fiberloss-elg.dat
-                ##throughput/fiberloss-lrg.dat
-                ##throughput/fiberloss-star.dat
-                ##throughput/fiberloss-sky.dat
-                ##throughput/fiberloss-perfect.dat
+            paths:
+                # Each path corresponds to a different source type.
+                qso: throughput/fiberloss-qso.dat
+                elg: throughput/fiberloss-elg.dat
+                lrg: throughput/fiberloss-lrg.dat
+                star: throughput/fiberloss-star.dat
+                sky: throughput/fiberloss-sky.dat
+                perfect: throughput/fiberloss-perfect.dat
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
@@ -169,6 +169,7 @@ instrument:
 # specsim.source module.
 source:
     name: 22nd AB magnitude reference
+    type: qso
     table:
         format: ascii
         path: spectra/spec-ABmag22.0.dat

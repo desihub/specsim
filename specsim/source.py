@@ -11,7 +11,9 @@ import astropy.units as u
 class Source(object):
     """
     """
-    def __init__(self, wavelength, flux):
+    def __init__(self, name, type_name, wavelength, flux):
+        self.name = name
+        self.type_name = type_name
         self.wavelength = wavelength
         self.flux = flux
 
@@ -31,4 +33,5 @@ def initialize(config):
     """
     # Check for required top-level config nodes.
     flux = config.load_table(config.source, 'flux')
-    return Source(config.wavelength, flux)
+    return Source(
+        config.source.name, config.source.type, config.wavelength, flux)

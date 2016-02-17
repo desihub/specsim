@@ -57,7 +57,8 @@ instrument:
     fiberloss:
         table:
             format: ascii
-            path: test/test_fiberloss.ecsv
+            paths:
+                qso: test/test_fiberloss.ecsv
             columns:
                 wavelength: { name: wavelength }
                 fiber_acceptance: { name: fiberloss }
@@ -90,6 +91,7 @@ instrument:
 # specsim.source module.
 source:
     name: Constant flux density test source
+    type: qso
     table:
         format: ascii.ecsv
         path: test/test_source.ecsv

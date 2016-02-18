@@ -207,19 +207,6 @@ class Camera(object):
         self.wavelength_min = self.wavelength[ccd_first]
         self.wavelength_max = self.wavelength[ccd_last - 1]
 
-        # The camera throughput should have no holes and extend beyond the
-        # CCD coverage to allow for dispersion at the edges.
-        thru_nonzero = np.where(self.throughput > 0)[0]
-        thru_first, thru_last = thru_nonzero[0], thru_nonzero[-1] + 1
-        if np.any(self.throughput[thru_first:thru_last] <= 0.):
-            raise RuntimeError('Camera throughput has holes.')
-        thru_min = self.wavelength[thru_first]
-        thru_max = self.wavelength[thru_last - 1]
-        if thru_min > self.wavelength_min - self.rms_resolution[ccd_first]:
-            raise RuntimeError('Throughput does not allow for edge dispersion.')
-        if thru_max < self.wavelength_max + self.rms_resolution[ccd_last - 1]:
-            raise RuntimeError('Throughput does not allow for edge dispersion.')
-
         # Calculate the size of each wavelength bin in units of pixel rows.
         wavelength_bin_size = np.gradient(self.wavelength)
         mask = self.row_size.value > 0

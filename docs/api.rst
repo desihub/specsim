@@ -5,6 +5,6 @@ API Reference
 .. automodapi:: specsim.atmosphere
 .. automodapi:: specsim.instrument
 .. automodapi:: specsim.source
-.. automodapi:: specsim.quick
+.. automodapi:: specsim.simulator
 .. automodapi:: specsim.transform
 .. automodapi:: specsim.driver

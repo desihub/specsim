@@ -5,7 +5,7 @@ A simulator is usually initialized from a configuration, for example:
 
     >>> import specsim.config
     >>> config = specsim.config.load_config('test')
-    >>> qsim = Quick(config)
+    >>> simulator = Simulator(config)
 """
 from __future__ import print_function, division
 
@@ -93,13 +93,9 @@ class QuickCamera(object):
         #   (sparseData,sparseIndices,sparseIndPtr),(nbins,nbins))
 
 
-class Quick(object):
+class Simulator(object):
     """
-    A class for quick simulations of DESI observations.
-
-    Initializes a Quick simulation for the specified atmosphere and instrument.
-    If either of these is None, they are initialized to their default state
-    using the specified base path.
+    Manage the simulation of an atmosphere, instrument, and source.
     """
     def __init__(self, config):
 

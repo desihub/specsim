@@ -16,5 +16,5 @@ if not _ASTROPY_SETUP_:
     import atmosphere
     import instrument
     import source
-    import quick
+    import simulator
     import transform

@@ -114,12 +114,10 @@ def main(args=None):
     specSummary = 'Summary Line #1'
 
     # Initialize the simulator.
-    qsim = specsim.quick.Quick(config)
+    simulator = specsim.simulator.Simulator(config)
 
     # Perform a quick simulation of the observed spectrum.
-    if args.verbose:
-        print('Running quick simulation.')
-    results = qsim.simulate(
+    results = simulator.simulate(
         source, downsampling=config.simulator.downsampling)
 
     # Calculate the median total SNR in bins with some observed flux.
@@ -139,9 +137,9 @@ def main(args=None):
         nsky = np.sum(results.nsky,axis=1)
         # Try opening the requested output file.
         with open(args.outfile,'w') as out:
-            print('# AIRMASS=',qsim.airmass,file=out)
+            print('# AIRMASS=',simulator.airmass,file=out)
             print('# MODEL=', source.type_name, file=out)
-            print('# EXPTIME=',qsim.expTime,file=out)
+            print('# EXPTIME=',simulator.expTime,file=out)
             print('#',file=out)
             print('# Median (S/N)=',medianSNR,file=out)
             print('# Total (S/N)^2=',totalSNR2,file=out)
@@ -164,7 +162,8 @@ def main(args=None):
             matplotlib.use('Agg')
         import matplotlib.pyplot as plt
         # Make the plots, labeled with our SNR summary.
-        qsim.plot(results,labels=(specSummary,snrSummary),plotMin=args.plot_min,plotMax=args.plot_max)
+        simulator.plot(results,labels=(specSummary,snrSummary),
+                       plotMin=args.plot_min,plotMax=args.plot_max)
         # Save the plot if requested.
         if args.save_plot:
             plt.savefig(args.save_plot)

@@ -14,6 +14,7 @@ results using the new desi.yaml config should be identical to v0.2.
 - Read files using astropy.table.Table.read() instead of numpy.loadtxt()
   and astropy.io.fits.read().
 - Remove unused sources, spectrum modules.
+- Rename quick.Quick to simulator.Simulator.
 - Add speclite dependency.
 
 0.2 (2015-12-18)

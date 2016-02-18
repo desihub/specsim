@@ -27,7 +27,36 @@ refers to additional files containing tabulated data, which are generally large
 and packaged separately.  For example, the DESI configuration refers to files
 in the `desimodel package <https://github.com/desihub/desimodel>`__.
 
-Something about wavelength_grid and base_path...
+Most of the configuration is used to initialize the independent models of the
+atmosphere, instrument and source that come together in the simulation.
+However, there are also a few global configuration options that you should
+be familiar with::
+
+    name: DESI QuickSim
+
+    # Be verbose during the simulation?
+    verbose: no
+
+    # The base path is pre-pended to all non-absolute path values below.
+    # {...} will be expanded using environment variables.
+    base_path: '{DESIMODEL}/data'
+
+    # Specify the wavelength grid to use for simulation.
+    wavelength_grid:
+        unit: Angstrom
+        min: 3500.3
+        max: 9999.7
+        step: 0.1
+
+The first two parameters are self explanatory.  The ``base_path`` option
+establishes the link between a configuration file and a directory tree
+containing the tabulated data that it refers to.  The ``wavelength_grid``
+options specify the equally spaced wavelength grid used internally by the
+simulation, which should be chosen to cover the instrument throughput and
+should sample the instrument's wavelength resolution sufficiently for a
+binned model of resolution effects.  This wavelength grid is downsampled to
+the simulation output grid according to the `simulator.downsampling`
+parameter.
 
 A valid configuration file is a YAML file whose hierarchy is specified using
 only mappings (dictionaries), with no sequences (lists). All mapping keys
@@ -37,6 +66,8 @@ and custom objects are not supported.
 
 The various configuration sections share some common syntax for specifying
 physical constants and tabular data, as described in the following sections.
+
+.. _config-constants:
 
 Constants
 ^^^^^^^^^
@@ -49,13 +80,17 @@ list of name-value pairs, for example::
         dark_current: 2.0 electron/(hour pixel**2)
         gain: 1.0 electron/adu
 
-Units are optional but, when present, must be separated from the value with some
-white space.  Units are interpreted by the :mod:`astropy.units` module.
+Units are required, except for dimensionless quantities, and must be separated
+from the value with some white space.  Units are interpreted by the
+:mod:`astropy.units` module.  Note that `pixel` is interpreted as a linear
+unit in this package, so that dark current is expressed in units of `pixel**2`.
+
+.. _config-tables:
 
 Tabulated Data
 ^^^^^^^^^^^^^^
 
-Tabulated data is read using :func:`astropy.table.Table.read` so is very flexible.
+Tabulated data is read using :meth:`astropy.table.Table.read` so is very flexible.
 A simple table node to specify a function of wavelength might look like::
 
     table:
@@ -92,11 +127,59 @@ specified by replacing the ``path`` node with a ``paths`` node as follows::
 For additional examples of specifying tabular data, refer to the configurations
 included with this package and described below.
 
+.. _desi-config:
+
 DESI Configuration
 ------------------
 
+The DESI configuration refers to files maintained in the `desimodel
+<https://github.com/desihub/desimodel>`__ package, which the user must
+separately install.  The linkage is established via the ``DESIMODEL``
+environment variable via the following line in ``desi.yaml``::
+
+    base_path: '{DESIMODEL}/data'
+
+The DESI configuration reads tabulated data files directly from ``desimodel``
+so any changes there propagate automatically to the simulation. Note, however,
+that the specsim DESI configuration does not read constants directly from
+`desimodel/desi.yaml
+<https://desi.lbl.gov/svn/code/desimodel/trunk/data/desi.yaml>`__.  Instead, the
+following values are copied from that file into this package's DESI configuration
+file (also called `desi.yaml`), in order to achieve a unified and consistent
+configuration scheme:
+
++-----------------------------+------------------------------------------------+
+| desimodel name              | specsim name                                   |
++=============================+================================================+
+| `area.M1_diameter`          | `instrument.constants.primary_mirror_diameter` |
++-----------------------------+------------------------------------------------+
+| `fibers.diameter_arcsec`    | `instrument.constants.fiber_diameter`          |
++-----------------------------+------------------------------------------------+
+| `area.obscuration_diameter` | `instrument.constants.obscuration_diameter`    |
++-----------------------------+------------------------------------------------+
+| `area.M2_support_width`     | `instrument.constants.support_width`           |
++-----------------------------+------------------------------------------------+
+| `ccd.*.readnoise`           | `instrument.cameras.*.constants.read_noise`    |
++-----------------------------+------------------------------------------------+
+| `ccd.*.darkcurrent`         | `instrument.cameras.*.constants.dark_current`  |
++-----------------------------+------------------------------------------------+
+| `ccd.*.gain`                | `instrument.cameras.*.constants.dark_current`  |
++-----------------------------+------------------------------------------------+
+| `exptime`                   | `instrument.constants.exposure_time`           |
++-----------------------------+------------------------------------------------+
+
+In addition to name mappings above, the specsim configuration values all have
+machine-readable units attached in a :ref:`constants section <config-constants>`
+(unlike the corresponding `desimodel` values, where units are specified in comments).
+
 Atmosphere
 ^^^^^^^^^^
+
+The following plot summarizes the default DESI atmosphere used for simulations,
+and was created using::
+
+    config = specsim.config.load_config('desi')
+    specsim.atmosphere.initialize(config).plot()
 
 .. image:: _static/desi_atmosphere.png
     :alt: DESI default atmosphere configuration
@@ -104,20 +187,45 @@ Atmosphere
 Instrument
 ^^^^^^^^^^
 
+The following plot summarizes the default DESI instrument configuration, and
+was created using::
+
+    config = specsim.config.load_config('desi')
+    specsim.instrument.initialize(config).plot()
+
 .. image:: _static/desi_instrument.png
     :alt: DESI default instrument configuration
+
+.. _test-config:
 
 Test Configuration
 ------------------
 
+The test configuration is intended for self-contained tests and demonstrations
+of this packages capabilities and only refers to small tabulated data files
+that are distributed with this package.  As a result, the test configuration
+is deliberately over-simplified and should only be used for testing purposes.
+
 Atmosphere
 ^^^^^^^^^^
+
+The following plot summarizes the default test atmosphere used for simulations,
+and was created using::
+
+    config = specsim.config.load_config('test')
+    specsim.atmosphere.initialize(config).plot()
 
 .. image:: _static/test_atmosphere.png
     :alt: Test default atmosphere configuration
 
 Instrument
 ^^^^^^^^^^
+
+The following plot summarizes the default test instrument configuration, and
+was created using::
+
+config = specsim.config.load_config('test')
+specsim.instrument.initialize(config).plot()
 
 .. image:: _static/test_instrument.png
     :alt: Test default instrument configuration

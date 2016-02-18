@@ -17,5 +17,4 @@ if not _ASTROPY_SETUP_:
     import instrument
     import source
     import quick
-    import spectrum
     import transform

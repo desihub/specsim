@@ -1,8 +1,19 @@
 0.3 (unreleased)
 ----------------
 
+This version introduces some significant API changes in order to make the
+code instrument agnostic and facilitate future algorithm improvements.
+There are no changes yet to the underlying algorithms and assumptions, so
+results using the new desi.yaml config should be identical to v0.2.
+
+- Add new config module for flexible specification of all simulation options,
+  including the instrument model definition.
+- Create config files for DESI and unit testing.
+- Refactor to make code instrument-agnostic, with no dependencies on
+  DESI packages.
 - Read files using astropy.table.Table.read() instead of numpy.loadtxt()
   and astropy.io.fits.read().
+- Add speclite dependency.
 
 0.2 (2015-12-18)
 ----------------

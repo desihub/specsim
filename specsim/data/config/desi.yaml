@@ -51,8 +51,10 @@ atmosphere:
 # The instrument configuration is interpreted and validated by the
 # specsim.instrument module.
 instrument:
+    # See DESI documents 334, 336, 347 for details.
     name: DESI
     constants:
+        # These values are copied from desimodel/data/desi.yaml
         exposure_time: 1000.0 s
         primary_mirror_diameter: 3.797 m
         obscuration_diameter: 1.8 m
@@ -76,6 +78,7 @@ instrument:
     cameras:
         b:
             constants:
+                # These values are copied from desimodel/data/desi.yaml
                 read_noise: 3.0 electron
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 3.0 electron/(hour pixel**2)
@@ -106,6 +109,7 @@ instrument:
                         throughput: { name: throughput }
         r:
             constants:
+                # These values are copied from desimodel/data/desi.yaml
                 read_noise: 2.9 electron
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)
@@ -136,6 +140,7 @@ instrument:
                         throughput: { name: throughput }
         z:
             constants:
+                # These values are copied from desimodel/data/desi.yaml
                 read_noise: 2.9 electron
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)

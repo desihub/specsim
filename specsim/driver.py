@@ -111,7 +111,7 @@ def main(args=None):
             specSummary += ' %s=%.2f' % (band,mags[band])
     print(specSummary)
     '''
-    specSummary = 'Summary Line #1'
+    specSummary = config.source.name
 
     # Initialize the simulator.
     simulator = specsim.simulator.Simulator(config)

@@ -1,47 +1,29 @@
 Command-Line Program
 ====================
 
-This page describes the command-line program for running simuations...
+This package includes a command-line program `quickspecsim` that simulates a
+single spectrum and saves the results as a text file and/or plot. To see the
+available command-line options use::
 
-Command-Line Options
---------------------
+    quickspecsim --help
 
-The following table summarizes the command-line options used to configure
-the simulation that will be performed.  Use the `--help` option for more
-details.
+The ``--config`` parameter specifies the top-level :doc:`configuration file
+</config>` to use and defaults to ``test``.  Without any arguments, the program
+simulates a constant flux density source using the test atmosphere and
+instrument models, producing the output::
 
-+------------------+---------+------------+---------------------------------------------------------------+
-| Option           | Default | Component  | Description                                                   |
-+==================+=========+============+===============================================================+
-| exptime          | (YAML)  | Observer   | Exposure time in seconds (use YAML `exptime` as default)      |
-+------------------+---------+------------+---------------------------------------------------------------+
-| airmass          | 1.0     | Observer   | Observing airmass                                             |
-+------------------+---------+------------+---------------------------------------------------------------+
-| model            |         | Source     | Source profile model use for fiber acceptance fraction        |
-+------------------+---------+------------+---------------------------------------------------------------+
-| infile           |         | Source     | Name of file containing wavelength (Ang) and                  |
-|                  |         |            | flux (1e-17 erg/cm^2/s/Ang) columns                           |
-+------------------+---------+------------+---------------------------------------------------------------+
-| infile-wavecol   | 0       | Source     | Index of infile column containing wavelengths                 |
-|                  |         |            | (starting from 0)                                             |
-+------------------+---------+------------+---------------------------------------------------------------+
-| infile-fluxcol   | 1       | Source     | Index of infile column containing fluxes                      |
-+------------------+---------+------------+---------------------------------------------------------------+
-| truncated        | False   | Source     | Assume zero flux outside of source spectrum wavelength range  |
-+------------------+---------+------------+---------------------------------------------------------------+
-| ab-magnitude     |         | Source     | Source spectrum flux rescaling, e.g. g=22.0 or r=21.5         |
-+------------------+---------+------------+---------------------------------------------------------------+
-| redshift-to      |         | Source     | Redshift source spectrum to this value                        |
-+------------------+---------+------------+---------------------------------------------------------------+
-| redshift-from    | 0.0     | Source     | Redshift source spectrum from this value                      |
-+------------------+---------+------------+---------------------------------------------------------------+
-| sky              | 'dark'  | Atmosphere | Sky conditions to simulate (dark | gray | bright)             |
-+------------------+---------+------------+---------------------------------------------------------------+
-| nread            | 1.0     | Simulation | Scale readout noise variance by this factor                   |
-+------------------+---------+------------+---------------------------------------------------------------+
-| min-wavelength   | 3500.3  | Simulation | Minimum wavelength to simulate in Angstroms                   |
-+------------------+---------+------------+---------------------------------------------------------------+
-| max-wavelength   | 9999.7  | Simulation | Maximum wavelength to simulate in Angstroms                   |
-+------------------+---------+------------+---------------------------------------------------------------+
-| wavelength-step  | 0.1     | Simulation | Linear spacing of simulation wavelength grid in Angstroms     |
-+------------------+---------+------------+---------------------------------------------------------------+
+    Median S/N = 2.107, Total (S/N)^2 = 18068.7
+
+Use the ``--show-plot`` and ``-save-plot`` options to visualize the simulation
+results, for example::
+
+    quickspecsim -c desi --show-plot
+
+produces the following plot of a simulated 22nd AB magnitude reference source:
+
+.. image:: _static/desi_ab22.png
+    :alt: Simulated DESI response
+
+A limited number of simulation parameters can be changed from the command line,
+such as the exposure time and airmass.  For more substantial changes to the
+simulation models, copy and edit an existing configuration file.

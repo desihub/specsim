@@ -11,8 +11,8 @@ This package originated as a DESI-specific simulation tool but, as of v0.3,
 has no code dependencies on DESI software and makes no hardcoded assumptions
 that are specific to DESI.  Instead, any fiber spectrograph and observing
 conditions can be configured.  Several configurations are included with the
-code distribution and described below.  New configurations are straightforward
-to create using these examples as templates.
+code distribution (under ``specsim/data/config/``) and described below.  New
+configurations are straightforward to create using these examples as templates.
 
 This document provides a user-oriented view of configuration, and focuses on the
 tasks of interpreting end editing configuration files.  For a
@@ -224,8 +224,8 @@ Instrument
 The following plot summarizes the default test instrument configuration, and
 was created using::
 
-config = specsim.config.load_config('test')
-specsim.instrument.initialize(config).plot()
+    config = specsim.config.load_config('test')
+    specsim.instrument.initialize(config).plot()
 
 .. image:: _static/test_instrument.png
     :alt: Test default instrument configuration

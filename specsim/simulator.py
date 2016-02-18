@@ -100,8 +100,8 @@ class Simulator(object):
     def __init__(self, config):
 
         self.atmosphere = specsim.atmosphere.initialize(config)
-
         self.instrument = specsim.instrument.initialize(config)
+        self.downsampling = config.simulator.downsampling
 
         # Lookup the telescope's effective area in cm^2.
         self.effArea = self.instrument.effective_area.to(u.cm**2).value
@@ -142,7 +142,7 @@ class Simulator(object):
             self.cameras.append(quick_camera)
 
 
-    def simulate(self, source, downsampling):
+    def simulate(self, source):
         """Simulate a single exposure.
 
         Returns a numpy array of results with one row per downsampled wavelength bin containing
@@ -180,6 +180,7 @@ class Simulator(object):
 
         These are accessible using the same camera index j, e.g. qsim.cameras[j].throughput.
         """
+        downsampling = self.downsampling
         airmass = self.atmosphere.airmass
         expTime = self.instrument.exposure_time.to(u.s).value
 

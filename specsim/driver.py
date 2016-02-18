@@ -117,8 +117,7 @@ def main(args=None):
     simulator = specsim.simulator.Simulator(config)
 
     # Perform a quick simulation of the observed spectrum.
-    results = simulator.simulate(
-        source, downsampling=config.simulator.downsampling)
+    results = simulator.simulate(source)
 
     # Calculate the median total SNR in bins with some observed flux.
     medianSNR = np.median(results[results.obsflux > 0].snrtot)

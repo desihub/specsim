@@ -8,5 +8,6 @@ specsim
     install.rst
     guide.rst
     config.rst
+    cmdline.rst
     output.rst
     api.rst

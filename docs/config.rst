@@ -4,105 +4,120 @@ Configuration
 This section describes how a simulation is configured using information read
 from files and command-line options.  For an overview of how a simulation is
 performed and what parameters it requires see the :doc:`/guide`. Configuration
-options specify the instrument and atmosphere to simulate, in addition to the
-source properties and observing parameters.
+options specify the instrument, atmosphere and source to simulate, and how
+the simulation should be performed.
 
-.. _config_yaml:
+This package originated as a DESI-specific simulation tool but, as of v0.3,
+has no code dependencies on DESI software and makes no hardcoded assumptions
+that are specific to DESI.  Instead, any fiber spectrograph and observing
+conditions can be configured.  Several configurations are included with the
+code distribution and described below.  New configurations are straightforward
+to create using these examples as templates.
 
-YAML
-----
+This document provides a user-oriented view of configuration, and focuses on the
+tasks of interpreting end editing configuration files.  For a
+developer-oriented view, see the :doc:`API documentation </api>`.
 
-The table below lists the parameters that are required in a `YAML file
-<http://https://en.wikipedia.org/wiki/YAML>`__ describing the instrument.
-Note that the `ccd.*` prefixes are repeated once per camera.
+Configuration File
+------------------
 
-+--------------------------+------------------------------------------------------+
-| YAML Name                | Description                                          |
-+==========================+======================================================+
-| `area.geometric_area`    | Unobscured effective area of primary mirror in m^2   |
-+--------------------------+------------------------------------------------------+
-| `fibers.diameter_arcsec` | Average fiber diameter in arcsecs                    |
-+--------------------------+------------------------------------------------------+
-| `ccd.*.readnoise`        | RMS readout noise in electrons per pixel             |
-+--------------------------+------------------------------------------------------+
-| `ccd.*.darkcurrent`      | Average dark current in electrons/hour/pixel         |
-+--------------------------+------------------------------------------------------+
-| `ccd.*.gain`             | Readout gain in electrons per ADU                    |
-+--------------------------+------------------------------------------------------+
-| `exptime`                | Nominal exposure time in seconds                     |
-+--------------------------+------------------------------------------------------+
+The top-level configuration is specified by a single YAML file with four main
+sections: atmosphere, instrument, source, and simulator. This top-level file
+refers to additional files containing tabulated data, which are generally large
+and packaged separately.  For example, the DESI configuration refers to files
+in the `desimodel package <https://github.com/desihub/desimodel>`__.
 
-.. _config_data:
+Something about wavelength_grid and base_path...
+
+A valid configuration file is a YAML file whose hierarchy is specified using
+only mappings (dictionaries), with no sequences (lists). All mapping keys
+must be `valid python identifiers
+<https://docs.python.org/2/reference/lexical_analysis.html#identifiers>`__,
+and custom objects are not supported.
+
+The various configuration sections share some common syntax for specifying
+physical constants and tabular data, as described in the following sections.
+
+Constants
+^^^^^^^^^
+
+Physical constants are grouped within a ``constants`` node and consists of a
+list of name-value pairs, for example::
+
+    constants:
+        read_noise: 2.9 electron
+        dark_current: 2.0 electron/(hour pixel**2)
+        gain: 1.0 electron/adu
+
+Units are optional but, when present, must be separated from the value with some
+white space.  Units are interpreted by the :mod:`astropy.units` module.
 
 Tabulated Data
---------------
+^^^^^^^^^^^^^^
 
-The table below lists the FITS binary table files required to configure a
-simulation.  The `*` pattern specifies a camera name (B, R, Z).
+Tabulated data is read using :func:`astropy.table.Table.read` so is very flexible.
+A simple table node to specify a function of wavelength might look like::
 
-+-------------------------------------+--------------+--------------------------------+
-| Filename                            |  HDU Name    | Column Names                   |
-+=====================================+==============+================================+
-| `data/specpsf/psf-quicksim.fits`    | `QUICKSIM-*` | wavelength, angstroms_per_row, |
-|                                     |              | fwhm_wave, neff_spatial        |
-+-------------------------------------+--------------+--------------------------------+
-| `data/throughput/thru-*.fits`       | `THROUGHPUT` | wavelength, throughput         |
-+-------------------------------------+--------------+--------------------------------+
+    table:
+        path: throughput.csv
+        columns:
+            wavelength: { index: 0, unit: Angstrom }
+            throughput: { index: 1 }
 
-The following ASCII data files are also required, where `<S>` denotes a source
-model (elg, lrg, qso, ...) and `<C>` denotes optional sky conditions (-grey, -bright).
+In this example, the file format is automatically determined by the filename
+extension and the required columns are identified by their indices (0, 1) in
+the file. Tabulated data generally requires units, but these can be specified
+in the configuration file instead of the data file, for more flexibility.
 
-+------------------------------------------+---------------------------------+
-| Filename                                 | Column Names                    |
-+==========================================+=================================+
-| `data/throughput/fiberloss-<S>.dat`      | Wavelength, FiberAcceptance     |
-+------------------------------------------+---------------------------------+
-| `data/spectra/spec-sky<C>.dat`           | WAVE, FLUX                      |
-+------------------------------------------+---------------------------------+
-| `data/spectra/ZenithExtinction-KPNO.dat` | WAVELENGTH, EXTINCTION          |
-+------------------------------------------+---------------------------------+
+Here is a more complex example of reading data from a binary table within a
+multi-HDU FITS file::
 
-.. _config_command_line:
+    table:
+        path: throughput.fits
+        hdu: THRU
+        wavelength: { name: wave }
+        throughput: { name: thru }
 
-Command-Line Options
---------------------
+In this case the HDU and columns are identified by their names in the FITS file.
 
-The following table summarizes the command-line options used to configure
-the simulation that will be performed.  Use the `--help` option for more
-details.
+Finally, some tabulated data uses different files to represent different options.
+For example, sky surface brightness tables under different conditions are
+specified by replacing the ``path`` node with a ``paths`` node as follows::
 
-+------------------+---------+------------+---------------------------------------------------------------+
-| Option           | Default | Component  | Description                                                   |
-+==================+=========+============+===============================================================+
-| exptime          | (YAML)  | Observer   | Exposure time in seconds (use YAML `exptime` as default)      |
-+------------------+---------+------------+---------------------------------------------------------------+
-| airmass          | 1.0     | Observer   | Observing airmass                                             |
-+------------------+---------+------------+---------------------------------------------------------------+
-| model            |         | Source     | Source profile model use for fiber acceptance fraction        |
-+------------------+---------+------------+---------------------------------------------------------------+
-| infile           |         | Source     | Name of file containing wavelength (Ang) and                  |
-|                  |         |            | flux (1e-17 erg/cm^2/s/Ang) columns                           |
-+------------------+---------+------------+---------------------------------------------------------------+
-| infile-wavecol   | 0       | Source     | Index of infile column containing wavelengths                 |
-|                  |         |            | (starting from 0)                                             |
-+------------------+---------+------------+---------------------------------------------------------------+
-| infile-fluxcol   | 1       | Source     | Index of infile column containing fluxes                      |
-+------------------+---------+------------+---------------------------------------------------------------+
-| truncated        | False   | Source     | Assume zero flux outside of source spectrum wavelength range  |
-+------------------+---------+------------+---------------------------------------------------------------+
-| ab-magnitude     |         | Source     | Source spectrum flux rescaling, e.g. g=22.0 or r=21.5         |
-+------------------+---------+------------+---------------------------------------------------------------+
-| redshift-to      |         | Source     | Redshift source spectrum to this value                        |
-+------------------+---------+------------+---------------------------------------------------------------+
-| redshift-from    | 0.0     | Source     | Redshift source spectrum from this value                      |
-+------------------+---------+------------+---------------------------------------------------------------+
-| sky              | 'dark'  | Atmosphere | Sky conditions to simulate (dark | gray | bright)             |
-+------------------+---------+------------+---------------------------------------------------------------+
-| nread            | 1.0     | Simulation | Scale readout noise variance by this factor                   |
-+------------------+---------+------------+---------------------------------------------------------------+
-| min-wavelength   | 3500.3  | Simulation | Minimum wavelength to simulate in Angstroms                   |
-+------------------+---------+------------+---------------------------------------------------------------+
-| max-wavelength   | 9999.7  | Simulation | Maximum wavelength to simulate in Angstroms                   |
-+------------------+---------+------------+---------------------------------------------------------------+
-| wavelength-step  | 0.1     | Simulation | Linear spacing of simulation wavelength grid in Angstroms     |
-+------------------+---------+------------+---------------------------------------------------------------+
+    paths:
+        dark: dark-sky.csv
+        grey: grey-sky.csv
+        bright: bright-sky.csv
+
+For additional examples of specifying tabular data, refer to the configurations
+included with this package and described below.
+
+DESI Configuration
+------------------
+
+Atmosphere
+^^^^^^^^^^
+
+.. image:: _static/desi_atmosphere.png
+    :alt: DESI default atmosphere configuration
+
+Instrument
+^^^^^^^^^^
+
+.. image:: _static/desi_instrument.png
+    :alt: DESI default instrument configuration
+
+Test Configuration
+------------------
+
+Atmosphere
+^^^^^^^^^^
+
+.. image:: _static/test_atmosphere.png
+    :alt: Test default atmosphere configuration
+
+Instrument
+^^^^^^^^^^
+
+.. image:: _static/test_instrument.png
+    :alt: Test default instrument configuration

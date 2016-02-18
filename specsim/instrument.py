@@ -105,7 +105,9 @@ class Instrument(object):
         if exposure_time is None:
             exposure_time = self.exposure_time
 
-        ax1.plot(wave, self.fiber_acceptance, 'k--')
+        for source_type in self.source_types:
+            # Plot fiber acceptance fractions without labels.
+            ax1.plot(wave, self.fiber_acceptance_dict[source_type], 'k--')
         for camera in self.cameras:
             cwave = camera.wavelength.to(wave_unit).value
 
@@ -115,8 +117,9 @@ class Instrument(object):
                 (mid_wave - self.wavelength_min) /
                 (self.wavelength_max - self.wavelength_min))
 
+            # Calculate number of photons with perfect fiber acceptance.
             nphot = (flux * self.photons_per_bin * exposure_time *
-                     self.fiber_acceptance * camera.throughput / dwave)
+                     camera.throughput / dwave)
             dark_noise = np.sqrt(
                 (camera.dark_current_per_bin * exposure_time).value)
             total_noise = np.sqrt(
@@ -143,7 +146,7 @@ class Instrument(object):
         ax1.plot([], [], 'k--', label='Fiber Acceptance')
         ax1.plot([], [], 'k-', label='Camera Throughput')
         ax1.plot([], [], 'k:', label='{0}'.format(flux))
-        ax1.plot([], [], 'k-.', label='Total Noise')
+        ax1.plot([], [], 'k-.', label='Dark + Readout Noise')
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                    ncol=2, mode="expand", borderaxespad=0.)
 

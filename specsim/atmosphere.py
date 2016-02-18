@@ -114,7 +114,8 @@ class Atmosphere(object):
         ax1.set_xlabel('Wavelength [$\AA$]')
         ax1.set_xlim(wave[0], wave[-1])
 
-        ax1.plot([], [], 'g-', label='Surface Brightness')
+        ax1.plot([], [], 'g-',
+                 label='Surface Brightness ({0})'.format(self.condition))
         ax1.plot([], [], 'r-', label='Zenith Extinction Coefficient')
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                    ncol=2, mode="expand", borderaxespad=0.)

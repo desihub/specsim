@@ -42,16 +42,14 @@ def main(args=None):
         help = 'atmosphere airmass to use.')
     parser.add_argument('--model', type=str, default=None,
         help = 'source fiberloss model to use (uses default if not set)')
-    '''
-    parser.add_argument('--ab-magnitude', type = str, default = None,
-        help = 'source spectrum flux rescaling, e.g. g=22.0 or r=21.5')
-    parser.add_argument('--redshift-to', type = float, default = None,
-        help = 'redshift source spectrum to this value')
-    parser.add_argument('--redshift-from', type = float, default = 0.,
-        help = 'redshift source spectrum from this value (ignored unless redshift-to is set)')
-    parser.add_argument('--save-spectrum', type = str, default = None,
-        help = 'filename for saving the spectrum after any rescaling or redshift')
-    '''
+    parser.add_argument('--z-in', type=float, default=None,
+        help = 'redshift of input source data')
+    parser.add_argument('--z-out', type=float, default=None,
+        help = 'redshift that source should be transformed to')
+    parser.add_argument('--filter', type=str, default=None,
+        help = 'filter name to use for source flux normalization')
+    parser.add_argument('--ab-mag', type=float, default=None,
+        help = 'AB magnitude that source flux will be normalized to.')
     parser.add_argument('--outfile', type = str, default = None,
         help = 'optional output file name')
     parser.add_argument('--show-plot', action = 'store_true',
@@ -69,49 +67,24 @@ def main(args=None):
 
     # Update configuration options from command-line options.
     config.verbose = args.verbose
+
     if args.sky_condition is not None:
         config.atmosphere.sky.condition = args.sky_condition
     config.atmosphere.airmass = args.airmass
-    if args.model is not None:
-        config.source.type = args.model
+
     config.instrument.constants.exposure_time = (
         '{0} s'.format(args.exposure_time))
 
+    if args.model is not None:
+        config.source.type = args.model
+    config.source.z_in = args.z_in
+    config.source.z_out = args.z_out
+    config.source.filter_name = args.filter
+    config.source.ab_magnitude = args.ab_mag
+    specSummary = config.source.name
+
     # Initialize the source to simulate.
     source = specsim.source.initialize(config)
-
-    '''
-    # Rescale the source flux if requested.
-    if args.ab_magnitude is not None:
-        try:
-            band = args.ab_magnitude[0]
-            abmag = float(args.ab_magnitude[2:])
-            assert band in 'ugriz' and args.ab_magnitude[1] == '='
-        except(AssertionError,ValueError):
-            print('Invalid ab-magnitude parameter. Valid syntax is, e.g. g=22.0 or r=21.5.')
-            return -1
-        if args.verbose:
-            print('Rescaling %s-band magnitude to %f' % (band,abmag))
-        srcSpectrum = srcSpectrum.createRescaled(band,abmag)
-
-    # Redshift the source spectrum if requested.
-    if args.redshift_to is not None:
-        srcSpectrum = srcSpectrum.createRedshifted(args.redshift_to,args.redshift_from)
-
-    # Save the spectrum after apply any rescaling or redshift.
-    if args.save_spectrum:
-        srcSpectrum.saveToTextFile(args.save_spectrum)
-
-    # Calculate the g,r,i AB magnitudes of the source spectrum.
-    mags = srcSpectrum.getABMagnitudes()
-    specSummary = os.path.basename(args.infile)
-    for band in 'ugriz':
-        # Check for a valid AB magnitude in this band.
-        if mags[band] is not None:
-            specSummary += ' %s=%.2f' % (band,mags[band])
-    print(specSummary)
-    '''
-    specSummary = config.source.name
 
     # Initialize the simulator.
     simulator = specsim.simulator.Simulator(config)

@@ -25,5 +25,5 @@ produces the following plot of a simulated 22nd AB magnitude reference source:
     :alt: Simulated DESI response
 
 A limited number of simulation parameters can be changed from the command line,
-such as the exposure time and airmass.  For more substantial changes to the
-simulation models, copy and edit an existing configuration file.
+such as the exposure time, airmass and source magnitude.  For more substantial
+changes to the simulation models, copy and edit an existing configuration file.

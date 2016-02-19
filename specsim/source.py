@@ -168,7 +168,6 @@ class Source(object):
             filter_response = speclite.filters.load_filter(filter_name)
             ab_magnitude_in = filter_response.get_ab_magnitude(
                 flux_value * flux_unit, wavelength_value * wavelength_unit)
-            print('ab_in', ab_magnitude_in)
             flux_value *= 10 ** (-(ab_magnitude_out - ab_magnitude_in) / 2.5)
 
         # Interpolate to the output wavelength grid, if necessary.

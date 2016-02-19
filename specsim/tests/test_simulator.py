@@ -9,13 +9,11 @@ from astropy.tests.helper import pytest
 from ..simulator import *
 
 import specsim.config
-import specsim.source
 
 def test_end_to_end():
     config = specsim.config.load_config('test')
     sim = Simulator(config)
-    src = specsim.source.initialize(config)
-    results = sim.simulate(src)
+    results = sim.simulate()
     medsnr = np.median(results[results.obsflux > 0].snrtot)
     snrtot2 = np.sum(results.snrtot ** 2)
     assert np.allclose([medsnr, snrtot2], [2.10661167, 18068.7423])

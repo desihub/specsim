@@ -18,6 +18,7 @@ from astropy import units as u
 
 import specsim.atmosphere
 import specsim.instrument
+import specsim.source
 
 
 class QuickCamera(object):
@@ -102,6 +103,7 @@ class Simulator(object):
 
         self.atmosphere = specsim.atmosphere.initialize(config)
         self.instrument = specsim.instrument.initialize(config)
+        self.source = specsim.source.initialize(config)
         self.downsampling = config.simulator.downsampling
 
         # Lookup the telescope's effective area in cm^2.
@@ -143,7 +145,7 @@ class Simulator(object):
             self.cameras.append(quick_camera)
 
 
-    def simulate(self, source):
+    def simulate(self):
         """Simulate a single exposure.
 
         Returns a numpy array of results with one row per downsampled wavelength bin containing
@@ -185,10 +187,11 @@ class Simulator(object):
         airmass = self.atmosphere.airmass
         expTime = self.instrument.exposure_time.to(u.s).value
 
-        self.fiberAcceptanceFraction = self.instrument.get_fiber_acceptance(source)
+        self.fiberAcceptanceFraction = self.instrument.get_fiber_acceptance(
+            self.source)
 
         # Resample the source spectrum to our simulation grid, if necessary.
-        self.sourceFlux = source.flux_out.to(
+        self.sourceFlux = self.source.flux_out.to(
             1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom)).value
 
         # Loop over cameras.

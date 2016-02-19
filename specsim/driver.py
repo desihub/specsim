@@ -11,7 +11,6 @@ import numpy as np
 from astropy.utils.compat import argparse
 
 import specsim.config
-import specsim.source
 import specsim.simulator
 
 
@@ -75,14 +74,11 @@ def main(args=None):
     config.source.ab_magnitude = args.ab_mag
     specSummary = config.source.name
 
-    # Initialize the source to simulate.
-    source = specsim.source.initialize(config)
-
     # Initialize the simulator.
     simulator = specsim.simulator.Simulator(config)
 
     # Perform a quick simulation of the observed spectrum.
-    results = simulator.simulate(source)
+    results = simulator.simulate()
 
     # Calculate the median total SNR in bins with some observed flux.
     medianSNR = np.median(results[results.obsflux > 0].snrtot)
@@ -104,13 +100,13 @@ def main(args=None):
         nsky = np.sum(results.nsky,axis=1)
         # Try opening the requested output file.
         with open(args.output,'w') as out:
-            print('# AIRMASS=',simulator.airmass,file=out)
-            print('# MODEL=', source.type_name, file=out)
-            print('# EXPTIME=',simulator.expTime,file=out)
-            print('#',file=out)
-            print('# Median (S/N)=',medianSNR,file=out)
-            print('# Total (S/N)^2=',totalSNR2,file=out)
-            print('#',file=out)
+            print('# AIRMASS=',simulator.atmosphere.airmass, file=out)
+            print('# MODEL=', simulator.source.type_name, file=out)
+            print('# EXPTIME=', simulator.instrument.exposure_time, file=out)
+            print('#', file=out)
+            print('# Median (S/N)=',medianSNR, file=out)
+            print('# Total (S/N)^2=',totalSNR2, file=out)
+            print('#', file=out)
             print('# Wave    Flux        Invvar      S/N         Counts_obj  ' +
                   'Counts_sky  Counts_read  FWHM', file=out)
             print('# [Ang] [e-17 erg/s/cm^2/Ang] [1/(e-17 erg/s/cm^2/Ang)^2] []',

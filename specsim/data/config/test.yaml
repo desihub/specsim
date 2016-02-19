@@ -103,7 +103,7 @@ source:
     z_out:
     # Set these parameters to normalize in a specified filter.
     filter_name:
-    ab_magnitude:
+    ab_magnitude_out:
 
 # The simulator configuration is interpreted and validated by the
 # specsim.simulator module.

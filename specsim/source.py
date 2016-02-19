@@ -57,7 +57,7 @@ class Source(object):
     filter_name : str or None
         Name of the `speclite filter response
         <http://speclite.readthedocs.org/en/stable/filters.html>`__ to use
-        for normalizing :attr:`flux_out`. Ignored when ab_magnitude is None.
+        for normalizing :attr:`flux_out`. Ignored when ab_magnitude_out is None.
     ab_magnitude_out : float or None
         AB magnitude to use for normalizing :attr:`flux_out`.  Note that any
         redshift transform is applied before normalizing.
@@ -164,7 +164,8 @@ class Source(object):
         # Normalize to a specified magnitude, if requested.
         if ab_magnitude_out is not None:
             if filter_name is None:
-                raise ValueError('Must specify filter_name with ab_magnitude.')
+                raise ValueError(
+                    'Must specify filter_name with ab_magnitude_out.')
             filter_response = speclite.filters.load_filter(filter_name)
             ab_magnitude_in = filter_response.get_ab_magnitude(
                 flux_value * flux_unit, wavelength_value * wavelength_unit)
@@ -260,15 +261,15 @@ def initialize(config):
         config.source.name, config.source.type, config.wavelength,
         table['wavelength'], table['flux'], config.source.z_in,
         config.source.z_out, config.source.filter_name,
-        config.source.ab_magnitude)
+        config.source.ab_magnitude_out)
     if config.verbose:
         print("Initialized source '{0}' of type '{1}'."
               .format(source.name, source.type_name))
         if config.source.z_out is not None:
             print('Redshift transformed from {0:.3f} to {1:.3f}.'
                   .format(config.source.z_in, config.source.z_out))
-        if config.source.ab_magnitude is not None:
+        if config.source.ab_magnitude_out is not None:
             print('Normalized to AB magnitude {0:.3f} in {1}.'
-                  .format(config.source.ab_magnitude,
+                  .format(config.source.ab_magnitude_out,
                           config.source.filter_name))
     return source

@@ -16,7 +16,7 @@ configurations are straightforward to create using these examples as templates.
 
 This document provides a user-oriented view of configuration, and focuses on the
 tasks of interpreting end editing configuration files.  For a
-developer-oriented view, see the :doc:`API documentation </api>`.
+developer-oriented view, see the :ref:`API documentation <config-api>`.
 
 Configuration File
 ------------------
@@ -28,9 +28,10 @@ and packaged separately.  For example, the DESI configuration refers to files
 in the `desimodel package <https://github.com/desihub/desimodel>`__.
 
 Most of the configuration is used to initialize the independent models of the
-atmosphere, instrument and source that come together in the simulation.
-However, there are also a few global configuration options that you should
-be familiar with::
+:ref:`atmosphere <atmosphere-api>`, :ref:`instrument <instrument-api>` and
+:ref:`source <source-api>` that come together in the
+:ref:`simulator <simulator-api>`. However, there are also a few global
+configuration options that you should be familiar with::
 
     name: DESI QuickSim
 

@@ -288,7 +288,14 @@ class Configuration(Node):
                         raise RuntimeError(
                             'Units do not match for "{0}".'.format(column))
 
-                loaded_columns[config_name] = column_data
+                if interpolate:
+                    loaded_columns[config_name] = column_data
+                else:
+                    unit = column_data.unit
+                    if unit:
+                        loaded_columns[config_name] = column_data.data * unit
+                    else:
+                        loaded_columns[config_name] = column_data.data
 
             if interpolate:
                 wavelength_column = loaded_columns['wavelength']

@@ -188,7 +188,7 @@ class Simulator(object):
         self.fiberAcceptanceFraction = self.instrument.get_fiber_acceptance(source)
 
         # Resample the source spectrum to our simulation grid, if necessary.
-        self.sourceFlux = source.flux.to(
+        self.sourceFlux = source.flux_out.to(
             1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom)).value
 
         # Loop over cameras.

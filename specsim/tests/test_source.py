@@ -45,6 +45,10 @@ def test_update_interlock():
 def test_redshift():
     config = load_config('test')
     src = initialize(config)
+
+    with pytest.raises(RuntimeError):
+        src.update_out(z_out = 0.5)
+    src.update_in('name', 'type_name', src.wavelength_in, src.flux_in, z_in=0.)
     src.update_out(z_out = 0.5)
     assert np.all(src.flux_out.value == 1e-17 / (1 + 0.5))
 

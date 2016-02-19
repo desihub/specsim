@@ -98,6 +98,12 @@ source:
         columns:
             wavelength: { name: wavelength }
             flux: { name: flux }
+    # Set these parameters to apply a redshift transformation.
+    z_in:
+    z_out:
+    # Set these parameters to normalize in a specified filter.
+    filter_name:
+    ab_magnitude:
 
 # The simulator configuration is interpreted and validated by the
 # specsim.simulator module.

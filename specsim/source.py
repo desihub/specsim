@@ -48,9 +48,9 @@ class Source(object):
         Array of increasing input wavelengths with units.
     flux_in : astropy.units.Quantity
         Array of input flux values tabulated at wavelength_in.
-    z_in : float
+    z_in : float or None
         Redshift of (wavelength_in, flux_in) to assume for redshift transforms.
-        Ignored unless z_out is set.
+        Ignored unless z_out is set and must be set when z_out is set.
     z_out : float or None
         When this parameter is set, (:attr:`wavelength_in`, :attr:`flux_in`)
         are redshifted from z_in to this value to obtain :attr:`flux_out`.
@@ -63,7 +63,8 @@ class Source(object):
         redshift transform is applied before normalizing.
     """
     def __init__(self, name, type_name, wavelength_out, wavelength_in, flux_in,
-                 z_in=0., z_out=None, filter_name=None, ab_magnitude_out=None):
+                 z_in=None, z_out=None, filter_name=None,
+                 ab_magnitude_out=None):
 
         wavelength_out = np.asanyarray(wavelength_out)
         if len(wavelength_out.shape) != 1:
@@ -78,7 +79,7 @@ class Source(object):
         self.update_out(z_out, filter_name, ab_magnitude_out)
 
 
-    def update_in(self, name, type_name, wavelength_in, flux_in, z_in=0.):
+    def update_in(self, name, type_name, wavelength_in, flux_in, z_in=None):
         """Update this source model.
 
         All parameters have the same meaning as in the
@@ -96,15 +97,16 @@ class Source(object):
             See :class:`constructor <Source>`.
         flux_in : astropy.units.Quantity
             See :class:`constructor <Source>`.
-        z_in : float
+        z_in : float or None
             See :class:`constructor <Source>`.
         """
         self._name = name
         self._type_name = type_name
 
-        z_in = np.float(z_in)
-        if z_in <= -1.0:
-            raise ValueError('Invalid z_in <= -1.')
+        if z_in is not None:
+            z_in = np.float(z_in)
+            if z_in <= -1.0:
+                raise ValueError('Invalid z_in <= -1.')
         self._z_in = z_in
 
         # Check for valid shapes.
@@ -152,12 +154,17 @@ class Source(object):
 
         # Appy a redshift transformation, if requested.
         if z_out is not None:
+            if self._z_in is None:
+                raise RuntimeError(
+                    'Cannot redshift unless z_in and z_out are both set.')
             z_ratio = (1. + z_out) / (1. + self._z_in)
             wavelength_value *= z_ratio
             flux_value /= z_ratio
 
         # Normalize to a specified magnitude, if requested.
         if ab_magnitude_out is not None:
+            if filter_name is None:
+                raise ValueError('Must specify filter_name with ab_magnitude.')
             filter_response = speclite.filters.load_filter(filter_name)
             ab_magnitude_in = filter_response.get_ab_magnitude(
                 flux_value * flux_unit, wavelength_value * wavelength_unit)
@@ -249,23 +256,20 @@ def initialize(config):
     # Load a table of (wavelength_in, flux_in) without any interpolation.
     table = config.load_table(
         config.source, ['wavelength', 'flux'], interpolate=False)
-    # Look up optional parameters in the config.
-    z_in = getattr(config.source, 'z_in', 0.)
-    z_out = getattr(config.source, 'z_out', None)
-    filter_name = getattr(config.source, 'filter_name', None)
-    ab_magnitude = getattr(config.source, 'ab_magnitude', None)
     # Create a new Source object.
     source = Source(
         config.source.name, config.source.type, config.wavelength,
-        table['wavelength'], table['flux'], z_in, z_out,
-        filter_name, ab_magnitude)
+        table['wavelength'], table['flux'], config.source.z_in,
+        config.source.z_out, config.source.filter_name,
+        config.source.ab_magnitude)
     if config.verbose:
         print("Initialized source '{0}' of type '{1}'."
               .format(source.name, source.type_name))
-        if z_out is not None:
+        if config.source.z_out is not None:
             print('Redshift transformed from {0:.3f} to {1:.3f}.'
-                  .format(z_in, z_out))
-        if ab_magnitude is not None:
+                  .format(config.source.z_in, config.source.z_out))
+        if config.source.ab_magnitude is not None:
             print('Normalized to AB magnitude {0:.3f} in {1}.'
-                  .format(ab_magnitude, filter_name))
+                  .format(config.source.ab_magnitude,
+                          config.source.filter_name))
     return source

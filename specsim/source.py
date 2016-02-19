@@ -168,8 +168,7 @@ class Source(object):
         # Interpolate to the output wavelength grid, if necessary.
         if not np.array_equal(wavelength_value, self.wavelength_out.value):
             interpolator = scipy.interpolate.interp1d(
-                wavelength_value, flux_value,
-                kind='linear', copy=False, assume_sorted=True)
+                wavelength_value, flux_value, kind='linear', copy=False)
             flux_out_value = interpolator(self.wavelength_out.value)
         else:
             flux_out_value = flux_value

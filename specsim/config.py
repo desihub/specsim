@@ -155,7 +155,31 @@ class Configuration(Node):
 
 
     def get_constants(self, parent, required_names=None):
-        """
+        """Interpret a constants node in this configuration.
+
+        Parameters
+        ----------
+        parent : :class:`Node`
+            Parent node in this configuration whose ``constants`` child
+            will be processed.
+        required_names : iterable or None
+            List of constant names that are required to be present for this
+            method to succeed.  If None, then no specific names are required.
+            When specified, exactly these names are required and any other
+            names will raise a RuntimeError.
+
+        Returns
+        -------
+        dict
+            Dictionary of (name, value) pairs where each value is an
+            :class:`astropy.units.Quantity`.  When ``required_names`` is
+            specified, they are guaranteed to be present as keys of the returned
+            dictionary.
+
+        Raises
+        ------
+        RuntimeError
+            Constants present in the node do not match the required names.
         """
         constants = {}
         node = parent.constants
@@ -177,7 +201,8 @@ class Configuration(Node):
 
 
     def load_table(self, parent, column_names, interpolate=True, as_dict=False):
-        """
+        """Load and interpolate tabular data from one or more files.
+
         Reads a single file if parent.table.path exists, or else reads
         multiple files if parent.table.paths exists (and returns a dictionary).
         If as_dict is True, always return a dictionary using the 'default' key

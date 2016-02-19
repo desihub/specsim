@@ -11,7 +11,7 @@ import astropy.units as u
 
 
 class Source(object):
-    """
+    """Source model used for simulation.
     """
     def __init__(self, name, type_name, wavelength, flux):
         self.name = name
@@ -21,7 +21,7 @@ class Source(object):
 
 
     def update(self, type_name, wavelength, flux, extrapolate_value=None):
-        """
+        """Update this source model.
         """
         self.type_name = type_name
         # Convert input arrays to original units.

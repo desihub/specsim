@@ -163,7 +163,7 @@ configuration scheme:
 +-----------------------------+------------------------------------------------+
 | `ccd.*.darkcurrent`         | `instrument.cameras.*.constants.dark_current`  |
 +-----------------------------+------------------------------------------------+
-| `ccd.*.gain`                | `instrument.cameras.*.constants.dark_current`  |
+| `ccd.*.gain`                | `instrument.cameras.*.constants.gain`          |
 +-----------------------------+------------------------------------------------+
 | `exptime`                   | `instrument.constants.exposure_time`           |
 +-----------------------------+------------------------------------------------+

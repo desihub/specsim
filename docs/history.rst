@@ -24,7 +24,7 @@ First, using the final SVN python version (revision 2134)::
     python bin/quicksim.py --infile data/spectra/spec-ABmag22.0.dat --model qso \
         --verbose --show-plot --outfile ab22.dat
 
-Next, using the first release (v0.1) after moving to a dedicated package on github:
+Next, using the first release (v0.1) after moving to a dedicated package on github::
 
     export SPECSIM_MODEL=$DESIMODEL
     ln -s $SPECSIM_MODEL/data/throughput specsim/data/throughput
@@ -32,7 +32,7 @@ Next, using the first release (v0.1) after moving to a dedicated package on gith
     quickspecsim --infile specsim/data/spectra/spec-ABmag22.0.dat --model qso \
         --verbose --show-plot --outfile ab22.dat
 
-Finally, using the first release (v0.3) that is completely independent of DESI software:
+Finally, using the first release (v0.3) that is completely independent of DESI software::
 
     quickspecsim -c desi -o ab22.dat --show-plot
 

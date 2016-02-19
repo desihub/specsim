@@ -30,6 +30,7 @@ class QuickCamera(object):
         self.throughput = camera.throughput
         self.readnoisePerBin = camera.read_noise_per_bin.value
         self.darkCurrentPerBin = camera.dark_current_per_bin.value
+        self.gain = camera.gain.value
         self.coverage = camera.ccd_coverage
 
         # Truncate our throughput to the wavelength range covered by all fibers.
@@ -196,12 +197,12 @@ class Simulator(object):
         throughputTotal = np.zeros_like(self.wavelengthGrid)
         for camera in self.cameras:
 
-            # Calculate the calibration from source flux to mean number of detected photons
+            # Calculate the calibration from source flux to mean detected photons
             # before resolution smearing in this camera's CCD.
             camera.sourceCalib = (expTime*camera.photonRatePerBin*
                 self.fiberAcceptanceFraction * 10 ** (-self.extinction*airmass/2.5))
 
-            # Apply resolution smoothing to the detected source photons.
+            # Apply resolution smoothing to the mean detected photons response.
             camera.sourcePhotonsSmooth = camera.sparseKernel.dot(
                 self.sourceFlux*camera.sourceCalib)
 
@@ -209,7 +210,7 @@ class Simulator(object):
             camera.sourcePhotonsSmooth[~camera.coverage] = 0.
 
             # Calculate the variance in the number of detected electrons
-            # for this camera.
+            # for this camera (assuming one electron per photon).
             camera.nElecVariance = (
                 camera.sourcePhotonsSmooth + camera.skyPhotonRateSmooth*expTime +
                 (camera.readnoisePerBin)**2 + camera.darkCurrentPerBin*expTime)

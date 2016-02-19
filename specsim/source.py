@@ -152,17 +152,16 @@ class Source(object):
 
         # Appy a redshift transformation, if requested.
         if z_out is not None:
-            if z_in is None:
-                z_in = 0.
-            z_ratio = (1. + z_out) / (1. + z_in)
+            z_ratio = (1. + z_out) / (1. + self._z_in)
             wavelength_value *= z_ratio
             flux_value /= z_ratio
 
         # Normalize to a specified magnitude, if requested.
         if ab_magnitude_out is not None:
-            filter_response = speclite.filters.get_filter(filter_name)
-            ab_magnitude_in = filter_response.get_ab_magitude(
+            filter_response = speclite.filters.load_filter(filter_name)
+            ab_magnitude_in = filter_response.get_ab_magnitude(
                 flux_value * flux_unit, wavelength_value * wavelength_unit)
+            print('ab_in', ab_magnitude_in)
             flux_value *= 10 ** (-(ab_magnitude_out - ab_magnitude_in) / 2.5)
 
         # Interpolate to the output wavelength grid, if necessary.

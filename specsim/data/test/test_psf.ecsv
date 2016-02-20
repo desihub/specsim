@@ -1,0 +1,12 @@
+# %ECSV 0.9
+# ---
+# datatype:
+# - {name: wavelength, unit: Angstrom, datatype: float64}
+# - {name: angstroms_per_row, unit: Angstrom/pixel, datatype: float64}
+# - {name: fwhm_wave, unit: Angstrom, datatype: float64}
+# - {name: neff_spatial, unit: pixel, datatype: float64}
+# meta: !!omap
+# - {description: Simple r-band PSF model for testing.}
+wavelength angstroms_per_row fwhm_wave neff_spatial
+5600.0 0.6 1.3 0.6
+7400.0 0.5 1.3 0.7

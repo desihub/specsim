@@ -1,0 +1,10 @@
+# %ECSV 0.9
+# ---
+# datatype:
+# - {name: wavelength, unit: Angstrom, datatype: float64}
+# - {name: flux, unit: erg / (Angstrom cm2 s), datatype: float64}
+# meta: !!omap
+# - {description: Constant flux density source for testing.}
+wavelength flux
+ 1000.0 1e-17
+20000.0 1e-17

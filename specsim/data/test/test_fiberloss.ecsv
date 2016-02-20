@@ -1,0 +1,10 @@
+# %ECSV 0.9
+# ---
+# datatype:
+# - {name: wavelength, unit: Angstrom, datatype: float64}
+# - {name: fiberloss, datatype: float64}
+# meta: !!omap
+# - {description: Linear fiberloss model for testing.}
+wavelength fiberloss
+ 3000.0 0.5
+10000.0 0.6

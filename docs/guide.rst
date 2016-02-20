@@ -20,7 +20,7 @@ The table below lists all of the simulation modeling parameters described
 in this guide, and specifies their units and which component they are associated
 with.
 
-.. figure:: img/overview.*
+.. figure:: _static/overview.*
     :alt: Simulation overview diagram
 
     *Overview of the simulation components and parameters.  Camera components are

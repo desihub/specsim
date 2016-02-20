@@ -38,4 +38,4 @@ by `[j]` are repeated for each simulated camera.
 
 The nominal co-add wavelength grid is obtained by downsampling the fine
 wavelength grid used internally by an integer factor.  The fine and downsampled
-grids are both configured by :ref:`command-line options <config_command_line>`.
+grids are both configured by :doc:`command-line options </cmdline>`.

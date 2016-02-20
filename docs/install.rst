@@ -77,6 +77,7 @@ a scientific python distribution such as  `anaconda
 * `scipy <http://www.scipy.org/scipylib/index.html>`__
 * `astropy <http://www.astropy.org/>`__
 * `pyyaml <http://pyyaml.org/wiki/PyYAML>`__
+* `speclite <http://speclite.readthedocs.org>`__ (version >= 0.3)
 
 Optional Dependency: matplotlib
 -------------------------------

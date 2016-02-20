@@ -1,0 +1,112 @@
+name: Test Simulation
+
+# The base path is pre-pended to all non-absolute path values below.
+# Any embedded {...} will be expanded using environment variables.
+# Use <PACKAGE_DATA> to indicate that paths are relative to this package's
+# data/ directory.  You can leave this blank ('') if all paths are absolute or
+# relative to the current working directory.
+base_path: <PACKAGE_DATA>
+
+# Be verbose during the simulation?
+verbose: no
+
+# Specify the wavelength grid to use for simulation.
+wavelength_grid:
+    unit: Angstrom
+    min: 4000.0
+    max: 9000.0
+    step: 0.1
+
+# The atmosphere configuration is interpreted and validated by the
+# specsim.atmosphere module.
+atmosphere:
+    # Sky emission surface brightness.
+    sky:
+        table:
+            # The .ecsv extension is not automatically recognized.
+            format: ascii.ecsv
+            columns:
+                wavelength: { name: wavelength }
+                surface_brightness: { name: flux }
+            path: test/test_sky.ecsv
+        condition: default
+    # Zenith extinction coefficients.
+    extinction:
+        table:
+            format: ascii.ecsv
+            columns:
+                wavelength: { name: wavelength }
+                extinction_coefficient: { name: extinction }
+            path: test/test_extinction.ecsv
+    # Should extinction be applied to the sky emission?
+    extinct_emission: no
+    # Airmass to use.
+    airmass: 1.0
+
+# The instrument configuration is interpreted and validated by the
+# specsim.instrument module.
+instrument:
+    name: Test Instrument
+    constants:
+        exposure_time: 1000.0 s
+        primary_mirror_diameter: 3.797 m
+        obscuration_diameter: 1.8 m
+        support_width: 0.025 m
+        # Averaged over the focal plane for 107.0 um physical diameter.
+        fiber_diameter: 1.52 arcsec
+    fiberloss:
+        table:
+            format: ascii
+            paths:
+                qso: test/test_fiberloss.ecsv
+            columns:
+                wavelength: { name: wavelength }
+                fiber_acceptance: { name: fiberloss }
+    cameras:
+        r:
+            constants:
+                read_noise: 2.9 electron
+                dark_current: 2.0 electron/(hour pixel**2)
+                gain: 1.0 electron/adu
+            ccd:
+                table:
+                    format: ascii.ecsv
+                    path: test/test_psf.ecsv
+                    extrapolated_value: 0.0
+                    columns:
+                        wavelength: { name: wavelength }
+                        row_size: { name: angstroms_per_row }
+                        fwhm_resolution: { name: fwhm_wave }
+                        neff_spatial: { name: neff_spatial }
+            throughput:
+                table:
+                    format: ascii.ecsv
+                    path: test/test_throughput.ecsv
+                    extrapolated_value: 0.0
+                    columns:
+                        wavelength: { name: wavelength }
+                        throughput: { name: throughput }
+
+# The source configuration is interpreted and validated by the
+# specsim.source module.
+source:
+    name: Constant flux density test source
+    type: qso
+    table:
+        format: ascii.ecsv
+        path: test/test_source.ecsv
+        columns:
+            wavelength: { name: wavelength }
+            flux: { name: flux }
+    # Set these parameters to apply a redshift transformation.
+    z_in:
+    z_out:
+    # Set these parameters to normalize in a specified filter.
+    filter_name:
+    ab_magnitude_out:
+
+# The simulator configuration is interpreted and validated by the
+# specsim.simulator module.
+simulator:
+    # Number of simulation wavelength bins to combine into the output bins.
+    downsampling: 5

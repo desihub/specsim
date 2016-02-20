@@ -1,7 +1,19 @@
 Data directory
 ==============
 
-This directory contains data files included with the affiliated package source
-code distribution. Note that this is intended only for relatively small files
-- large files should be externally hosted and downloaded as needed.
+This directory contains small data files that are included with the specsim
+source code distribution.
 
+Config
+------
+
+The ``config`` subdirectory contains YAML configuration files.
+See the `configuration documentation page
+<http://specsim.readthedocs.org/en/stable/config.html>`__ for details.
+
+Test
+----
+
+The ``test`` subdirectory contains input tables referred to by
+``config/test.yaml``.  These are simplified inputs provided to allow
+this package to be tested without any external inputs.

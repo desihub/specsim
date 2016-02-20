@@ -3,19 +3,6 @@ specsim
 
 Quick simulations of fiber spectrograph response.
 
-The following recipe gives identical results to the original desimodel quicksim::
-
-    # Using desimodel (svn revision 2134)
-    export DESIMODEL=`pwd`
-    python bin/quicksim.py --infile data/spectra/spec-ABmag22.0.dat --model qso --verbose --show-plot --outfile ab22.dat
-
-    # Using specsim (git tag 0.1)
-    export SPECSIM_MODEL=$DESIMODEL
-    ln -s $SPECSIM_MODEL/data/throughput specsim/data/throughput
-    ln -s $SPECSIM_MODEL/data/spectra specsim/data/spectra
-    quickspecsim --infile specsim/data/spectra/spec-ABmag22.0.dat --model qso --verbose --show-plot --outfile ab22.dat
-
-
 Status reports for developers
 -----------------------------
 

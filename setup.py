@@ -76,7 +76,9 @@ package_info = get_package_info()
 
 # Add the project-global data
 package_info['package_data'].setdefault(PACKAGENAME, [])
-package_info['package_data'][PACKAGENAME].append('data/*')
+package_info['package_data'][PACKAGENAME].append('data/README.rst')
+package_info['package_data'][PACKAGENAME].append('data/config/*')
+package_info['package_data'][PACKAGENAME].append('data/test/*')
 
 # Define entry points for command-line scripts
 entry_points = {'console_scripts': []}
@@ -106,7 +108,7 @@ setup(name=PACKAGENAME,
       version=VERSION,
       description=DESCRIPTION,
       scripts=scripts,
-      install_requires=['astropy', 'scipy', 'pyyaml'],
+      install_requires=['astropy', 'scipy', 'pyyaml', 'speclite'],
       author=AUTHOR,
       author_email=AUTHOR_EMAIL,
       license=LICENSE,

@@ -1,4 +1,4 @@
-0.3 (unreleased)
+0.3 (2016-02-19)
 ----------------
 
 This version introduces some significant API changes in order to make the

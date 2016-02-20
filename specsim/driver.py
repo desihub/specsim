@@ -71,7 +71,7 @@ def main(args=None):
     config.source.z_in = args.z_in
     config.source.z_out = args.z_out
     config.source.filter_name = args.filter
-    config.source.ab_magnitude = args.ab_mag
+    config.source.ab_magnitude_out = args.ab_mag
     specSummary = config.source.name
 
     # Initialize the simulator.

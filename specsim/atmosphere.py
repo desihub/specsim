@@ -40,12 +40,14 @@ class Atmosphere(object):
     """Implement an atmosphere model based on tabulated data read from files.
     """
     def __init__(self, wavelength, surface_brightness_dict,
-                 extinction_coefficient, extinct_emission, condition, airmass):
+                 extinction_coefficient, extinct_emission, condition, airmass,
+                 moon):
         self.wavelength = wavelength
         self.surface_brightness_dict = surface_brightness_dict
         self.extinction_coefficient = extinction_coefficient
         self.extinct_emission = extinct_emission
         self.condition_names = surface_brightness_dict.keys()
+        self.moon = moon
 
         self.set_condition(condition)
         self.set_airmass(airmass)
@@ -121,6 +123,25 @@ class Atmosphere(object):
                    ncol=2, mode="expand", borderaxespad=0.)
 
 
+class Moon(object):
+    """Model of scattered moonlight.
+    """
+    def __init__(self, moon_spectrum, extinction_coefficient, moon_phase,
+                 moon_zenith, observation_zenith, separation_angle):
+        self.moon_spectrum = moon_spectrum
+        self.extinction_coefficient = extinction_coefficient
+        self.update(
+            moon_phase, moon_zenith, observation_zenith, separation_angle)
+
+
+    def update(self, moon_phase, moon_zenith, observation_zenith,
+               separation_angle):
+        self.moon_phase = moon_phase
+        self.moon_zenith = moon_zenith
+        self.observation_zenith = observation_zenith
+        self.separation_angle = separation_angle
+
+
 def initialize(config):
     """Initialize the atmosphere model from configuration parameters.
 
@@ -142,10 +163,23 @@ def initialize(config):
     extinction_coefficient = config.load_table(
         atm_config.extinction, 'extinction_coefficient')
 
+    # Initialize an optional lunar scattering model.
+    moon_config = getattr(atm_config, 'moon', None)
+    if moon_config:
+        moon_spectrum = config.load_table(moon_config, 'flux')
+        c = config.get_constants(moon_config,
+            ['moon_phase', 'moon_zenith', 'observation_zenith',
+             'separation_angle'])
+        moon = Moon(
+            moon_spectrum, extinction_coefficient, c['moon_phase'],
+            c['moon_zenith'], c['observation_zenith'], c['separation_angle'])
+    else:
+        moon = None
+
     atmosphere = Atmosphere(
         config.wavelength, surface_brightness_dict, extinction_coefficient,
         atm_config.extinct_emission, atm_config.sky.condition,
-        atm_config.airmass)
+        atm_config.airmass, moon)
 
     if config.verbose:
         print(

@@ -143,15 +143,18 @@ class Moon(object):
 
 
 def krisciunas_schaefer(obs_zenith, moon_zenith, separation_angle, moon_phase,
-                        extinction_coefficient):
-    """Calculate the moon surface brightness.
+                        vband_extinction):
+    """Calculate the scattered moonlight surface brightness in V band.
 
     Based on Krisciunas and Schaefer, "A model of the brightness of moonlight",
     PASP, vol. 103, Sept. 1991, p. 1033-1039 (http://dx.doi.org/10.1086/132921).
     Equation numbers in the code comments refer to this paper.
 
-    This method has many caveats but the authors find agreement with data at
+    This method has several caveats but the authors find agreement with data at
     the 8% - 23% level.  See the paper for details.
+
+    The function :func:`plot_lunar_brightness` provides a convenient way to
+    plot this model's predictions as a function of observation pointing.
 
     Parameters
     ----------
@@ -165,7 +168,7 @@ def krisciunas_schaefer(obs_zenith, moon_zenith, separation_angle, moon_phase,
         Phase of the moon from 0.0 (full) to 1.0 (new), which can be calculated
         as abs((d / D) - 1) where d is the time since the last new moon
         and D = 29.5 days is the period between new moons.
-    extinction_coefficient : float
+    vband_extinction : float
         V-band extinction coefficient to use.
 
     Returns
@@ -193,13 +196,98 @@ def krisciunas_schaefer(obs_zenith, moon_zenith, separation_angle, moon_phase,
     X_moon = np.sqrt(1 - 0.96 * np.sin(moon_zenith) ** 2)
     # Calculate the V-band moon surface brightness in nanoLamberts.
     B_moon = (f_scatter * Istar *
-        10 ** (-0.4 * extinction_coefficient * X_moon) *
-        (1 - 10 ** (-0.4 * (extinction_coefficient * X_obs))))
+        10 ** (-0.4 * vband_extinction * X_moon) *
+        (1 - 10 ** (-0.4 * (vband_extinction * X_obs))))
     # Convert from nanoLamberts to to mag / arcsec**2 using eqn.19 of
     # Garstang, "Model for Artificial Night-Sky Illumination",
     # PASP, vol. 98, Mar. 1986, p. 364 (http://dx.doi.org/10.1086/131768)
     return ((20.7233 - np.log(B_moon / 34.08)) / 0.92104 *
             u.mag / (u.arcsec ** 2))
+
+
+def plot_lunar_brightness(moon_zenith, moon_azimuth, moon_phase,
+                          vband_extinction=0.162, ngrid=250,
+                          cmap='YlGnBu', figure_size=(8, 6)):
+    """Create a polar plot of the scattered moon brightness in V band.
+
+    Evaluates the model of :func:`krisciunas_schaefer` on a polar grid of
+    observation pointings, for a fixed moon position and phase.
+
+    This method requires that matplotlib is installed.
+
+    Parameters
+    ----------
+    moon_zenith : astropy.units.Quantity
+        See :func:`krisciunas_schaefer`.
+    moon_azimuth : astropy.units.Quantity
+        Aziumuthal angle of the moon in angular units.  Azimuth is measured
+        clockwize from zero (North).
+    moon_phase : float
+        See :func:`krisciunas_schaefer`.
+    vband_extinction : float
+        See :func:`krisciunas_schaefer`.
+    ngrid : int
+        Size of observing location zenith and azimuth grids to use.
+    cmap : str
+        Name of the matplotlib color map to use.
+    figure_size : tuple or None
+        Tuple (width, height) giving the figure dimensions in inches.
+
+    Returns
+    -------
+    tuple
+        Tuple (fig, ax, cax) of matplotlib objects created for this plot. You
+        can ignore these unless you want to make further changes to the plot.
+    """
+    import matplotlib.pyplot as plt
+
+    # Build a grid in observation (zenith, azimuth).
+    # Build a grid in observation (zenith, azimuth).
+    obs_zenith = np.linspace(0., 90., ngrid, endpoint=False) * u.deg
+    obs_az = (np.linspace(0., 360., ngrid) * u.deg)[:, np.newaxis]
+
+    # Calculate the separation angles.
+    cos_sep = (np.cos(moon_zenith) * np.cos(obs_zenith) +
+               np.cos(moon_azimuth - obs_az) * np.sin(moon_zenith) *
+               np.sin(obs_zenith))
+    sep = np.arccos(cos_sep)
+
+    # Calculate the V-band moon brightness.
+    moon_V = krisciunas_schaefer(
+        obs_zenith, moon_zenith, sep, moon_phase, vband_extinction)
+
+    # Initialize the plot. We are borrowing from:
+    # http://blog.rtwilson.com/producing-polar-contour-plots-with-matplotlib/
+    fig, ax = plt.subplots(
+        figsize=figure_size, subplot_kw=dict(projection='polar'))
+    r, theta = np.meshgrid(
+        obs_zenith.to(u.deg).value, obs_az.to(u.rad).value[:,0], copy=False)
+    ax.set_theta_zero_location('N')
+    ax.set_theta_direction(-1)
+    ax.set_ylim(0., 90.)
+
+    # Draw a polar contour plot.
+    cax = ax.contourf(theta, r, moon_V.value, 50, cmap=cmap)
+    fig.colorbar(cax).set_label('Scattered Moon V [mag/arcsec2]')
+
+    # Draw a point indicating the moon position.
+    plt.scatter(moon_azimuth.to(u.rad).value, moon_zenith.to(u.deg).value,
+                s=150., marker='o', color='w', lw=0.5, edgecolor='k')
+
+    # Add labels.
+    xy, coords = (1., 0.), 'axes fraction'
+    plt.annotate('$k_V$ = {0:.3f}'.format(vband_extinction),
+                 xy, xy, coords, coords,
+                 horizontalalignment='right', verticalalignment='top',
+                 size='x-large', color='k')
+    xy, coords = (0., 0.), 'axes fraction'
+    plt.annotate('$\\alpha$ = {0:.3f}'.format(moon_phase),
+                 xy, xy, coords, coords,
+                 horizontalalignment='left', verticalalignment='top',
+                 size='x-large', color='k')
+
+    plt.tight_layout()
+    return fig, ax, cax
 
 
 def initialize(config):

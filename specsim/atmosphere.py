@@ -35,9 +35,14 @@ import numpy as np
 
 import astropy.units as u
 
+import speclite.filters
+
 
 class Atmosphere(object):
-    """Implement an atmosphere model based on tabulated data read from files.
+    """Model atmospheric surface brightness and extinction.
+
+    Parameters
+    ----------
     """
     def __init__(self, wavelength, surface_brightness_dict,
                  extinction_coefficient, extinct_emission, condition, airmass,
@@ -120,26 +125,97 @@ class Atmosphere(object):
                  label='Surface Brightness ({0})'.format(self.condition))
         ax1.plot([], [], 'r-', label='Zenith Extinction Coefficient')
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                   ncol=2, mode="expand", borderaxespad=0.)
+                   ncol=2, mode='expand', borderaxespad=0.)
 
 
 class Moon(object):
     """Model of scattered moonlight.
+
+    Parameters
+    ----------
+    wavelength : astropy.units.Quantity
+        Array of wavelengths with units where data is tabulated.
+    moon_spectrum : astropy.units.Quantity
+        Tabulated spectrum of scattered moonlight.  The normalization does not
+        matter since it will be fixed by :meth:`get_lunar_surface_brightness`.
+    extinction_coefficient : array
+        Array of extinction coefficients tabulated on ``wavelength``.
+    moon_zenith : astropy.units.Quantity
+        See :func:`krisciunas_schaefer`.
+    separation_angle : astropy.units.Quantity
+        See :func:`krisciunas_schaefer`.
+    moon_phase : float
+        See :func:`krisciunas_schaefer`.
     """
-    def __init__(self, moon_spectrum, extinction_coefficient, moon_phase,
-                 moon_zenith, observation_zenith, separation_angle):
-        self.moon_spectrum = moon_spectrum
-        self.extinction_coefficient = extinction_coefficient
-        self.update(
-            moon_phase, moon_zenith, observation_zenith, separation_angle)
+    def __init__(self, wavelength, moon_spectrum, extinction_coefficient,
+                 moon_zenith, separation_angle, moon_phase):
+        self._moon_spectrum = moon_spectrum
+        self._extinction_coefficient = extinction_coefficient
+
+        # Calculate the V-band extinction of the moon spectrum.
+        vband = speclite.filters.load_filter('bessell-V')
+        V = vband.get_ab_magnitude(moon_spectrum, wavelength)
+        extinction = 10 ** (-extinction_coefficient / 2.5)
+        Vstar = vband.get_ab_magnitude(moon_spectrum * extinction, wavelength)
+        self._vband_extinction = Vstar - V
+
+        # Update our observing parameters.
+        self.update(moon_phase, moon_zenith, separation_angle)
 
 
-    def update(self, moon_phase, moon_zenith, observation_zenith,
-               separation_angle):
-        self.moon_phase = moon_phase
-        self.moon_zenith = moon_zenith
-        self.observation_zenith = observation_zenith
-        self.separation_angle = separation_angle
+    def update(self, moon_zenith, separation_angle, moon_phase):
+        """Update the parameters of moon in this model.
+
+        Parameters
+        ----------
+        moon_zenith : astropy.units.Quantity
+            See :func:`krisciunas_schaefer`.
+        separation_angle : astropy.units.Quantity
+            See :func:`krisciunas_schaefer`.
+        moon_phase : float
+            See :func:`krisciunas_schaefer`.
+        """
+        self._moon_phase = moon_phase
+        self._moon_zenith = moon_zenith
+        self._separation_angle = separation_angle
+
+
+    @property
+    def moon_phase(self):
+        """Read-only value of the moon phase.
+
+        Use :meth:`update` to update this value.
+        """
+        return self._moon_phase
+
+
+    @property
+    def moon_zenith(self):
+        """Read-only value of the moon zenith angle.
+
+        Use :meth:`update` to update this value.
+        """
+        return self._moon_zenith
+
+
+    @property
+    def separation_angle(self):
+        """Read-only value of the observation-moon separation angle.
+
+        Use :meth:`update` to update this value.
+        """
+        return self._separation_angle
+
+
+    @property
+    def vband_extinction(self):
+        """Read-only value of the V-band extinction of the moon spectrum.
+
+        Calculated as V* - V where V is the Bessell-V magnitude of the
+        input lunar spectrum and V* is calculated with airmass 1.0
+        extinction applied.
+        """
+        return self._vband_extinction
 
 
 def krisciunas_schaefer(obs_zenith, moon_zenith, separation_angle, moon_phase,
@@ -316,11 +392,10 @@ def initialize(config):
     if moon_config:
         moon_spectrum = config.load_table(moon_config, 'flux')
         c = config.get_constants(moon_config,
-            ['moon_phase', 'moon_zenith', 'observation_zenith',
-             'separation_angle'])
+            ['moon_zenith', 'separation_angle', 'moon_phase'])
         moon = Moon(
-            moon_spectrum, extinction_coefficient, c['moon_phase'],
-            c['moon_zenith'], c['observation_zenith'], c['separation_angle'])
+            config.wavelength, moon_spectrum, extinction_coefficient,
+            c['moon_zenith'], c['separation_angle'], c['moon_phase'])
     else:
         moon = None
 
@@ -333,5 +408,9 @@ def initialize(config):
         print(
             "Atmosphere initialized with condition '{0}' from {1}."
             .format(atmosphere.condition, atmosphere.condition_names))
+        if moon:
+            print(
+                'Lunar V-band extinction coefficient is {0:.5f}.'
+                .format(moon.vband_extinction))
 
     return atmosphere

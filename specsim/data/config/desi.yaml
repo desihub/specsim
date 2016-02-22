@@ -52,8 +52,6 @@ atmosphere:
             # Zenith angles of the moon. An angle > 90 (below the horizon)
             # will zero the scattered moon contribution.
             moon_zenith: 100 deg
-            # Zenith angle of the observation.
-            observation_zenith: 10 deg
             # Separation angle between the observation and moon.
             separation_angle: 60 deg
     # Zenith extinction coefficients.

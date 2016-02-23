@@ -43,7 +43,13 @@ atmosphere:
         table:
             columns:
                 wavelength: { index: 1, unit: Angstrom }
-                flux: { index: 2, unit: W / (m2 micron) }
+                flux:
+                    index: 2
+                    # The actual units are W / (m2 micron) but we lie here
+                    # (by a factor of 10) since the input normalization does
+                    # not matter and old versions of speclite.filters do
+                    # not interpret the actual units correctly.
+                    unit: erg / (cm2 s Angstrom)
             path: sky/solarspec.txt
             format: ascii.basic
         constants:

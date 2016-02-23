@@ -41,6 +41,9 @@ import speclite.filters
 class Atmosphere(object):
     """Model atmospheric surface brightness and extinction.
 
+    A simulation uses only our :attr:`surface_brightness` and
+    :attr:`extinction` attributes.
+
     Parameters
     ----------
     """
@@ -58,6 +61,30 @@ class Atmosphere(object):
         self.set_airmass(airmass)
 
 
+    @property
+    def surface_brightness(self):
+        """Total sky surface brightness.
+
+        Includes both dark sky emission and (if configured) scattered moonlight.
+        """
+        sky = self._surface_brightness.copy()
+        if self.extinct_emission:
+            sky *= self.extinction
+        if self.moon is not None and self.moon.visible:
+            sky += self.moon.surface_brightness
+        return sky
+
+
+    @property
+    def extinction(self):
+        """The extinction factor for the current model airmass.
+
+        Tabulated as a function of wavelength. Use :meth:`set_airmass` to
+        update these values.
+        """
+        return self._extinction
+
+
     def set_condition(self, name):
         """
         """
@@ -66,23 +93,14 @@ class Atmosphere(object):
                 "Invalid condition '{0}'. Pick one of {1}."
                 .format(name, self.condition_names))
         self.condition = name
-        self.surface_brightness = self.surface_brightness_dict[name]
+        self._surface_brightness = self.surface_brightness_dict[name]
 
 
     def set_airmass(self, airmass):
         """
         """
         self.airmass = airmass
-        self.extinction = 10 ** (-self.extinction_coefficient * airmass / 2.5)
-
-
-    def propagate(self, source_flux, fiber_area):
-        """Propagate a source flux through the atmosphere and into a fiber.
-        """
-        sky = self.surface_brightness * fiber_area
-        if extinct_emission:
-            sky *= self.extinction
-        return sky + source_flux * self.extinction
+        self._extinction = 10 ** (-self.extinction_coefficient * airmass / 2.5)
 
 
     def plot(self):

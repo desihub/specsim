@@ -126,9 +126,6 @@ class Simulator(object):
         # photon rate (Hz).
         skyPhotonRate = sky * self.fiberArea * photonRatePerBin
 
-        # Resample the zenith atmospheric extinction.
-        self.extinction = self.atmosphere.extinction_coefficient
-
         self.cameras = [ ]
         for camera in self.instrument.cameras:
             quick_camera = QuickCamera(camera)
@@ -203,7 +200,7 @@ class Simulator(object):
             # Calculate the calibration from source flux to mean detected photons
             # before resolution smearing in this camera's CCD.
             camera.sourceCalib = (expTime*camera.photonRatePerBin*
-                self.fiberAcceptanceFraction * 10 ** (-self.extinction*airmass/2.5))
+                self.fiberAcceptanceFraction * self.atmosphere.extinction)
 
             # Apply resolution smoothing to the mean detected photons response.
             camera.sourcePhotonsSmooth = camera.sparseKernel.dot(

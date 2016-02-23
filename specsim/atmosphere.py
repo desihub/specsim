@@ -46,15 +46,30 @@ class Atmosphere(object):
 
     Parameters
     ----------
+    wavelength : astropy.units.Quantity
+        Array of wavelengths with units where data is tabulated.
+    surface_brightness_dict : dict
+        Dictionary of tabulated sky emission surface brightness values. Each
+        dictionary key defines a possible sky condition.
+    extinction_coefficient : array
+        Array of extinction coefficients tabulated on ``wavelength``.
+    extinct_emission : bool
+        If set, atmospheric extinction is applied to sky emission.
+    condition : sky emission condition to use, which must be one of the keys
+        of ``surface_brightness_dict``.
+    airmass : float
+        Airmass of the observation.
+    moon : :class:`Moon` or None
+        Model to use for scattered moonlight.
     """
     def __init__(self, wavelength, surface_brightness_dict,
                  extinction_coefficient, extinct_emission, condition, airmass,
                  moon):
-        self.wavelength = wavelength
-        self.surface_brightness_dict = surface_brightness_dict
-        self.extinction_coefficient = extinction_coefficient
-        self.extinct_emission = extinct_emission
-        self.condition_names = surface_brightness_dict.keys()
+        self._wavelength = wavelength
+        self._surface_brightness_dict = surface_brightness_dict
+        self._extinction_coefficient = extinction_coefficient
+        self._extinct_emission = extinct_emission
+        self._condition_names = surface_brightness_dict.keys()
         self.moon = moon
 
         self.set_condition(condition)
@@ -68,7 +83,7 @@ class Atmosphere(object):
         Includes both dark sky emission and (if configured) scattered moonlight.
         """
         sky = self._surface_brightness.copy()
-        if self.extinct_emission:
+        if self._extinct_emission:
             sky *= self.extinction
         if self.moon is not None and self.moon.visible:
             sky += self.moon.surface_brightness
@@ -85,22 +100,36 @@ class Atmosphere(object):
         return self._extinction
 
 
+    @property
+    def condition(self):
+        """Sky emission condition.
+        """
+        return self._condition
+
+
     def set_condition(self, name):
         """
         """
-        if name not in self.condition_names:
+        if name not in self._condition_names:
             raise ValueError(
                 "Invalid condition '{0}'. Pick one of {1}."
-                .format(name, self.condition_names))
-        self.condition = name
-        self._surface_brightness = self.surface_brightness_dict[name]
+                .format(name, self._condition_names))
+        self._condition = name
+        self._surface_brightness = self._surface_brightness_dict[name]
+
+
+    @property
+    def airmass(self):
+        """Observing airmass.
+        """
+        return self._airmass
 
 
     def set_airmass(self, airmass):
         """
         """
-        self.airmass = airmass
-        self._extinction = 10 ** (-self.extinction_coefficient * airmass / 2.5)
+        self._airmass = airmass
+        self._extinction = 10 ** (-self._extinction_coefficient * airmass / 2.5)
 
 
     def plot(self):
@@ -113,14 +142,14 @@ class Atmosphere(object):
         fig, ax1 = plt.subplots(figsize=(8, 4))
         ax1_rhs = ax1.twinx()
 
-        wave = self.wavelength.to(u.Angstrom).value
+        wave = self._wavelength.to(u.Angstrom).value
         wave_unit = u.Angstrom
 
         sky_unit = 1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)
         sky = self.surface_brightness.to(sky_unit).value
         sky_min, sky_max = np.percentile(sky, (1, 99))
 
-        ext = self.extinction_coefficient
+        ext = self._extinction_coefficient
         ext_min, ext_max = np.percentile(ext, (1, 99))
 
         ax1.scatter(wave, sky, color='g', lw=0, s=1.)
@@ -165,8 +194,9 @@ class Moon(object):
     wavelength : astropy.units.Quantity
         Array of wavelengths with units where data is tabulated.
     moon_spectrum : astropy.units.Quantity
-        Tabulated spectrum of scattered moonlight.  The normalization does not
-        matter since it will be fixed by :meth:`get_lunar_surface_brightness`.
+        Tabulated spectrum of scattered moonlight with units of flux density.
+        The normalization does not matter since it will be fixed by
+        :meth:`get_lunar_surface_brightness`.
     extinction_coefficient : array
         Array of extinction coefficients tabulated on ``wavelength``.
     airmass : float
@@ -342,7 +372,8 @@ def krisciunas_schaefer(obs_zenith, moon_zenith, separation_angle, moon_phase,
     moon_phase : float
         Phase of the moon from 0.0 (full) to 1.0 (new), which can be calculated
         as abs((d / D) - 1) where d is the time since the last new moon
-        and D = 29.5 days is the period between new moons.
+        and D = 29.5 days is the period between new moons.  The corresponding
+        illumination fraction is ``0.5*(1 + cos(pi * moon_phase))``.
     vband_extinction : float
         V-band extinction coefficient to use.
 

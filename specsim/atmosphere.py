@@ -189,6 +189,15 @@ class Atmosphere(object):
 class Moon(object):
     """Model of scattered moonlight.
 
+    Most of the work is performed by :func:`krisciunas_schaefer`, which
+    implements the model of their 1991 paper. This class uses the predicted
+    V-band surface brightness to normalize an input lunar spectrum (or solar
+    spectrum if you assume the moon is grey).
+
+    This implementation is loosely based on and tested against [IDL code]
+    (https://desi.lbl.gov/svn/code/desimodel/tags/0.4.2/pro/lunarmodel.pro) by
+    Connie Rockosi.
+
     Parameters
     ----------
     wavelength : astropy.units.Quantity
@@ -196,7 +205,9 @@ class Moon(object):
     moon_spectrum : astropy.units.Quantity
         Tabulated spectrum of scattered moonlight with units of flux density.
         The normalization does not matter since it will be fixed by
-        :meth:`get_lunar_surface_brightness`.
+        :meth:`get_lunar_surface_brightness`.  A solar spectrum can be used,
+        which effectively assumes that the moon's reflectance is wavelength
+        independent.
     extinction_coefficient : array
         Array of extinction coefficients tabulated on ``wavelength``.
     airmass : float

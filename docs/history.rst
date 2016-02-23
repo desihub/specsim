@@ -3,8 +3,8 @@ History
 
 The initial version of this code was based on IDL code "Simple S/N calculator
 for DESI spectra" written for DESI and available `here
-<https://desi.lbl.gov/svn/code/desimodel/tags/0.4.2/pro/desi_quicksim.pro>`__
-(DESI login required). Early versions of this package were maintained in the
+<https://desi.lbl.gov/svn/code/desimodel/tags/0.4.2/pro/desi_quicksim.pro>`__.
+Early versions of this package were maintained in the
 same SVN package and aimed to produce identical results.
 
 This package originated as a DESI-specific simulation tool but, as of v0.3,

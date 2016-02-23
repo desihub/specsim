@@ -106,6 +106,13 @@ class Atmosphere(object):
         ext_min, ext_max = np.percentile(ext, (1, 99))
 
         ax1.scatter(wave, sky, color='g', lw=0, s=1.)
+        if self.moon is not None and self.moon.visible:
+            moon = self.moon.surface_brightness.to(sky_unit).value
+            ax1.scatter(wave, moon, color='b', lw=0, s=1.)
+            # Adjust the vertical limits to include the moon.
+            moon_min, moon_max = np.percentile(moon, (1, 99))
+            sky_min = min(moon_min, sky_min)
+            sky_max = max(moon_max, sky_max)
         ax1_rhs.scatter(wave, ext, color='r', lw=0, s=1.)
 
         ax1.set_yscale('log')
@@ -121,11 +128,15 @@ class Atmosphere(object):
         ax1.set_xlabel('Wavelength [$\AA$]')
         ax1.set_xlim(wave[0], wave[-1])
 
+        ncol = 2
         ax1.plot([], [], 'g-',
-                 label='Surface Brightness ({0})'.format(self.condition))
-        ax1.plot([], [], 'r-', label='Zenith Extinction Coefficient')
+                 label='Sky ({0})'.format(self.condition))
+        if self.moon is not None and self.moon.visible:
+            ax1.plot([], [], 'b-', label='Moon')
+            ncol += 1
+        ax1.plot([], [], 'r-', label='Extinction')
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
-                   ncol=2, mode='expand', borderaxespad=0.)
+                   ncol=ncol, mode='expand', borderaxespad=0.)
 
 
 class Moon(object):
@@ -140,6 +151,8 @@ class Moon(object):
         matter since it will be fixed by :meth:`get_lunar_surface_brightness`.
     extinction_coefficient : array
         Array of extinction coefficients tabulated on ``wavelength``.
+    airmass : float
+        Airmass of the observation.
     moon_zenith : astropy.units.Quantity
         See :func:`krisciunas_schaefer`.
     separation_angle : astropy.units.Quantity
@@ -148,26 +161,33 @@ class Moon(object):
         See :func:`krisciunas_schaefer`.
     """
     def __init__(self, wavelength, moon_spectrum, extinction_coefficient,
-                 moon_zenith, separation_angle, moon_phase):
+                 airmass, moon_zenith, separation_angle, moon_phase):
+        self._wavelength = wavelength
         self._moon_spectrum = moon_spectrum
         self._extinction_coefficient = extinction_coefficient
 
         # Calculate the V-band extinction of the moon spectrum.
-        vband = speclite.filters.load_filter('bessell-V')
-        V = vband.get_ab_magnitude(moon_spectrum, wavelength)
+        self._vband = speclite.filters.load_filter('bessell-V')
+        V = self._vband.get_ab_magnitude(moon_spectrum, wavelength)
         extinction = 10 ** (-extinction_coefficient / 2.5)
-        Vstar = vband.get_ab_magnitude(moon_spectrum * extinction, wavelength)
+        Vstar = self._vband.get_ab_magnitude(
+            moon_spectrum * extinction, wavelength)
         self._vband_extinction = Vstar - V
 
         # Update our observing parameters.
-        self.update(moon_phase, moon_zenith, separation_angle)
+        self.update(airmass, moon_zenith, separation_angle, moon_phase)
 
 
-    def update(self, moon_zenith, separation_angle, moon_phase):
+    def update(self, airmass, moon_zenith, separation_angle, moon_phase):
         """Update the parameters of moon in this model.
+
+        This method updates :attr:`surface_brightness`, which is the only
+        output of this model used for simulation.
 
         Parameters
         ----------
+        airmass : float
+            Airmass of the observation.
         moon_zenith : astropy.units.Quantity
             See :func:`krisciunas_schaefer`.
         separation_angle : astropy.units.Quantity
@@ -179,6 +199,54 @@ class Moon(object):
         self._moon_zenith = moon_zenith
         self._separation_angle = separation_angle
 
+        if moon_zenith > 90 * u.deg:
+            self._visible = False
+            self._surface_brightness = (
+                np.zeros_like(self._moon_spectrum) / (u.arcsec ** 2))
+            return
+        else:
+            self._visible = True
+
+        # Estimate the zenith angle corresponding to this observing airmass.
+        # We invert eqn.3 of KS1991 for this (instead of eqn.14).
+        self._obs_zenith = np.arcsin(
+            np.sqrt((1 - airmass ** -2) / 0.96)) * u.rad
+
+        # Calculate the V-band surface brightness of scattered moonlight.
+        moon_V = krisciunas_schaefer(
+            self.obs_zenith, moon_zenith, separation_angle,
+            moon_phase, self.vband_extinction)
+
+        # Calculate the wavelength-dependent extinction of moonlight
+        # scattered once into the observed field of view.
+        scattering_airmass = (1 - 0.96 * np.sin(moon_zenith) ** 2) ** (-0.5)
+        extinction = (
+            10 ** (-self._extinction_coefficient * scattering_airmass / 2.5) *
+            (1 - 10 ** (-self._extinction_coefficient * airmass / 2.5)))
+        self._surface_brightness = self._moon_spectrum * extinction
+
+        # Renormalized the extincted spectrum to the correct V-band magnitude.
+        raw_V = self._vband.get_ab_magnitude(
+            self._surface_brightness, self._wavelength) * u.mag
+        area = 1 * u.arcsec ** 2
+        self._surface_brightness *= 10 ** (
+            -(moon_V * area - raw_V) / (2.5 * u.mag)) / area
+
+
+    @property
+    def visible(self):
+        """Is moon above the horizon?
+        """
+        return self._visible
+
+
+    @property
+    def surface_brightness(self):
+        """Tabulated scattered moonlight surface brightness.
+
+        This attribute is updated by :meth:`update`.
+        """
+        return self._surface_brightness
 
     @property
     def moon_phase(self):
@@ -188,6 +256,19 @@ class Moon(object):
         """
         return self._moon_phase
 
+
+    @property
+    def obs_zenith(self):
+        """Read-only value of the observing zenith angle.
+
+        This attribute is calculated from the airmass passed to :meth:`update`
+        by inverting Eqn.3 of Krisciunas & Schaefer 1991:
+
+        .. math::
+
+            X = (1 - 0.96 \sin^2 Z)^{-0.5}
+        """
+        return self._obs_zenith
 
     @property
     def moon_zenith(self):
@@ -268,8 +349,8 @@ def krisciunas_schaefer(obs_zenith, moon_zenith, separation_angle, moon_phase,
                  10 ** (6.15 - rho / 40.))
     # Calculate the scattering airmass along the lines of sight to the
     # observation and moon (eqn. 3).
-    X_obs = np.sqrt(1 - 0.96 * np.sin(obs_zenith) ** 2)
-    X_moon = np.sqrt(1 - 0.96 * np.sin(moon_zenith) ** 2)
+    X_obs = (1 - 0.96 * np.sin(obs_zenith) ** 2) ** (-0.5)
+    X_moon = (1 - 0.96 * np.sin(moon_zenith) ** 2) ** (-0.5)
     # Calculate the V-band moon surface brightness in nanoLamberts.
     B_moon = (f_scatter * Istar *
         10 ** (-0.4 * vband_extinction * X_moon) *
@@ -357,7 +438,7 @@ def plot_lunar_brightness(moon_zenith, moon_azimuth, moon_phase,
                  horizontalalignment='right', verticalalignment='top',
                  size='x-large', color='k')
     xy, coords = (0., 0.), 'axes fraction'
-    plt.annotate('$\\alpha$ = {0:.3f}'.format(moon_phase),
+    plt.annotate('$\\phi$ = {0:.1f}%'.format(100. * moon_phase),
                  xy, xy, coords, coords,
                  horizontalalignment='left', verticalalignment='top',
                  size='x-large', color='k')
@@ -395,7 +476,8 @@ def initialize(config):
             ['moon_zenith', 'separation_angle', 'moon_phase'])
         moon = Moon(
             config.wavelength, moon_spectrum, extinction_coefficient,
-            c['moon_zenith'], c['separation_angle'], c['moon_phase'])
+            atm_config.airmass, c['moon_zenith'], c['separation_angle'],
+            c['moon_phase'])
     else:
         moon = None
 

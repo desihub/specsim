@@ -19,7 +19,8 @@ if ``extinct_emission`` is False, or else as:
 where :math:`s(\lambda)` is the source flux entering the atmosphere,
 :math:`e(\lambda)` is the zenith extinction, :math:`X` is the airmass,
 :math:`a` is the fiber entrance face area, and :math:`b(\lambda)` is the
-sky emission surface brightness.
+sky emission surface brightness.  The sky brightness can optionally include
+a scattered moonlight component.
 
 An atmosphere model is usually initialized from a configuration, for example:
 
@@ -28,6 +29,16 @@ An atmosphere model is usually initialized from a configuration, for example:
     >>> atmosphere = initialize(config)
     >>> atmosphere.airmass
     1.0
+
+See :doc:`/api` for examples of changing model parameters defined in the
+configuration.  Certain parameters can also be changed after a model has
+been initialized, for example:
+
+    >>> atmosphere.airmass = 1.5
+    >>> atmosphere.moon.moon_phase = 0.25
+    >>> atmosphere.moon_zenith = 25 * u.deg
+
+See :class:`Atmosphere` and :class:`Moon` for details.
 """
 from __future__ import print_function, division
 
@@ -217,12 +228,13 @@ class Moon(object):
     V-band surface brightness to normalize an input lunar spectrum (or solar
     spectrum if you assume the moon is grey).
 
-    Use the :meth:`update` method to update scattered moon simulation
-    parameters.
+    The predicted :attr:`surface_brightness` is automatically updated to
+    reflect changes in the following attributes: :attr:`airmass`,
+    :attr:`moon_zenith`, :attr:`moon_phase` and :attr:`separation_angle`.
 
     This implementation is loosely based on and tested against [IDL code]
-    (https://desi.lbl.gov/svn/code/desimodel/tags/0.4.2/pro/lunarmodel.pro) by
-    Connie Rockosi.
+    (https://desi.lbl.gov/svn/code/desimodel/tags/0.4.2/pro/lunarmodel.pro)
+    from Connie Rockosi.
 
     Parameters
     ----------
@@ -259,55 +271,35 @@ class Moon(object):
             moon_spectrum * extinction, wavelength)
         self._vband_extinction = Vstar - V
 
-        # Update our observing parameters.
-        self.update(airmass, moon_zenith, separation_angle, moon_phase)
+        # Initialize the model parameters.
+        self.airmass = airmass
+        self.moon_zenith = moon_zenith
+        self.separation_angle = separation_angle
+        self.moon_phase = moon_phase
 
 
-    def update(self, airmass, moon_zenith, separation_angle, moon_phase):
-        """Update the parameters of moon in this model.
-
-        This method updates :attr:`surface_brightness`, which is the only
-        output of this model used for simulation.
-
-        Parameters
-        ----------
-        airmass : float
-            Airmass of the observation.
-        moon_zenith : astropy.units.Quantity
-            See :func:`krisciunas_schaefer`.
-        separation_angle : astropy.units.Quantity
-            See :func:`krisciunas_schaefer`.
-        moon_phase : float
-            See :func:`krisciunas_schaefer`.
+    def _update(self):
+        """Update the model based on the current parameter values.
         """
-        self._moon_phase = moon_phase
-        self._moon_zenith = moon_zenith
-        self._separation_angle = separation_angle
+        self._update_required = False
 
-        if moon_zenith > 90 * u.deg:
-            self._visible = False
+        if not self.visible:
             self._surface_brightness = (
                 np.zeros_like(self._moon_spectrum) / (u.arcsec ** 2))
             return
-        else:
-            self._visible = True
-
-        # Estimate the zenith angle corresponding to this observing airmass.
-        # We invert eqn.3 of KS1991 for this (instead of eqn.14).
-        self._obs_zenith = np.arcsin(
-            np.sqrt((1 - airmass ** -2) / 0.96)) * u.rad
 
         # Calculate the V-band surface brightness of scattered moonlight.
         moon_V = krisciunas_schaefer(
-            self.obs_zenith, moon_zenith, separation_angle,
-            moon_phase, self.vband_extinction)
+            self.obs_zenith, self.moon_zenith, self.separation_angle,
+            self.moon_phase, self.vband_extinction)
 
         # Calculate the wavelength-dependent extinction of moonlight
         # scattered once into the observed field of view.
-        scattering_airmass = (1 - 0.96 * np.sin(moon_zenith) ** 2) ** (-0.5)
+        scattering_airmass = (
+            1 - 0.96 * np.sin(self.moon_zenith) ** 2) ** (-0.5)
         extinction = (
             10 ** (-self._extinction_coefficient * scattering_airmass / 2.5) *
-            (1 - 10 ** (-self._extinction_coefficient * airmass / 2.5)))
+            (1 - 10 ** (-self._extinction_coefficient * self.airmass / 2.5)))
         self._surface_brightness = self._moon_spectrum * extinction
 
         # Renormalized the extincted spectrum to the correct V-band magnitude.
@@ -319,35 +311,73 @@ class Moon(object):
 
 
     @property
+    def surface_brightness(self):
+        """astropy.units.Quantity: Tabulated scattered moon surface brightness.
+
+        This is the only model attribute used for simulation. Its value depends
+        on the current values of :attr:`airmass`, :attr:`moon_zenith`,
+        :attr:`moon_phase` and :attr:`separation_angle`.
+        """
+        if self._update_required:
+            self._update()
+        return self._surface_brightness
+
+
+    @property
+    def airmass(self):
+        """Airmass of observation used for lunar scattering model.
+
+        Changes to this value will update :attr:`obs_zenith` and
+        :attr:`surface_brightness`.
+
+        This should normally be the same airmass that is used in the
+        :class:`Atmosphere` model to calculate source extinction, but this
+        is not checked here.
+        """
+        return self._airmass
+
+
+    @airmass.setter
+    def airmass(self, airmass):
+        self._airmass = airmass
+        # Estimate the zenith angle corresponding to this observing airmass.
+        # We invert eqn.3 of KS1991 for this (instead of eqn.14).
+        self._obs_zenith = np.arcsin(
+            np.sqrt((1 - airmass ** -2) / 0.96)) * u.rad
+        self._update_required = True
+
+
+    @property
     def visible(self):
-        """Is moon above the horizon?
+        """bool: Read-only visibility of the moon.
+
+        The visibility criterion is :attr:`moon_zenith` < 90 degrees.
         """
         return self._visible
 
 
     @property
-    def surface_brightness(self):
-        """Tabulated scattered moonlight surface brightness.
-
-        This attribute is updated by :meth:`update`.
-        """
-        return self._surface_brightness
-
-    @property
     def moon_phase(self):
-        """Read-only value of the moon phase.
+        """Phase of the moon.
 
-        Use :meth:`update` to update this value.
+        See :func:`krisciunas_schaefer`. Changes to this value will update
+        :attr:`surface_brightness`.
         """
         return self._moon_phase
+
+
+    @moon_phase.setter
+    def moon_phase(self, value):
+        self._moon_phase = value
+        self._update_required = True
 
 
     @property
     def obs_zenith(self):
         """Read-only value of the observing zenith angle.
 
-        This attribute is calculated from the airmass passed to :meth:`update`
-        by inverting Eqn.3 of Krisciunas & Schaefer 1991:
+        This attribute is calculated from :attr:`airmass` by inverting
+        Eqn.3 of Krisciunas & Schaefer 1991:
 
         .. math::
 
@@ -355,22 +385,38 @@ class Moon(object):
         """
         return self._obs_zenith
 
+
     @property
     def moon_zenith(self):
-        """Read-only value of the moon zenith angle.
+        """Moon zenith angle.
 
-        Use :meth:`update` to update this value.
+        See :func:`krisciunas_schaefer`. Changes to this value will update
+        :attr:`surface_brightness` and :attr:`visible`.
         """
         return self._moon_zenith
+        self._update_required = True
+
+
+    @moon_zenith.setter
+    def moon_zenith(self, value):
+        self._moon_zenith = value
+        self._visible = self._moon_zenith < 90 * u.deg
 
 
     @property
     def separation_angle(self):
         """Read-only value of the observation-moon separation angle.
 
-        Use :meth:`update` to update this value.
+        See :func:`krisciunas_schaefer`. Changes to this value will update
+        :attr:`surface_brightness`.
         """
         return self._separation_angle
+
+
+    @separation_angle.setter
+    def separation_angle(self, value):
+        self._separation_angle = value
+        self._update_required = True
 
 
     @property

@@ -31,7 +31,7 @@ repeating the initialization step, for example::
     config = specsim.config.load_config('test')
     simulator = specsim.simulator.Simulator(config)
     results1 = simulator.simulate()
-    simulator.atmosphere.set_airmass(1.5)
+    simulator.atmosphere.airmass = 1.5
     simulator.source.update_out(filter_name='sdss2010-r', ab_magnitude_out=21.0)
     results2 = simulator.simulate()
 

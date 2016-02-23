@@ -14,7 +14,7 @@ def test_end_to_end():
     results = sim.simulate()
     medsnr = np.median(results[results.obsflux > 0].snrtot)
     snrtot2 = np.sum(results.snrtot ** 2)
-    assert np.allclose([medsnr, snrtot2], [2.10661167, 18068.7423])
+    assert np.allclose([medsnr, snrtot2], [1.78901990, 12683.1480])
 
 '''
 def test_zero_flux():

@@ -549,7 +549,7 @@ def initialize(config):
     if config.verbose:
         print(
             "Atmosphere initialized with condition '{0}' from {1}."
-            .format(atmosphere.condition, atmosphere.condition_names))
+            .format(atmosphere.condition, atmosphere._condition_names))
         if moon:
             print(
                 'Lunar V-band extinction coefficient is {0:.5f}.'

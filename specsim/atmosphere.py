@@ -41,8 +41,11 @@ import speclite.filters
 class Atmosphere(object):
     """Model atmospheric surface brightness and extinction.
 
-    A simulation uses only our :attr:`surface_brightness` and
-    :attr:`extinction` attributes.
+    A simulation uses only our read-only :attr:`surface_brightness` and
+    :attr:`extinction` attributes.  Use the :attr:`condition` and
+    :attr:`airmass` attributes to update this model.  Refer to the
+    :class:`moon model <Moon>` for details on updating the optional
+    scattered moon model.
 
     Parameters
     ----------
@@ -70,19 +73,29 @@ class Atmosphere(object):
         self._extinction_coefficient = extinction_coefficient
         self._extinct_emission = extinct_emission
         self._condition_names = surface_brightness_dict.keys()
-        self.moon = moon
+        self._moon = moon
+        self.condition = condition
+        self.airmass = airmass
 
-        self.set_condition(condition)
-        self.set_airmass(airmass)
+
+    @property
+    def moon(self):
+        """Moon or None: Model of scattered moonlight.
+
+        See :class:`Moon` for details on changing scattered moon simulation
+        parameters via this attribute.
+        """
+        return self._moon
 
 
     @property
     def surface_brightness(self):
-        """Total sky surface brightness.
+        """astropy.units.Quantity: Total sky surface brightness.
 
         Includes both dark sky emission and (if configured) scattered moonlight.
+        Changes to :attr:`condition` or :attr:`airmass` are reflected here.
         """
-        sky = self._surface_brightness.copy()
+        sky = self._surface_brightness_dict[self.condition].copy()
         if self._extinct_emission:
             sky *= self.extinction
         if self.moon is not None and self.moon.visible:
@@ -92,42 +105,52 @@ class Atmosphere(object):
 
     @property
     def extinction(self):
-        """The extinction factor for the current model airmass.
+        """numpy.ndarray: The extinction factor for the current model airmass.
 
-        Tabulated as a function of wavelength. Use :meth:`set_airmass` to
-        update these values.
+        Tabulated as a function of wavelength. Changes to :attr:`airmass`
+        automatically update these values.
         """
         return self._extinction
 
 
     @property
     def condition(self):
-        """Sky emission condition.
+        """str: Sky emission condition.
+
+        Must be one of the predefined names in :attr:`condition_names`.
         """
         return self._condition
 
 
-    def set_condition(self, name):
-        """
-        """
+    @condition.setter
+    def condition(self, name):
         if name not in self._condition_names:
             raise ValueError(
                 "Invalid condition '{0}'. Pick one of {1}."
                 .format(name, self._condition_names))
         self._condition = name
-        self._surface_brightness = self._surface_brightness_dict[name]
+
+
+    @property
+    def condition_names(self):
+        """list: The list of valid sky condition names.
+
+        The valid names are keys of the ``atmosphere.sky.table.paths`` node,
+        or "default" if only a single path is specified via a
+        ``atmosphere.sky.table.path`` node.
+        """
+        return self._condition_names
 
 
     @property
     def airmass(self):
-        """Observing airmass.
+        """float: Observing airmass.
         """
         return self._airmass
 
 
-    def set_airmass(self, airmass):
-        """
-        """
+    @airmass.setter
+    def airmass(self, airmass):
         self._airmass = airmass
         self._extinction = 10 ** (-self._extinction_coefficient * airmass / 2.5)
 
@@ -193,6 +216,9 @@ class Moon(object):
     implements the model of their 1991 paper. This class uses the predicted
     V-band surface brightness to normalize an input lunar spectrum (or solar
     spectrum if you assume the moon is grey).
+
+    Use the :meth:`update` method to update scattered moon simulation
+    parameters.
 
     This implementation is loosely based on and tested against [IDL code]
     (https://desi.lbl.gov/svn/code/desimodel/tags/0.4.2/pro/lunarmodel.pro) by
@@ -510,6 +536,12 @@ def plot_lunar_brightness(moon_zenith, moon_azimuth, moon_phase,
 def initialize(config):
     """Initialize the atmosphere model from configuration parameters.
 
+    After an atmosphere model has been initialized, further changes to the
+    input configuration will no effect unless this method is called to
+    initialize a new model. However, certain model attributes can be
+    varied after a model is initialized.  See :class:`Atmosphere` and
+    :class:`Moon` for details.
+
     Parameters
     ----------
     config : :class:`specsim.config.Configuration`
@@ -518,7 +550,8 @@ def initialize(config):
     Returns
     -------
     Atmosphere
-        An initialized atmosphere model.
+        An initialized :class:`atmosphere model <Atmosphere>`, possibly
+        containing a :class:`scattered moonlight model <Moon>`.
     """
     atm_config = config.atmosphere
 
@@ -549,7 +582,7 @@ def initialize(config):
     if config.verbose:
         print(
             "Atmosphere initialized with condition '{0}' from {1}."
-            .format(atmosphere.condition, atmosphere._condition_names))
+            .format(atmosphere.condition, atmosphere.condition_names))
         if moon:
             print(
                 'Lunar V-band extinction coefficient is {0:.5f}.'

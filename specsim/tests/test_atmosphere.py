@@ -10,6 +10,9 @@ from ..atmosphere import *
 
 import specsim.config
 
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
+
 
 def test_initialize():
     c = specsim.config.load_config('test')
@@ -71,3 +74,14 @@ def test_property_updates():
     assert np.allclose(
         np.mean(m.surface_brightness.value), 6.370824e-18, atol=0.)
     assert np.allclose(m.obs_zenith.value, 0.)
+
+
+def test_plot():
+    c = specsim.config.load_config('test')
+    a = initialize(c)
+    a.plot()
+
+
+def test_plot_moon():
+    plot_lunar_brightness(
+        moon_zenith=60*u.deg, moon_azimuth=90*u.deg, moon_phase=0.25)

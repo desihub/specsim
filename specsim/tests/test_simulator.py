@@ -7,6 +7,9 @@ from ..simulator import *
 
 import specsim.config
 
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
+
 
 def test_ctor():
     config = specsim.config.load_config('test')
@@ -33,3 +36,8 @@ def test_zero_flux():
     assert not np.all((results.camivar)[:, 0] == 0)
     assert not np.all(results.ivar == 0)
 '''
+
+def test_plot():
+    s = Simulator('test')
+    r = s.simulate()
+    s.plot(r)

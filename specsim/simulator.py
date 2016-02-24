@@ -114,31 +114,9 @@ class Simulator(object):
 
         self.wavelengthGrid = config.wavelength.to(u.Angstrom).value
 
-        # Convert the photon response in our canonical flux units.
-        photonRatePerBin = self.instrument.photons_per_bin.to(
-            1e17 * u.Angstrom * u.cm**2 / u.erg).value
-
-        # Convert the sky spectrum to our canonical units.
-        sky = self.atmosphere.surface_brightness.to(
-            1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)).value
-
-        # Integrate the sky flux over the fiber area and convert to a total
-        # photon rate (Hz).
-        skyPhotonRate = sky * self.fiberArea * photonRatePerBin
-
         self.cameras = [ ]
         for camera in self.instrument.cameras:
             quick_camera = QuickCamera(camera)
-
-            # Rescale the mean rate (Hz) of photons to account for this camera's
-            # throughput. We are including camera throughput but not
-            # fiber acceptance losses or atmostpheric absorption here.
-            quick_camera.photonRatePerBin = camera.throughput * photonRatePerBin
-
-            # Apply resolution smoothing and throughput to the sky photon rate.
-            quick_camera.skyPhotonRateSmooth = quick_camera.sparseKernel.dot(
-                camera.throughput * skyPhotonRate)
-
             self.cameras.append(quick_camera)
 
 
@@ -184,10 +162,23 @@ class Simulator(object):
         airmass = self.atmosphere.airmass
         expTime = self.instrument.exposure_time.to(u.s).value
 
+        # Convert the photon response in our canonical flux units.
+        photonRatePerBin = self.instrument.photons_per_bin.to(
+            1e17 * u.Angstrom * u.cm**2 / u.erg).value
+
+        # Convert the sky spectrum to our canonical units.
+        sky = self.atmosphere.surface_brightness.to(
+            1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)).value
+
+        # Integrate the sky flux over the fiber area and convert to a total
+        # photon rate (Hz).
+        skyPhotonRate = sky * self.fiberArea * photonRatePerBin
+
+        # Lookup the fiber acceptance function for this source type.
         self.fiberAcceptanceFraction = self.instrument.get_fiber_acceptance(
             self.source)
 
-        # Resample the source spectrum to our simulation grid, if necessary.
+        # Convert the source spectrum flux to our canonical units.
         self.sourceFlux = self.source.flux_out.to(
             1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom)).value
 
@@ -196,6 +187,15 @@ class Simulator(object):
         self.observedFlux = np.zeros_like(self.wavelengthGrid)
         throughputTotal = np.zeros_like(self.wavelengthGrid)
         for camera in self.cameras:
+
+            # Rescale the mean rate (Hz) of photons to account for this camera's
+            # throughput. We are including camera throughput but not
+            # fiber acceptance losses or atmostpheric absorption here.
+            camera.photonRatePerBin = camera.throughput * photonRatePerBin
+
+            # Apply resolution smoothing and throughput to the sky photon rate.
+            camera.skyPhotonRateSmooth = camera.sparseKernel.dot(
+                camera.throughput * skyPhotonRate)
 
             # Calculate the calibration from source flux to mean detected photons
             # before resolution smearing in this camera's CCD.

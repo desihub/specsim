@@ -22,21 +22,21 @@ where :math:`s(\lambda)` is the source flux entering the atmosphere,
 sky emission surface brightness.  The sky brightness can optionally include
 a scattered moonlight component.
 
-An atmosphere model is usually initialized from a configuration, for example:
+An atmosphere model is usually initialized from a configuration used to create
+a simulator and then accessible via its ``atmosphere`` attribute, for example:
 
-    >>> import specsim.config
-    >>> config = specsim.config.load_config('test')
-    >>> atmosphere = initialize(config)
-    >>> atmosphere.airmass
+    >>> import specsim.simulator
+    >>> simulator = specsim.simulator.Simulator('test')
+    >>> simulator.atmosphere.airmass
     1.0
 
 See :doc:`/api` for examples of changing model parameters defined in the
 configuration.  Certain parameters can also be changed after a model has
 been initialized, for example:
 
-    >>> atmosphere.airmass = 1.5
-    >>> atmosphere.moon.moon_phase = 0.25
-    >>> atmosphere.moon.moon_zenith = 25 * u.deg
+    >>> simulator.atmosphere.airmass = 1.5
+    >>> simulator.atmosphere.moon.moon_phase = 0.25
+    >>> simulator.atmosphere.moon.moon_zenith = 25 * u.deg
 
 See :class:`Atmosphere` and :class:`Moon` for details.
 """

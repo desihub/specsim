@@ -1,12 +1,12 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Model an astronomical source for spectroscopic simulations.
 
-A source model is usually initialized from a configuration, for example:
+An source model is usually initialized from a configuration used to create
+a simulator and then accessible via its ``source`` attribute, for example:
 
-    >>> import specsim.config
-    >>> config = specsim.config.load_config('test')
-    >>> source = initialize(config)
-    >>> print(source.name)
+    >>> import specsim.simulator
+    >>> simulator = specsim.simulator.Simulator('test')
+    >>> print(simulator.source.name)
     Constant flux density test source
 
 After initialization, all aspects of a source can be modified at runtime.

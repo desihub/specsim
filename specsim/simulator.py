@@ -3,9 +3,7 @@
 
 A simulator is usually initialized from a configuration, for example:
 
-    >>> import specsim.config
-    >>> config = specsim.config.load_config('test')
-    >>> simulator = Simulator(config)
+    >>> simulator = Simulator('test')
 """
 from __future__ import print_function, division
 
@@ -98,8 +96,16 @@ class QuickCamera(object):
 class Simulator(object):
     """
     Manage the simulation of an atmosphere, instrument, and source.
+
+    Parameters
+    ----------
+    config : specsim.config.Configuration or str
+        A configuration object or configuration name.
     """
     def __init__(self, config):
+
+        if isinstance(config, basestring):
+            config = specsim.config.load_config(config)
 
         self.atmosphere = specsim.atmosphere.initialize(config)
         self.instrument = specsim.instrument.initialize(config)

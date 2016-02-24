@@ -8,9 +8,15 @@ from ..simulator import *
 import specsim.config
 
 
-def test_end_to_end():
+def test_ctor():
     config = specsim.config.load_config('test')
-    sim = Simulator(config)
+    sim1 = Simulator(config)
+    sim2 = Simulator('test')
+    assert sim1.downsampling == sim2.downsampling
+
+
+def test_end_to_end():
+    sim = Simulator('test')
     results = sim.simulate()
     medsnr = np.median(results[results.obsflux > 0].snrtot)
     snrtot2 = np.sum(results.snrtot ** 2)
@@ -18,8 +24,7 @@ def test_end_to_end():
 
 '''
 def test_zero_flux():
-    config = specsim.config.load_config('test')
-    sim = Simulator(config)
+    sim = Simulator('test')
     sim.source.update_in(
         'Zero Flux', 'qso', sim.source.wavelength_in, 0 * sim.source.flux_in)
     sim.source.update_out()

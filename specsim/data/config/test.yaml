@@ -56,7 +56,7 @@ atmosphere:
                 extinction_coefficient: { name: extinction }
             path: test/test_extinction.ecsv
     # Should extinction be applied to the sky emission?
-    extinct_emission: no
+    extinct_emission: yes
     # Airmass to use.
     airmass: 1.0
 

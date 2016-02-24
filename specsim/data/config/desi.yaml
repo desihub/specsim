@@ -69,7 +69,7 @@ atmosphere:
                 extinction_coefficient: { index: 1 }
             path: spectra/ZenithExtinction-KPNO.dat
     # Should extinction be applied to the sky emission?
-    extinct_emission: no
+    extinct_emission: yes
     # Airmass to use.
     airmass: 1.0
 

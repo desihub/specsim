@@ -14,6 +14,7 @@ import scipy.sparse as sp
 
 from astropy import units as u
 
+import specsim.config
 import specsim.atmosphere
 import specsim.instrument
 import specsim.source

@@ -47,7 +47,7 @@ def test_property_updates():
 
     assert m._update_required == True
     assert np.allclose(
-        np.mean(a.surface_brightness.value), 1.694304e-17, atol=0.)
+        np.mean(a.surface_brightness.value), 1.563611e-17, atol=0.)
     assert m.visible == True
     assert np.allclose(m.obs_zenith.value, 0.)
     # Evaluating the atmosphere surface_brightness updates the moon.
@@ -60,14 +60,14 @@ def test_property_updates():
     assert m._update_required == True
     assert np.allclose(m.obs_zenith.value, 1.20942920)
     assert np.allclose(
-        np.mean(a.surface_brightness.value), 2.487268e-17, atol=0.)
+        np.mean(a.surface_brightness.value), 2.198837e-17, atol=0.)
     assert np.allclose(
         np.mean(m.surface_brightness.value), 1.430046e-17, atol=0.)
     assert m._update_required == False
 
     a.airmass = 1.0
     assert np.allclose(
-        np.mean(a.surface_brightness.value), 1.694304e-17, atol=0.)
+        np.mean(a.surface_brightness.value), 1.563611e-17, atol=0.)
     assert np.allclose(
         np.mean(m.surface_brightness.value), 6.370824e-18, atol=0.)
     assert np.allclose(m.obs_zenith.value, 0.)

@@ -1,7 +1,8 @@
 0.4 (unreleased)
 ----------------
 
-No changes yet.
+- Implement scattered moon component of sky brightness.
+- Apply extinction to sky emission by default.
 
 0.3 (2016-02-19)
 ----------------

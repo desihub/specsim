@@ -9,6 +9,7 @@ import os.path
 import numpy as np
 
 from astropy.utils.compat import argparse
+import astropy.units as u
 
 import specsim.config
 import specsim.simulator
@@ -31,6 +32,13 @@ def main(args=None):
         help='sky condition to use (uses default if not set)')
     parser.add_argument('--airmass', type=float, default=1.,
         help='atmosphere airmass to use.')
+    parser.add_argument('--moon-phase', type=float, default=None, metavar='P',
+        help='moon phase between 0 (full) and 1 (new)')
+    parser.add_argument('--moon-zenith', type=float, default=None, metavar='Z',
+        help='zenith angle of the moon in degrees (>90 is below the horizon)')
+    parser.add_argument('--moon-separation', type=float, default=None,
+        metavar='S',
+        help='opening angle between moon and this observation in degrees')
     parser.add_argument('--model', type=str, default=None,
         help='source fiberloss model to use (uses default if not set)')
     parser.add_argument('--z-in', type=float, default=None,
@@ -62,6 +70,19 @@ def main(args=None):
     if args.sky_condition is not None:
         config.atmosphere.sky.condition = args.sky_condition
     config.atmosphere.airmass = args.airmass
+    if (args.moon_phase is not None or args.moon_zenith is not None or
+        args.moon_separation is not None):
+        try:
+            moon = config.atmosphere.moon.constants
+        except AttributeError:
+            print('Cannot set moon parameters when no moon defined in config.')
+            return -1
+        if args.moon_phase is not None:
+            moon.moon_phase = args.moon_phase
+        if args.moon_zenith is not None:
+            moon.moon_zenith = args.moon_zenith * u.deg
+        if args.moon_separation is not None:
+            moon.separation_angle = args.moon_separation * u.deg
 
     config.instrument.constants.exposure_time = (
         '{0} s'.format(args.exposure_time))
@@ -75,7 +96,11 @@ def main(args=None):
     specSummary = config.source.name
 
     # Initialize the simulator.
-    simulator = specsim.simulator.Simulator(config)
+    try:
+        simulator = specsim.simulator.Simulator(config)
+    except Exception as e:
+        print(e)
+        return -1
 
     # Perform a quick simulation of the observed spectrum.
     results = simulator.simulate()

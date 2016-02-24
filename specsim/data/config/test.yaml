@@ -30,6 +30,23 @@ atmosphere:
                 surface_brightness: { name: flux }
             path: test/test_sky.ecsv
         condition: default
+    # Surface brightness of scattered moonlight.
+    moon:
+        table:
+            # The .ecsv extension is not automatically recognized.
+            format: ascii.ecsv
+            columns:
+                wavelength: { name: wavelength }
+                flux: { name: flux }
+            path: test/test_solar.ecsv
+        constants:
+            # Phase of the moon from 0 (full) to 1 (new).
+            moon_phase: 0.5
+            # Zenith angles of the moon. An angle > 90 (below the horizon)
+            # will zero the scattered moon contribution.
+            moon_zenith: 70 deg
+            # Separation angle between the observation and moon.
+            separation_angle: 60 deg
     # Zenith extinction coefficients.
     extinction:
         table:
@@ -39,7 +56,7 @@ atmosphere:
                 extinction_coefficient: { name: extinction }
             path: test/test_extinction.ecsv
     # Should extinction be applied to the sky emission?
-    extinct_emission: no
+    extinct_emission: yes
     # Airmass to use.
     airmass: 1.0
 

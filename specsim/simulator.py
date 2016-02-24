@@ -3,9 +3,7 @@
 
 A simulator is usually initialized from a configuration, for example:
 
-    >>> import specsim.config
-    >>> config = specsim.config.load_config('test')
-    >>> simulator = Simulator(config)
+    >>> simulator = Simulator('test')
 """
 from __future__ import print_function, division
 
@@ -16,6 +14,7 @@ import scipy.sparse as sp
 
 from astropy import units as u
 
+import specsim.config
 import specsim.atmosphere
 import specsim.instrument
 import specsim.source
@@ -98,8 +97,16 @@ class QuickCamera(object):
 class Simulator(object):
     """
     Manage the simulation of an atmosphere, instrument, and source.
+
+    Parameters
+    ----------
+    config : specsim.config.Configuration or str
+        A configuration object or configuration name.
     """
     def __init__(self, config):
+
+        if isinstance(config, basestring):
+            config = specsim.config.load_config(config)
 
         self.atmosphere = specsim.atmosphere.initialize(config)
         self.instrument = specsim.instrument.initialize(config)
@@ -114,34 +121,9 @@ class Simulator(object):
 
         self.wavelengthGrid = config.wavelength.to(u.Angstrom).value
 
-        # Convert the photon response in our canonical flux units.
-        photonRatePerBin = self.instrument.photons_per_bin.to(
-            1e17 * u.Angstrom * u.cm**2 / u.erg).value
-
-        # Convert the sky spectrum to our canonical units.
-        sky = self.atmosphere.surface_brightness.to(
-            1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)).value
-
-        # Integrate the sky flux over the fiber area and convert to a total
-        # photon rate (Hz).
-        skyPhotonRate = sky * self.fiberArea * photonRatePerBin
-
-        # Resample the zenith atmospheric extinction.
-        self.extinction = self.atmosphere.extinction_coefficient
-
         self.cameras = [ ]
         for camera in self.instrument.cameras:
             quick_camera = QuickCamera(camera)
-
-            # Rescale the mean rate (Hz) of photons to account for this camera's
-            # throughput. We are including camera throughput but not
-            # fiber acceptance losses or atmostpheric absorption here.
-            quick_camera.photonRatePerBin = camera.throughput * photonRatePerBin
-
-            # Apply resolution smoothing and throughput to the sky photon rate.
-            quick_camera.skyPhotonRateSmooth = quick_camera.sparseKernel.dot(
-                camera.throughput * skyPhotonRate)
-
             self.cameras.append(quick_camera)
 
 
@@ -187,10 +169,23 @@ class Simulator(object):
         airmass = self.atmosphere.airmass
         expTime = self.instrument.exposure_time.to(u.s).value
 
+        # Convert the photon response in our canonical flux units.
+        photonRatePerBin = self.instrument.photons_per_bin.to(
+            1e17 * u.Angstrom * u.cm**2 / u.erg).value
+
+        # Convert the sky spectrum to our canonical units.
+        sky = self.atmosphere.surface_brightness.to(
+            1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom * u.arcsec**2)).value
+
+        # Integrate the sky flux over the fiber area and convert to a total
+        # photon rate (Hz).
+        skyPhotonRate = sky * self.fiberArea * photonRatePerBin
+
+        # Lookup the fiber acceptance function for this source type.
         self.fiberAcceptanceFraction = self.instrument.get_fiber_acceptance(
             self.source)
 
-        # Resample the source spectrum to our simulation grid, if necessary.
+        # Convert the source spectrum flux to our canonical units.
         self.sourceFlux = self.source.flux_out.to(
             1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom)).value
 
@@ -200,10 +195,19 @@ class Simulator(object):
         throughputTotal = np.zeros_like(self.wavelengthGrid)
         for camera in self.cameras:
 
+            # Rescale the mean rate (Hz) of photons to account for this camera's
+            # throughput. We are including camera throughput but not
+            # fiber acceptance losses or atmostpheric absorption here.
+            camera.photonRatePerBin = camera.throughput * photonRatePerBin
+
+            # Apply resolution smoothing and throughput to the sky photon rate.
+            camera.skyPhotonRateSmooth = camera.sparseKernel.dot(
+                camera.throughput * skyPhotonRate)
+
             # Calculate the calibration from source flux to mean detected photons
             # before resolution smearing in this camera's CCD.
             camera.sourceCalib = (expTime*camera.photonRatePerBin*
-                self.fiberAcceptanceFraction * 10 ** (-self.extinction*airmass/2.5))
+                self.fiberAcceptanceFraction * self.atmosphere.extinction)
 
             # Apply resolution smoothing to the mean detected photons response.
             camera.sourcePhotonsSmooth = camera.sparseKernel.dot(

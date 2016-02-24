@@ -61,3 +61,14 @@ def test_normalize():
     rband = speclite.filters.load_filter('sdss2010-r')
     abmag = rband.get_ab_magnitude(src.flux_out, src.wavelength_out)
     assert abs(abmag - 22.) < 1e-8
+
+
+def test_side_effects():
+    config = load_config('test')
+    src = initialize(config)
+    src.update_in('name', 'type_name', src.wavelength_in, src.flux_in, z_in=0.)
+    wave_in = src.wavelength_in.copy()
+    flux_in = src.flux_in.copy()
+    src.update_out(z_out=0.5)
+    assert np.all(wave_in == src.wavelength_in)
+    assert np.all(flux_in == src.flux_in)

@@ -35,6 +35,31 @@ atmosphere:
                 bright: spectra/spec-sky-bright.dat
         # Specify the current condition.
         condition: dark
+    # Surface brightness of scattered moonlight.
+    moon:
+        # Un-normalized spectrum of scattered moonlight.
+        # We use the Wehrli 1985 extraterrestial solar spectrum here.
+        # Seee http://rredc.nrel.gov/solar/spectra/am0/ for details.
+        table:
+            columns:
+                wavelength: { index: 1, unit: Angstrom }
+                flux:
+                    index: 2
+                    # The actual units are W / (m2 micron) but we lie here
+                    # (by a factor of 10) since the input normalization does
+                    # not matter and old versions of speclite.filters do
+                    # not interpret the actual units correctly.
+                    unit: erg / (cm2 s Angstrom)
+            path: sky/solarspec.txt
+            format: ascii.basic
+        constants:
+            # Phase of the moon from 0 (full) to 1 (new).
+            moon_phase: 0.5
+            # Zenith angles of the moon. An angle > 90 (below the horizon)
+            # will zero the scattered moon contribution.
+            moon_zenith: 100 deg
+            # Separation angle between the observation and moon.
+            separation_angle: 60 deg
     # Zenith extinction coefficients.
     extinction:
         table:
@@ -44,7 +69,7 @@ atmosphere:
                 extinction_coefficient: { index: 1 }
             path: spectra/ZenithExtinction-KPNO.dat
     # Should extinction be applied to the sky emission?
-    extinct_emission: no
+    extinct_emission: yes
     # Airmass to use.
     airmass: 1.0
 

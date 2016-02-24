@@ -185,6 +185,32 @@ and was created using::
 .. image:: _static/desi_atmosphere.png
     :alt: DESI default atmosphere configuration
 
+The default atmosphere has the moon below the horizon. To simulate grey or
+bright conditions, add scattered moon light by :doc:`modifying the relevant
+parameters in the configuration </api>`, or else by changing attributes of the
+initialized atmosphere model. For example::
+
+    atm = specsim.atmosphere.initialize(config)
+    atm.airmass = 1.3
+    atm.moon.moon_zenith = 60 * u.deg
+    atm.moon.separation_angle = 50 * u.deg
+    atm.moon.moon_phase = 0.25
+    atm.plot()
+
+.. image:: _static/desi_bright_atmosphere.png
+    :alt: DESI bright atmosphere configuration
+
+Note how total sky emission has increased significantly and is dominated by
+scattered moon at the blue end.  To explore the dependence of the scattered
+moon brightness on the observed field, use
+:func:`specsim.atmosphere.plot_lunar_brightness`.  For example::
+
+    specsim.atmosphere.plot_lunar_brightness(
+        moon_zenith=60*u.deg, moon_azimuth=90*u.deg, moon_phase=0.25)
+
+.. image:: _static/desi_scattered_moon.png
+    :alt: DESI scattered moon brightness
+
 Instrument
 ^^^^^^^^^^
 
@@ -218,6 +244,8 @@ and was created using::
 
 .. image:: _static/test_atmosphere.png
     :alt: Test default atmosphere configuration
+
+Note that the test atmosphere has the moon above the horizon by default.
 
 Instrument
 ^^^^^^^^^^

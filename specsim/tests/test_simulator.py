@@ -7,19 +7,27 @@ from ..simulator import *
 
 import specsim.config
 
+import matplotlib
+matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
+
+
+def test_ctor():
+    config = specsim.config.load_config('test')
+    sim1 = Simulator(config)
+    sim2 = Simulator('test')
+    assert sim1.downsampling == sim2.downsampling
+
 
 def test_end_to_end():
-    config = specsim.config.load_config('test')
-    sim = Simulator(config)
+    sim = Simulator('test')
     results = sim.simulate()
     medsnr = np.median(results[results.obsflux > 0].snrtot)
     snrtot2 = np.sum(results.snrtot ** 2)
-    assert np.allclose([medsnr, snrtot2], [2.10661167, 18068.7423])
+    assert np.allclose([medsnr, snrtot2], [1.83393503, 13291.019])
 
 '''
 def test_zero_flux():
-    config = specsim.config.load_config('test')
-    sim = Simulator(config)
+    sim = Simulator('test')
     sim.source.update_in(
         'Zero Flux', 'qso', sim.source.wavelength_in, 0 * sim.source.flux_in)
     sim.source.update_out()
@@ -28,3 +36,8 @@ def test_zero_flux():
     assert not np.all((results.camivar)[:, 0] == 0)
     assert not np.all(results.ivar == 0)
 '''
+
+def test_plot():
+    s = Simulator('test')
+    r = s.simulate()
+    s.plot(r)

@@ -73,7 +73,7 @@ class Source(object):
             converted = wavelength_out.unit.to(u.Angstrom)
         except (AttributeError, u.UnitConversionError):
             raise ValueError('Invalid or missing unit for wavelength_out.')
-        self._wavelength_out = wavelength_out[:]
+        self._wavelength_out = wavelength_out.copy()
 
         self.update_in(name, type_name, wavelength_in, flux_in, z_in)
         self.update_out(z_out, filter_name, ab_magnitude_out)
@@ -124,8 +124,8 @@ class Source(object):
         except (AttributeError, u.UnitConversionError):
             raise ValueError('Inputs have invalid or missing units.')
 
-        self._wavelength_in = wavelength_in[:]
-        self._flux_in = flux_in[:]
+        self._wavelength_in = wavelength_in.copy()
+        self._flux_in = flux_in.copy()
 
         self._update_out_required = True
 
@@ -149,8 +149,8 @@ class Source(object):
         """
         wavelength_unit = self.wavelength_out.unit
         flux_unit = self.flux_in.unit
-        wavelength_value = self.wavelength_in.to(wavelength_unit).value[:]
-        flux_value = self.flux_in.value[:]
+        wavelength_value = self.wavelength_in.to(wavelength_unit).value.copy()
+        flux_value = self.flux_in.value.copy()
 
         # Appy a redshift transformation, if requested.
         if z_out is not None:

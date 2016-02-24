@@ -1,7 +1,7 @@
 0.4 (unreleased)
 ----------------
 
-No changes yet.
+- Implement scattered moon component of sky brightness.
 
 0.3 (2016-02-19)
 ----------------

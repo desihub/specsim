@@ -36,7 +36,7 @@ been initialized, for example:
 
     >>> atmosphere.airmass = 1.5
     >>> atmosphere.moon.moon_phase = 0.25
-    >>> atmosphere.moon_zenith = 25 * u.deg
+    >>> atmosphere.moon.moon_zenith = 25 * u.deg
 
 See :class:`Atmosphere` and :class:`Moon` for details.
 """
@@ -156,6 +156,9 @@ class Atmosphere(object):
     @property
     def airmass(self):
         """float: Observing airmass.
+
+        Changes to this value automatically propagate to our scattered
+        moon model, if there is one.
         """
         return self._airmass
 
@@ -164,6 +167,8 @@ class Atmosphere(object):
     def airmass(self, airmass):
         self._airmass = airmass
         self._extinction = 10 ** (-self._extinction_coefficient * airmass / 2.5)
+        if self.moon is not None:
+            self.moon.airmass = airmass
 
 
     def plot(self):
@@ -367,8 +372,8 @@ class Moon(object):
 
 
     @moon_phase.setter
-    def moon_phase(self, value):
-        self._moon_phase = value
+    def moon_phase(self, moon_phase):
+        self._moon_phase = moon_phase
         self._update_required = True
 
 
@@ -398,8 +403,8 @@ class Moon(object):
 
 
     @moon_zenith.setter
-    def moon_zenith(self, value):
-        self._moon_zenith = value
+    def moon_zenith(self, moon_zenith):
+        self._moon_zenith = moon_zenith
         self._visible = self._moon_zenith < 90 * u.deg
 
 
@@ -414,8 +419,8 @@ class Moon(object):
 
 
     @separation_angle.setter
-    def separation_angle(self, value):
-        self._separation_angle = value
+    def separation_angle(self, separation_angle):
+        self._separation_angle = separation_angle
         self._update_required = True
 
 
@@ -438,11 +443,21 @@ def krisciunas_schaefer(obs_zenith, moon_zenith, separation_angle, moon_phase,
     PASP, vol. 103, Sept. 1991, p. 1033-1039 (http://dx.doi.org/10.1086/132921).
     Equation numbers in the code comments refer to this paper.
 
-    This method has several caveats but the authors find agreement with data at
-    the 8% - 23% level.  See the paper for details.
-
     The function :func:`plot_lunar_brightness` provides a convenient way to
     plot this model's predictions as a function of observation pointing.
+
+    Units are required for the angular inputs and the result has units of
+    surface brightness, for example:
+
+    >>> sb = krisciunas_schaefer(20*u.deg, 70*u.deg, 50*u.deg, 0.25, 0.15)
+    >>> print(np.round(sb, 3))
+    19.855 mag / arcsec2
+
+    The output is automatically broadcast over input arrays following the usual
+    numpy rules.
+
+    This method has several caveats but the authors find agreement with data at
+    the 8% - 23% level.  See the paper for details.
 
     Parameters
     ----------

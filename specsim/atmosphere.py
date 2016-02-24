@@ -216,9 +216,9 @@ class Atmosphere(object):
 
         ncol = 2
         ax1.plot([], [], 'g-',
-                 label='Sky ({0})'.format(self.condition))
+                 label='Total Emission ({0})'.format(self.condition))
         if self.moon is not None and self.moon.visible:
-            ax1.plot([], [], 'b-', label='Moon')
+            ax1.plot([], [], 'b-', label='Scattered Moon')
             ncol += 1
         ax1.plot([], [], 'r-', label='Extinction')
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,

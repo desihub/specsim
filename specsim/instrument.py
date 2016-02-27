@@ -12,6 +12,7 @@ An instrument model is usually initialized from a configuration, for example:
 from __future__ import print_function, division
 
 import math
+import collections
 
 import numpy as np
 
@@ -109,7 +110,7 @@ class Instrument(object):
             # Plot fiber acceptance fractions without labels.
             ax1.plot(wave, self.fiber_acceptance_dict[source_type], 'k--')
         for camera in self.cameras:
-            cwave = camera.wavelength.to(wave_unit).value
+            cwave = camera._wavelength
 
             # Use an approximate spectral color for each band.
             mid_wave = 0.5 * (camera.wavelength_min + camera.wavelength_max)
@@ -141,7 +142,8 @@ class Instrument(object):
                 cwave, camera.row_size.to(wave_unit / u.pixel).value,
                 ls='--', color=color)
 
-            ax2_rhs.plot(cwave, camera.neff_spatial, ls=':', color=color)
+            ax2_rhs.plot(
+                cwave, camera.neff_spatial.to(u.pixel), ls=':', color=color)
 
         ax1.plot([], [], 'k--', label='Fiber Acceptance')
         ax1.plot([], [], 'k-', label='Camera Throughput')
@@ -171,57 +173,59 @@ class Instrument(object):
 
 class Camera(object):
     """
+
+    Parameters
+    ----------
     """
     def __init__(self, name, wavelength, throughput, row_size,
-                 fwhm_resolution, neff_spatial, read_noise, dark_current, gain):
+                 fwhm_resolution, neff_spatial, read_noise, dark_current,
+                 gain, num_sigmas_clip):
         self.name = name
-        self.wavelength = wavelength
+        self._wavelength = wavelength.to(self._wavelength_unit).value
         self.throughput = throughput
-        self.row_size = row_size
-        self.fwhm_resolution = fwhm_resolution
-        self.neff_spatial = neff_spatial
+        self._row_size = row_size.to(self._wavelength_unit / u.pixel).value
+        self._fwhm_resolution = fwhm_resolution.to(self._wavelength_unit).value
+        self._neff_spatial = neff_spatial.to(u.pixel).value
         self.read_noise = read_noise
         self.dark_current = dark_current
         self.gain = gain
+        self.num_sigmas_clip = num_sigmas_clip
 
-        # Calculate the RMS resolution assuming a Gaussian PSF.
-        fwhm_to_sigma = 1. / (2 * math.sqrt(2 * math.log(2)))
-        self.rms_resolution = fwhm_to_sigma * self.fwhm_resolution
-
-        # The CCD properties should all have consistent coverage.
-        ccd_nonzero = np.where(self.row_size > 0)[0]
+        # The arrays defining the CCD properties must all have identical
+        # wavelength coverage.
+        ccd_nonzero = np.where(self._row_size > 0)[0]
         ccd_first, ccd_last = ccd_nonzero[0], ccd_nonzero[-1] + 1
-        if (np.any(self.fwhm_resolution[:ccd_first] != 0) or
-            np.any(self.fwhm_resolution[ccd_last:] != 0)):
+        if (np.any(self._fwhm_resolution[:ccd_first] != 0) or
+            np.any(self._fwhm_resolution[ccd_last:] != 0)):
             raise RuntimeError('Resolution extends beyond CCD coverage.')
-        if (np.any(self.neff_spatial[:ccd_first] != 0) or
-            np.any(self.neff_spatial[ccd_last:] != 0)):
+        if (np.any(self._neff_spatial[:ccd_first] != 0) or
+            np.any(self._neff_spatial[ccd_last:] != 0)):
             raise RuntimeError('Spatial Neff extends beyond CCD coverage.')
-        if np.any(self.row_size[ccd_first:ccd_last] <= 0.):
-            raise RuntimeError('CCD coverage has holes.')
-        if np.any(self.fwhm_resolution[ccd_first:ccd_last] <= 0.):
-            raise RuntimeError('CCD resolution has holes.')
-        if np.any(self.neff_spatial[ccd_first:ccd_last] <= 0.):
-            raise RuntimeError('CCD spatial Neff has holes.')
 
-        #self.ccd_slice = slice(ccd_first, ccd_last)
-        self.ccd_coverage = np.zeros_like(self.wavelength.value, dtype=bool)
+        # CCD properties must be valid across the coverage.
+        if np.any(self._row_size[ccd_first:ccd_last] <= 0.):
+            raise RuntimeError('CCD row size has invalid values <= 0.')
+        if np.any(self._fwhm_resolution[ccd_first:ccd_last] <= 0.):
+            raise RuntimeError('CCD resolution has invalid values <= 0.')
+        if np.any(self._neff_spatial[ccd_first:ccd_last] <= 0.):
+            raise RuntimeError('CCD spatial Neff has invalid values <= 0.')
+
+        self.ccd_slice = slice(ccd_first, ccd_last)
+        self.ccd_coverage = np.zeros_like(self._wavelength, dtype=bool)
         self.ccd_coverage[ccd_first:ccd_last] = True
-        self.wavelength_min = self.wavelength[ccd_first]
-        self.wavelength_max = self.wavelength[ccd_last - 1]
+        self._wavelength_min = self._wavelength[ccd_first]
+        self._wavelength_max = self._wavelength[ccd_last - 1]
 
         # Calculate the size of each wavelength bin in units of pixel rows.
-        wavelength_bin_size = np.gradient(self.wavelength)
-        mask = self.row_size.value > 0
-        neff_wavelength = np.zeros_like(self.neff_spatial)
-        neff_wavelength[mask] = (
-            wavelength_bin_size[mask] / self.row_size[mask]
-            ).to(u.pixel)
+        self._wavelength_bin_size = np.gradient(self._wavelength)
+        neff_wavelength = np.zeros_like(self._neff_spatial)
+        neff_wavelength[self.ccd_slice] = (
+            self._wavelength_bin_size[self.ccd_slice] /
+            self._row_size[self.ccd_slice])
 
         # Calculate the effective pixel area contributing to the signal
         # in each wavelength bin.
-        self.neff_pixels = (
-            neff_wavelength * self.neff_spatial).to(u.pixel ** 2)
+        self.neff_pixels = neff_wavelength * self._neff_spatial * u.pixel ** 2
 
         # Calculate the read noise per wavelength bin, assuming that
         # readnoise is uncorrelated between pixels (hence the sqrt scaling). The
@@ -233,6 +237,140 @@ class Camera(object):
         # Calculate the dark current per wavelength bin.
         self.dark_current_per_bin = (
             self.dark_current * self.neff_pixels).to(u.electron / u.s)
+
+        # Calculate the RMS resolution assuming a Gaussian PSF.
+        fwhm_to_sigma = 1. / (2 * math.sqrt(2 * math.log(2)))
+        self._rms_resolution = fwhm_to_sigma * self._fwhm_resolution
+
+        return
+        # Build a resolution matrix that transforms source flux on a true
+        # wavelength grid to flux on an observed wavelength grid.
+        # The matrix is not square because source flux can disperse into
+        # the CCD from just outside its wavelength limits.
+        columns = collections.deque()
+        # Add wavelengths below the CCD coverage that can disperse into it.
+        print('=== under')
+        response_start = self.ccd_slice.start
+        try:
+            while True:
+                columns.appendleft(self._resolution_column(response_start - 1))
+                response_start -= 1
+        except IndexError:
+            # Flux centered at bin_index cannot disperse into the CCD.
+            pass
+        # Add wavelengths covered by the CCD.
+        print('=== ccd')
+        for bin_index in xrange(self.ccd_slice.start, self.ccd_slice.stop):
+            columns.append(self._resolution_column(bin_index))
+        # Add wavelengths above the CCD coverage that can disperse into it.
+        print('=== over')
+        response_stop = self.ccd_slice.stop
+        try:
+            while True:
+                columns.append(self._resolution_column(response_stop))
+                response_stop += 1
+        except IndexError:
+            # Flux centered at bin_index cannot disperse into the CCD.
+            pass
+        self.response_slice = slice(response_start, response_stop)
+        print('response:', self.response_slice)
+
+
+    # Canonical wavelength unit used for all internal arrays.
+    _wavelength_unit = u.Angstrom
+
+
+    @property
+    def wavelength_min(self):
+        """Minimum wavelength covered by this camera's CCD.
+        """
+        return self._wavelength_min * self._wavelength_unit
+
+
+    @property
+    def wavelength_max(self):
+        """Maximum wavelength covered by this camera's CCD.
+        """
+        return self._wavelength_max * self._wavelength_unit
+
+
+    @property
+    def rms_resolution(self):
+        """Array of RMS resolution values.
+        """
+        return self._rms_resolution * self._wavelength_unit
+
+
+    @property
+    def row_size(self):
+        """Array of row sizes in the dispersion direction.
+        """
+        return self._row_size * self._wavelength_unit / u.pixel
+
+
+    @property
+    def neff_spatial(self):
+        """Array of effective pixel dimensions in the spatial (fiber) direction.
+        """
+        return self._neff_spatial * u.pixel
+
+
+    def _resolution_column(self, bin_index):
+        """Evaluate a single column of our resolution matrix.
+
+        A column gives the detector response to a delta-function input centered
+        in the specified bin, in terms of observed wavelengths.
+
+        The resolution is modeled as a Gaussian clipped and renormalized to
+        num_sigmas_clip.
+        """
+        # Determine the RMS resolution to use, with constant extrapolation
+        # of the resolution below and above the CCD.
+        if bin_index < self.ccd_slice.start:
+            sigma = self._rms_resolution[self.ccd_slice.start]
+        elif bin_index >= self.ccd_slice.stop:
+            sigma = self._rms_resolution[self.ccd_slice.stop - 1]
+        else:
+            sigma = self._rms_resolution[bin_index]
+        assert sigma > 0
+
+        # Calculate the non-zero extent of this column.
+        dwave = self.num_sigmas_clip * sigma
+        bin_wave = self._wavelength[bin_index]
+        min_wave = bin_wave - dwave
+        max_wave = bin_wave + dwave
+
+        # Is the wavelength grid big enough?
+        if min_wave < self._wavelength[0]:
+            raise RuntimeError(
+                'Wavelength grid min does not cover {0}-camera response.'
+                .format(self.name))
+        if max_wave > self._wavelength[-1]:
+            raise RuntimeError(
+                'Wavelength grid max does not cover {0}-camera response.'
+                .format(self.name))
+
+        # Does this column's response overlap the CCD?
+        start = np.where(self._wavelength <= min_wave)[0][-1]
+        stop = np.where(self._wavelength >= max_wave)[0][0] + 1
+        if stop <= self.ccd_slice.start or start >= self.ccd_slice.stop:
+            raise IndexError('Column does not overlap CCD.')
+
+        # Calculate the clipped and renormalized dispersion in each bin.
+        wave = self._wavelength[start:stop]
+        dwave = self._wavelength_bin_size[start:stop]
+        column = np.exp(-0.5 * (wave / sigma) ** 2) * dwave
+        column /= np.sum(column)
+
+        # Trim the column to the CCD wavelength coverage.
+        if start < self.ccd_slice.start:
+            column = column[self.ccd_slice.start - start:]
+            start = self.ccd_slice.start
+        if stop > self.ccd_slice.stop:
+            column = column[:self.ccd_slice.stop - stop]
+            stop = self.ccd_slice.stop
+
+        return column, (start, stop)
 
 
 def initialize(config):
@@ -258,12 +396,13 @@ def initialize(config):
             camera.ccd, ['row_size', 'fwhm_resolution', 'neff_spatial'])
         throughput = config.load_table(camera.throughput, 'throughput')
         constants = config.get_constants(camera,
-            ['read_noise', 'dark_current', 'gain'])
+            ['read_noise', 'dark_current', 'gain', 'num_sigmas_clip'])
         initialized_cameras.append(Camera(
             camera_name, config.wavelength, throughput,
             ccd['row_size'], ccd['fwhm_resolution'],
             ccd['neff_spatial'], constants['read_noise'],
-            constants['dark_current'], constants['gain']))
+            constants['dark_current'], constants['gain'],
+            constants['num_sigmas_clip']))
 
     constants = config.get_constants(
         config.instrument,

@@ -25,8 +25,8 @@ class QuickCamera(object):
     A class representing one camera in a quick simulation.
     """
     def __init__(self, camera):
-        wavelengthGrid = camera.wavelength.value
-        self.sigmaWavelength = camera.rms_resolution.value
+        wavelengthGrid = camera._wavelength
+        self.sigmaWavelength = camera._rms_resolution
         self.throughput = camera.throughput
         self.readnoisePerBin = camera.read_noise_per_bin.value
         self.darkCurrentPerBin = camera.dark_current_per_bin.value

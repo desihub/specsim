@@ -108,6 +108,8 @@ instrument:
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 3.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
+                # Clip the resolution matrix at this number of sigmas.
+                num_sigmas_clip: 5
             ccd:
                 table:
                     path: specpsf/psf-quicksim.fits
@@ -139,6 +141,8 @@ instrument:
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
+                # Clip the resolution matrix at this number of sigmas.
+                num_sigmas_clip: 5
             ccd:
                 table:
                     path: specpsf/psf-quicksim.fits
@@ -170,6 +174,8 @@ instrument:
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
+                # Clip the resolution matrix at this number of sigmas.
+                num_sigmas_clip: 5
             ccd:
                 table:
                     path: specpsf/psf-quicksim.fits

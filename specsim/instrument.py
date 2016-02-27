@@ -15,6 +15,7 @@ import math
 import collections
 
 import numpy as np
+import scipy.sparse
 
 import astropy.constants
 import astropy.units as u
@@ -194,27 +195,27 @@ class Camera(object):
         # The arrays defining the CCD properties must all have identical
         # wavelength coverage.
         ccd_nonzero = np.where(self._row_size > 0)[0]
-        ccd_first, ccd_last = ccd_nonzero[0], ccd_nonzero[-1] + 1
-        if (np.any(self._fwhm_resolution[:ccd_first] != 0) or
-            np.any(self._fwhm_resolution[ccd_last:] != 0)):
+        ccd_start, ccd_stop = ccd_nonzero[0], ccd_nonzero[-1] + 1
+        if (np.any(self._fwhm_resolution[:ccd_start] != 0) or
+            np.any(self._fwhm_resolution[ccd_stop:] != 0)):
             raise RuntimeError('Resolution extends beyond CCD coverage.')
-        if (np.any(self._neff_spatial[:ccd_first] != 0) or
-            np.any(self._neff_spatial[ccd_last:] != 0)):
+        if (np.any(self._neff_spatial[:ccd_start] != 0) or
+            np.any(self._neff_spatial[ccd_stop:] != 0)):
             raise RuntimeError('Spatial Neff extends beyond CCD coverage.')
 
         # CCD properties must be valid across the coverage.
-        if np.any(self._row_size[ccd_first:ccd_last] <= 0.):
+        if np.any(self._row_size[ccd_start:ccd_stop] <= 0.):
             raise RuntimeError('CCD row size has invalid values <= 0.')
-        if np.any(self._fwhm_resolution[ccd_first:ccd_last] <= 0.):
+        if np.any(self._fwhm_resolution[ccd_start:ccd_stop] <= 0.):
             raise RuntimeError('CCD resolution has invalid values <= 0.')
-        if np.any(self._neff_spatial[ccd_first:ccd_last] <= 0.):
+        if np.any(self._neff_spatial[ccd_start:ccd_stop] <= 0.):
             raise RuntimeError('CCD spatial Neff has invalid values <= 0.')
 
-        self.ccd_slice = slice(ccd_first, ccd_last)
+        self.ccd_slice = slice(ccd_start, ccd_stop)
         self.ccd_coverage = np.zeros_like(self._wavelength, dtype=bool)
-        self.ccd_coverage[ccd_first:ccd_last] = True
-        self._wavelength_min = self._wavelength[ccd_first]
-        self._wavelength_max = self._wavelength[ccd_last - 1]
+        self.ccd_coverage[ccd_start:ccd_stop] = True
+        self._wavelength_min = self._wavelength[ccd_start]
+        self._wavelength_max = self._wavelength[ccd_stop - 1]
 
         # Calculate the size of each wavelength bin in units of pixel rows.
         self._wavelength_bin_size = np.gradient(self._wavelength)
@@ -242,38 +243,85 @@ class Camera(object):
         fwhm_to_sigma = 1. / (2 * math.sqrt(2 * math.log(2)))
         self._rms_resolution = fwhm_to_sigma * self._fwhm_resolution
 
-        return
-        # Build a resolution matrix that transforms source flux on a true
-        # wavelength grid to flux on an observed wavelength grid.
-        # The matrix is not square because source flux can disperse into
-        # the CCD from just outside its wavelength limits.
-        columns = collections.deque()
-        # Add wavelengths below the CCD coverage that can disperse into it.
-        print('=== under')
-        response_start = self.ccd_slice.start
-        try:
-            while True:
-                columns.appendleft(self._resolution_column(response_start - 1))
-                response_start -= 1
-        except IndexError:
-            # Flux centered at bin_index cannot disperse into the CCD.
-            pass
-        # Add wavelengths covered by the CCD.
-        print('=== ccd')
-        for bin_index in xrange(self.ccd_slice.start, self.ccd_slice.stop):
-            columns.append(self._resolution_column(bin_index))
-        # Add wavelengths above the CCD coverage that can disperse into it.
-        print('=== over')
-        response_stop = self.ccd_slice.stop
-        try:
-            while True:
-                columns.append(self._resolution_column(response_stop))
-                response_stop += 1
-        except IndexError:
-            # Flux centered at bin_index cannot disperse into the CCD.
-            pass
-        self.response_slice = slice(response_start, response_stop)
-        print('response:', self.response_slice)
+        # Find the minimum wavelength that can disperse into the CCD,
+        # assuming a constant extrapolation of the resolution.
+        sigma_lo = self._rms_resolution[ccd_start]
+        min_wave = (self._wavelength[ccd_start] -
+                    self.num_sigmas_clip * sigma_lo)
+        if min_wave < self._wavelength[0]:
+            raise RuntimeError(
+                'Wavelength grid min does not cover {0}-camera response.'
+                .format(self.name))
+        matrix_start = np.where(self._wavelength >= min_wave)[0][0]
+
+        # Find the maximum wavelength that can disperse into the CCD,
+        # assuming a constant extrapolation of the resolution.
+        sigma_hi = self._rms_resolution[ccd_stop - 1]
+        max_wave = (self._wavelength[ccd_stop - 1] +
+                    self.num_sigmas_clip * sigma_hi)
+        if max_wave > self._wavelength[-1]:
+            raise RuntimeError(
+                'Wavelength grid max does not cover {0}-camera response.'
+                .format(self.name))
+        matrix_stop = np.where(self._wavelength <= max_wave)[0][-1] + 1
+
+        # Pad the RMS array to cover the full resolution matrix range.
+        sigma = np.empty((matrix_stop - matrix_start))
+        sigma[:ccd_start - matrix_start] = sigma_lo
+        sigma[ccd_start - matrix_start:ccd_stop - matrix_start] = (
+            self._rms_resolution[ccd_start:ccd_stop])
+        sigma[ccd_stop - matrix_start:] = sigma_hi
+
+        # Calculate the range of wavelengths where the dispersion will
+        # be evaluated.  The evaluation range extends beyond wavelengths that
+        # can disperse into the CCD in order to calculate the normalization.
+        wave = self._wavelength[matrix_start:matrix_stop]
+        min_wave = wave - self.num_sigmas_clip * sigma
+        max_wave = wave + self.num_sigmas_clip * sigma
+        eval_start = np.searchsorted(self._wavelength, min_wave)
+        eval_stop = np.searchsorted(self._wavelength, max_wave) + 1
+
+        # The columns of the resolution matrix are clipped to the CCD coverage.
+        column_start = np.maximum(eval_start, ccd_start)
+        column_stop = np.minimum(eval_stop, ccd_stop)
+        column_size = column_stop - column_start
+        assert np.all(column_size > 0)
+
+        # Prepare start, stop values for slicing eval -> column.
+        trim_start = column_start - eval_start
+        trim_stop = column_stop - eval_start
+        assert np.all(trim_stop > trim_start)
+
+        # Prepare a sparse resolution matrix in compressed column format.
+        matrix_size = np.sum(column_size)
+        data = np.empty((matrix_size,), float)
+        indices = np.empty((matrix_size,), int)
+        indptr = np.empty((len(column_size) + 1,), int)
+        indptr[0] = 0
+        indptr[1:] = np.cumsum(column_size)
+        assert indptr[-1] == matrix_size
+
+        # Fill sparse matrix arrays.
+        sparse_start = 0
+        for i in xrange(matrix_stop - matrix_start):
+            eval_slice = slice(eval_start[i], eval_stop[i])
+            w = self._wavelength[eval_slice]
+            dw = self._wavelength_bin_size[eval_slice]
+            column = dw * np.exp(-0.5 * ((w - wave[i]) / sigma[i]) ** 2)
+            # Normalize over the full evaluation range.
+            column /= np.sum(column)
+            # Trim to the CCD coverage.
+            s = slice(sparse_start, sparse_start + column_size[i])
+            data[s] = column[trim_start[i]:trim_stop[i]]
+            indices[s] = np.arange(column_start[i], column_stop[i]) - ccd_start
+            sparse_start = s.stop
+        assert np.all((indices >= 0) & (indices < ccd_stop - ccd_start))
+        assert s.stop == matrix_size
+
+        # Create the matrix.
+        matrix_shape = (ccd_stop - ccd_start, matrix_stop - matrix_start)
+        self._resolution_matrix = scipy.sparse.csc_matrix(
+            (data, indices, indptr), shape=matrix_shape)
 
 
     # Canonical wavelength unit used for all internal arrays.
@@ -313,64 +361,6 @@ class Camera(object):
         """Array of effective pixel dimensions in the spatial (fiber) direction.
         """
         return self._neff_spatial * u.pixel
-
-
-    def _resolution_column(self, bin_index):
-        """Evaluate a single column of our resolution matrix.
-
-        A column gives the detector response to a delta-function input centered
-        in the specified bin, in terms of observed wavelengths.
-
-        The resolution is modeled as a Gaussian clipped and renormalized to
-        num_sigmas_clip.
-        """
-        # Determine the RMS resolution to use, with constant extrapolation
-        # of the resolution below and above the CCD.
-        if bin_index < self.ccd_slice.start:
-            sigma = self._rms_resolution[self.ccd_slice.start]
-        elif bin_index >= self.ccd_slice.stop:
-            sigma = self._rms_resolution[self.ccd_slice.stop - 1]
-        else:
-            sigma = self._rms_resolution[bin_index]
-        assert sigma > 0
-
-        # Calculate the non-zero extent of this column.
-        dwave = self.num_sigmas_clip * sigma
-        bin_wave = self._wavelength[bin_index]
-        min_wave = bin_wave - dwave
-        max_wave = bin_wave + dwave
-
-        # Is the wavelength grid big enough?
-        if min_wave < self._wavelength[0]:
-            raise RuntimeError(
-                'Wavelength grid min does not cover {0}-camera response.'
-                .format(self.name))
-        if max_wave > self._wavelength[-1]:
-            raise RuntimeError(
-                'Wavelength grid max does not cover {0}-camera response.'
-                .format(self.name))
-
-        # Does this column's response overlap the CCD?
-        start = np.where(self._wavelength <= min_wave)[0][-1]
-        stop = np.where(self._wavelength >= max_wave)[0][0] + 1
-        if stop <= self.ccd_slice.start or start >= self.ccd_slice.stop:
-            raise IndexError('Column does not overlap CCD.')
-
-        # Calculate the clipped and renormalized dispersion in each bin.
-        wave = self._wavelength[start:stop]
-        dwave = self._wavelength_bin_size[start:stop]
-        column = np.exp(-0.5 * (wave / sigma) ** 2) * dwave
-        column /= np.sum(column)
-
-        # Trim the column to the CCD wavelength coverage.
-        if start < self.ccd_slice.start:
-            column = column[self.ccd_slice.start - start:]
-            start = self.ccd_slice.start
-        if stop > self.ccd_slice.stop:
-            column = column[:self.ccd_slice.stop - stop]
-            stop = self.ccd_slice.stop
-
-        return column, (start, stop)
 
 
 def initialize(config):

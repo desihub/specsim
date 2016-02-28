@@ -13,6 +13,7 @@ import numpy as np
 import scipy.sparse as sp
 
 from astropy import units as u
+import astropy.table
 
 import specsim.config
 import specsim.atmosphere
@@ -126,6 +127,40 @@ class Simulator(object):
             quick_camera = QuickCamera(camera)
             self.cameras.append(quick_camera)
 
+        # Initialize our table of simulation results.
+        self.camera_names = []
+        self.camera_slices = {}
+        num_rows = len(config.wavelength)
+        flux_unit = u.erg / (u.cm**2 * u.s * u.Angstrom)
+        self.simulated = astropy.table.Table(
+            meta=dict(description='Specsim simulation results'))
+        self.simulated.add_column(astropy.table.Column(
+            name='wavelength', data=config.wavelength))
+        self.simulated.add_column(astropy.table.Column(
+            name='source_flux', dtype=float, length=num_rows, unit=flux_unit))
+        self.simulated.add_column(astropy.table.Column(
+            name='sky_flux', dtype=float, length=num_rows, unit=flux_unit))
+        self.simulated.add_column(astropy.table.Column(
+            name='num_source_photons', dtype=float, length=num_rows))
+        self.simulated.add_column(astropy.table.Column(
+            name='num_sky_photons', dtype=float, length=num_rows))
+        for camera in self.instrument.cameras:
+            name = camera.name
+            self.camera_names.append(name)
+            self.camera_slices[name] = camera.ccd_slice
+            self.simulated.add_column(astropy.table.Column(
+                name='num_source_electrons_{0}'.format(name),
+                dtype=float, length=num_rows))
+            self.simulated.add_column(astropy.table.Column(
+                name='num_sky_electrons_{0}'.format(name),
+                dtype=float, length=num_rows))
+            self.simulated.add_column(astropy.table.Column(
+                name='num_dark_electrons_{0}'.format(name),
+                dtype=float, length=num_rows))
+            self.simulated.add_column(astropy.table.Column(
+                name='num_electrons_variance_{0}'.format(name),
+                dtype=float, length=num_rows))
+
 
     def simulate(self):
         """Simulate a single exposure.
@@ -165,8 +200,71 @@ class Simulator(object):
 
         These are accessible using the same camera index j, e.g. qsim.cameras[j].throughput.
         """
+        # Get references to our results columns.
+        source_flux = self.simulated['source_flux']
+        sky_flux = self.simulated['sky_flux']
+        num_source_photons = self.simulated['num_source_photons']
+        num_sky_photons = self.simulated['num_sky_photons']
+
+        # Get the source flux incident on the atmosphere.
+        source_flux[:] = self.source.flux_out.to(source_flux.unit)
+
+        # Get the sky flux seen by a fiber.
+        sky_flux[:] = (
+            self.atmosphere.surface_brightness *
+            self.instrument.fiber_area).to(sky_flux.unit)
+
+        # Calculate the mean number of source photons entering the fiber
+        # per simulation bin.
+        num_source_photons[:] = (
+            source_flux *
+            self.atmosphere.extinction *
+            self.instrument.get_fiber_acceptance(self.source) *
+            self.instrument.photons_per_bin *
+            self.instrument.exposure_time).to(1).value
+
+        # Calculate the mean number of sky photons entering the fiber
+        # per simulation bin.
+        num_sky_photons[:] = (
+            sky_flux *
+            self.instrument.photons_per_bin *
+            self.instrument.exposure_time).to(1).value
+
+        # Loop over cameras.
+        for camera in self.instrument.cameras:
+
+            # Get references to this camera's columns.
+            num_source_electrons = self.simulated[
+                'num_source_electrons_{0}'.format(camera.name)]
+            num_sky_electrons = self.simulated[
+                'num_sky_electrons_{0}'.format(camera.name)]
+            num_dark_electrons = self.simulated[
+                'num_dark_electrons_{0}'.format(camera.name)]
+            num_electrons_variance = self.simulated[
+                'num_electrons_variance_{0}'.format(camera.name)]
+
+            # Calculate the mean number of source electrons detected in the CCD.
+            num_source_electrons[:] = camera.apply_resolution(
+                num_source_photons * camera.throughput)
+
+            # Calculate the mean number of sky electrons detected in the CCD.
+            num_sky_electrons[:] = camera.apply_resolution(
+                num_sky_photons * camera.throughput)
+
+            # Calculate the mean number of dark current electrons in the CCD.
+            num_dark_electrons[:] = (
+                camera.dark_current_per_bin *
+                self.instrument.exposure_time).to(u.electron).value
+
+            # Calculate the variance in the number of detected electrons.
+            num_electrons_variance[:] = (
+                num_source_electrons +
+                num_sky_electrons +
+                num_dark_electrons +
+                camera.read_noise_per_bin.to(u.electron).value ** 2
+            )
+
         downsampling = self.downsampling
-        airmass = self.atmosphere.airmass
         expTime = self.instrument.exposure_time.to(u.s).value
 
         # Convert the photon response in our canonical flux units.
@@ -328,7 +426,6 @@ class Simulator(object):
         '''
 
         # Remember the parameters used for this simulation.
-        self.airmass = airmass
         self.expTime = expTime
 
         # Return the downsampled vectors

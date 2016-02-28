@@ -327,26 +327,17 @@ class Camera(object):
         self._resolution_matrix = self._resolution_matrix.tocsr()
 
 
-    def apply_dispersion(self, flux):
+    def apply_resolution(self, flux):
         """
         Input should be on the simulation wavelength grid.
 
         Any throughput should already be applied.
         """
-        flux = np.asanyarray(flux)
+        flux = np.asarray(flux)
         dispersed = np.zeros_like(flux)
 
-        # Remove units if any.
-        try:
-            flux_value = flux.value
-            dispersed_value = dispersed.value
-        except AttributeError:
-            flux_value = flux
-            dispersed_value = dispered
-
-        # Apply dispersion.
-        dispersed_value[self.ccd_slice] = self._resolution_matrix.dot(
-            flux_value[self.response_slice])
+        dispersed[self.ccd_slice] = self._resolution_matrix.dot(
+            flux[self.response_slice])
 
         return dispersed
 

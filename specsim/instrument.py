@@ -264,6 +264,7 @@ class Camera(object):
                 'Wavelength grid max does not cover {0}-camera response.'
                 .format(self.name))
         matrix_stop = np.where(self._wavelength <= max_wave)[0][-1] + 1
+        self.response_slice = slice(matrix_start, matrix_stop)
 
         # Pad the RMS array to cover the full resolution matrix range.
         sigma = np.empty((matrix_stop - matrix_start))
@@ -318,10 +319,36 @@ class Camera(object):
         assert np.all((indices >= 0) & (indices < ccd_stop - ccd_start))
         assert s.stop == matrix_size
 
-        # Create the matrix.
+        # Create the matrix in CSC format.
         matrix_shape = (ccd_stop - ccd_start, matrix_stop - matrix_start)
         self._resolution_matrix = scipy.sparse.csc_matrix(
             (data, indices, indptr), shape=matrix_shape)
+        # Convert to CSR format for faster matrix multiplies.
+        self._resolution_matrix = self._resolution_matrix.tocsr()
+
+
+    def apply_dispersion(self, flux):
+        """
+        Input should be on the simulation wavelength grid.
+
+        Any throughput should already be applied.
+        """
+        flux = np.asanyarray(flux)
+        dispersed = np.zeros_like(flux)
+
+        # Remove units if any.
+        try:
+            flux_value = flux.value
+            dispersed_value = dispersed.value
+        except AttributeError:
+            flux_value = flux
+            dispersed_value = dispered
+
+        # Apply dispersion.
+        dispersed_value[self.ccd_slice] = self._resolution_matrix.dot(
+            flux_value[self.response_slice])
+
+        return dispersed
 
 
     # Canonical wavelength unit used for all internal arrays.

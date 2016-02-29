@@ -104,7 +104,7 @@ instrument:
         b:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 3.0 electron
+                read_noise: 3.0 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 3.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
@@ -137,7 +137,7 @@ instrument:
         r:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 2.9 electron
+                read_noise: 2.9 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
@@ -170,7 +170,7 @@ instrument:
         z:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 2.9 electron
+                read_noise: 2.9 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu

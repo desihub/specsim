@@ -232,7 +232,7 @@ class Camera(object):
         # readnoise is uncorrelated between pixels (hence the sqrt scaling). The
         # value will be zero in pixels that are not used by this camera.
         self.read_noise_per_bin = (
-            self.read_noise * np.sqrt(self.neff_pixels.value)
+            self.read_noise * np.sqrt(self.neff_pixels.value) * u.pixel ** 2
             ).to(u.electron)
 
         # Calculate the dark current per wavelength bin.

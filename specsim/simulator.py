@@ -139,11 +139,17 @@ class Simulator(object):
         self.simulated.add_column(astropy.table.Column(
             name='source_flux', dtype=float, length=num_rows, unit=flux_unit))
         self.simulated.add_column(astropy.table.Column(
-            name='sky_flux', dtype=float, length=num_rows, unit=flux_unit))
+            name='source_fiber_flux', dtype=float, length=num_rows,
+            unit=flux_unit))
+        self.simulated.add_column(astropy.table.Column(
+            name='sky_fiber_flux', dtype=float, length=num_rows,
+            unit=flux_unit))
         self.simulated.add_column(astropy.table.Column(
             name='num_source_photons', dtype=float, length=num_rows))
         self.simulated.add_column(astropy.table.Column(
             name='num_sky_photons', dtype=float, length=num_rows))
+        self.simulated.add_column(astropy.table.Column(
+            name='total_snr', dtype=float, length=num_rows))
         for camera in self.instrument.cameras:
             name = camera.name
             self.camera_names.append(name)
@@ -201,36 +207,48 @@ class Simulator(object):
         These are accessible using the same camera index j, e.g. qsim.cameras[j].throughput.
         """
         # Get references to our results columns.
+        wavelength = self.simulated['wavelength']
         source_flux = self.simulated['source_flux']
-        sky_flux = self.simulated['sky_flux']
+        source_fiber_flux = self.simulated['source_fiber_flux']
+        sky_fiber_flux = self.simulated['sky_fiber_flux']
         num_source_photons = self.simulated['num_source_photons']
         num_sky_photons = self.simulated['num_sky_photons']
+        total_snr = self.simulated['total_snr']
 
         # Get the source flux incident on the atmosphere.
         source_flux[:] = self.source.flux_out.to(source_flux.unit)
 
-        # Get the sky flux seen by a fiber.
-        sky_flux[:] = (
+        # Calculate the source flux entering a fiber.
+        source_fiber_flux[:] = (
+            source_flux *
+            self.atmosphere.extinction *
+            self.instrument.get_fiber_acceptance(self.source)
+            ).to(source_fiber_flux.unit)
+
+        # Calculate the sky flux entering a fiber.
+        sky_fiber_flux[:] = (
             self.atmosphere.surface_brightness *
-            self.instrument.fiber_area).to(sky_flux.unit)
+            self.instrument.fiber_area
+            ).to(sky_fiber_flux.unit)
 
         # Calculate the mean number of source photons entering the fiber
         # per simulation bin.
         num_source_photons[:] = (
-            source_flux *
-            self.atmosphere.extinction *
-            self.instrument.get_fiber_acceptance(self.source) *
+            source_fiber_flux *
             self.instrument.photons_per_bin *
-            self.instrument.exposure_time).to(1).value
+            self.instrument.exposure_time
+            ).to(1).value
 
         # Calculate the mean number of sky photons entering the fiber
         # per simulation bin.
         num_sky_photons[:] = (
-            sky_flux *
+            sky_fiber_flux *
             self.instrument.photons_per_bin *
-            self.instrument.exposure_time).to(1).value
+            self.instrument.exposure_time
+            ).to(1).value
 
-        # Loop over cameras.
+        # Loop over cameras and accumulate the total SNR.
+        total_snr[:] = 0.
         for camera in self.instrument.cameras:
 
             # Get references to this camera's columns.
@@ -263,6 +281,12 @@ class Simulator(object):
                 num_dark_electrons +
                 camera.read_noise_per_bin.to(u.electron).value ** 2
             )
+
+            total_snr[camera.ccd_slice] += (
+                num_source_electrons[camera.ccd_slice] /
+                np.sqrt(num_electrons_variance[camera.ccd_slice]))
+
+        print('Total SNR^2', np.sum(total_snr ** 2))
 
         downsampling = self.downsampling
         expTime = self.instrument.exposure_time.to(u.s).value

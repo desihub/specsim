@@ -109,32 +109,10 @@ class Simulator(object):
         if isinstance(config, basestring):
             config = specsim.config.load_config(config)
 
+        # Initalize our component models.
         self.atmosphere = specsim.atmosphere.initialize(config)
         self.instrument = specsim.instrument.initialize(config)
         self.source = specsim.source.initialize(config)
-
-        self.downsampling = int(config.simulator.downsampling)
-        num_downsampled = len(config.wavelength) // self.downsampling
-        downsampled_shape = (num_downsampled, self.downsampling)
-        num_rounded = num_downsampled * self.downsampling
-        self.downsample = (
-            lambda data, method:
-                method(data[:num_rounded].reshape(downsampled_shape), axis=-1))
-
-        self.snrtot2 = np.zeros((num_downsampled,), float)
-
-        # Lookup the telescope's effective area in cm^2.
-        self.effArea = self.instrument.effective_area.to(u.cm**2).value
-
-        # Lookup the fiber area in arcsec^2.
-        self.fiberArea = self.instrument.fiber_area.to(u.arcsec**2).value
-
-        self.wavelengthGrid = config.wavelength.to(u.Angstrom).value
-
-        self.cameras = [ ]
-        for camera in self.instrument.cameras:
-            quick_camera = QuickCamera(camera)
-            self.cameras.append(quick_camera)
 
         # Initialize our table of simulation results.
         self.camera_names = []
@@ -174,44 +152,45 @@ class Simulator(object):
                 name='num_electrons_variance_{0}'.format(name),
                 dtype=float, length=num_rows))
 
+        # Initialize the downsampled results.
+        self.downsampling = config.simulator.downsampling
+
+        '''----------------------------------------------------------------'''
+        # Lookup the telescope's effective area in cm^2.
+        self.effArea = self.instrument.effective_area.to(u.cm**2).value
+
+        # Lookup the fiber area in arcsec^2.
+        self.fiberArea = self.instrument.fiber_area.to(u.arcsec**2).value
+
+        self.wavelengthGrid = config.wavelength.to(u.Angstrom).value
+
+        self.cameras = [ ]
+        for camera in self.instrument.cameras:
+            quick_camera = QuickCamera(camera)
+            self.cameras.append(quick_camera)
+        '''----------------------------------------------------------------'''
+
+
+    @property
+    def downsampling(self):
+        """Integer downsampling factor of simulation wavelength grid.
+        """
+        return self._downsampling
+
+
+    @downsampling.setter
+    def downsampling(self, downsampling):
+        self._downsampling = int(downsampling)
+        num_downsampled = len(self.simulated) // self._downsampling
+        downsampled_shape = (num_downsampled, self._downsampling)
+        num_rounded = num_downsampled * self._downsampling
+        self._downsample = (
+            lambda data, method:
+                method(data[:num_rounded].reshape(downsampled_shape), axis=-1))
+
 
     def simulate(self):
         """Simulate a single exposure.
-
-        Returns a numpy array of results with one row per downsampled wavelength bin containing
-        the following named columns in a numpy.recarray:
-
-         - wave: wavelength in Angstroms
-         - srcflux: source flux in 1e-17 erg/s/cm^2/Ang
-         - obsflux: estimate of observed co-added flux in 1e-17 erg/s/cm^2/Ang
-         - ivar: inverse variance of obsflux in 1/(1e-17 erg/s/cm^2/Ang)**2
-         - snrtot: total signal-to-noise ratio of coadded spectrum
-         - nobj[j]: mean number of observed photons from the source in camera j
-         - nsky[j]: mean number of observed photons from the sky in camera j
-         - rdnoise[j]: RMS read noise in electrons in camera j
-         - dknoise[j]: RMS dark current shot noise in electrons in camera j
-         - snr[j]: signal-to-noise ratio in camera j
-         - camivar[j]: inverse variance of source flux in (1e-17 erg/s/cm^2/Ang)^-2 in camera j
-         - camflux[j]: source flux in 1e-17 erg/s/cm^2/Ang in camera j
-                     (different for each camera because of change of resolution)
-
-        After calling this method the following high-resolution (pre-downsampling) arrays are also
-        available as data members:
-
-         - wavelengthGrid ~ wave
-         - sourceFlux ~ srcflux
-         - observedFlux ~ obsflux
-
-        In addition, each camera provides the following arrays tabulated on the same high-resolution
-        wavelength grid:
-
-         - throughput
-         - sourcePhotonsSmooth ~ nobj
-         - skyPhotonRateSmooth ~ nsky/expTime
-         - readnoisePerBin ~ rdnoise
-         - darkCurrentPerBin ~ sqrt(dknoise/expTime)
-
-        These are accessible using the same camera index j, e.g. qsim.cameras[j].throughput.
         """
         # Get references to our results columns.
         wavelength = self.simulated['wavelength']
@@ -253,8 +232,6 @@ class Simulator(object):
             self.instrument.exposure_time
             ).to(1).value
 
-        self.snrtot2[:] = 0.
-
         # Loop over cameras to calculate their individual responses.
         for camera in self.instrument.cameras:
 
@@ -289,16 +266,7 @@ class Simulator(object):
                 camera.read_noise_per_bin.to(u.electron).value ** 2
             )
 
-            # Accumulate the downsampled total SNR for this camera.
-            nobj = self.downsample(num_source_electrons, np.sum)
-            nvar = self.downsample(num_electrons_variance, np.sum)
-            mask = nvar > 0
-            snr = nobj[mask] / np.sqrt(nvar[mask])
-            print('SNR new', camera.name, np.sum(snr**2), snr[:10])
-            self.snrtot2[mask] += snr ** 2
-
-        print('Total SNR^2', np.sum(self.snrtot2))
-
+        '''----------------------------------------------------------------'''
         downsampling = self.downsampling
         expTime = self.instrument.exposure_time.to(u.s).value
 
@@ -421,7 +389,6 @@ class Simulator(object):
             signalMask = (results.nobj)[:,j] > 0
             (results.snr)[:,j] = np.zeros((ndown,))
             (results.snr)[signalMask,j] = (results.nobj)[signalMask,j]/np.sqrt(variance[signalMask])
-            print('SNR old', j, np.sum((results.snr)[signalMask,j]**2), (results.snr)[signalMask,j][:10])
             # Compute calib in downsampled wave grid, it's a sum because
             # nphot is a sum over orginal wave bins.
             # The effective calibration of convolved spectra is different from the true one
@@ -441,31 +408,13 @@ class Simulator(object):
         results.ivar = np.zeros((ndown,))
         results.ivar[fluxMask] = (results[fluxMask].snrtot/results[fluxMask].obsflux)**2
 
-        '''
-        # Loop over downsampled bins to calculate flux inverse variances.
-        results.ivarnew = np.zeros((ndown,))
-        for alpha in range(ndown):
-            # Initialize the weight vector for flux interpolation parameter alpha.
-            wgt = np.zeros((nbins,))
-            wgt[alpha*downsampling:(alpha+1)*downsampling] = 1.
-            # Loop over cameras.
-            for camera in self.cameras:
-                # Calculate this camera's photons-per-unit-flux response to this parameter.
-                Kprime = camera.sparseKernel.dot(camera.sourceCalib*wgt)
-                # Calculate this camera's contribution to the corresponding diagonal
-                # flux inverse variances.
-                nIVar = np.zeros((nbins,))
-                nIVar[camera.coverage] = 1./camera.nElecVariance[camera.coverage]
-                fIVar = Kprime**2*(nIVar + 0.5*nIVar**2)
-                results.ivarnew[alpha] += np.sum(fIVar[:last])
-        np.savetxt('ivar.dat',np.vstack([results.ivar,results.ivarnew]).T)
-        '''
-
         # Remember the parameters used for this simulation.
         self.expTime = expTime
 
         # Return the downsampled vectors
         return results
+        '''----------------------------------------------------------------'''
+
 
     def plot(self,results,labels=None,plotMin=None,plotMax=None,plotName='quicksim'):
         """

@@ -326,8 +326,50 @@ class Camera(object):
         # Convert to CSR format for faster matrix multiplies.
         self._resolution_matrix = self._resolution_matrix.tocsr()
 
-        # Initialize the output pixels.
-        self.output_pixel_size = output_pixel_size
+        # Initialize downsampled output pixels.
+        self._output_pixel_size = (
+            output_pixel_size.to(self._wavelength_unit).value)
+        # Check that we can downsample simulation pixels to obtain
+        # output pixels.  This check will only work if the simulation
+        # grid is equally spaced, but no other part of the Camera class
+        # class currently requires this.
+        wavelength_step = self._wavelength[1] - self._wavelength[0]
+        self._downsampling = int(round(
+            self._output_pixel_size / wavelength_step))
+        num_downsampled = int(
+            (self._wavelength_max - self._wavelength_min) //
+            self._output_pixel_size)
+        pixel_edges = (
+            self._wavelength_min - 0.5 * wavelength_step +
+            np.arange(num_downsampled + 1) * self._output_pixel_size)
+        sim_edges = (
+            self._wavelength[self.ccd_slice][::self._downsampling] -
+             0.5 * wavelength_step)
+        if not np.allclose(
+            pixel_edges, sim_edges, rtol=0., atol=1e-6 * wavelength_step):
+            raise ValueError(
+                'Cannot downsample {0}-camera pixels from {1:f} to {2} {3}.'
+                .format(self.name, wavelength_step, self._output_pixel_size,
+                        self._wavelength_unit))
+        # Save the centers of each output pixel.
+        self._output_wavelength = 0.5 * (pixel_edges[1:] + pixel_edges[:-1])
+        # Initialize the parameters used by the downsample() method.
+        self._output_slice = slice(
+            self.ccd_slice.start,
+            self.ccd_slice.start + num_downsampled * self._downsampling)
+        self._downsampled_shape = (num_downsampled, self._downsampling)
+
+
+    def downsample(self, data, method=np.sum):
+        """Downsample data tabulated on the simulation grid to output pixels.
+        """
+        data = np.asanyarray(data)
+        if data.shape != self._wavelength.shape:
+            raise ValueError(
+                'Invalid data shape for downsampling: {0}.'.format(data.shape))
+
+        return method(
+            data[self._output_slice].reshape(self._downsampled_shape), axis=-1)
 
 
     def apply_resolution(self, flux):
@@ -393,39 +435,11 @@ class Camera(object):
         return self._output_pixel_size * self._wavelength_unit
 
 
-    @output_pixel_size.setter
-    def output_pixel_size(self, output_pixel_size):
-        self._output_pixel_size = (
-            output_pixel_size.to(self._wavelength_unit).value)
-        # Check that we can downsample simulation pixels to obtain
-        # output pixels.
-        wavelength_step = self._wavelength[1] - self._wavelength[0]
-        self._downsampling = int(round(
-            self._output_pixel_size / wavelength_step))
-        num_downsampled = int(
-            (self._wavelength_max - self._wavelength_min) //
-            self._output_pixel_size)
-        pixel_edges = (
-            self._wavelength_min +
-            np.arange(num_downsampled + 1) * self._output_pixel_size)
-        sim_edges = self._wavelength[self.ccd_slice][::self._downsampling]
-        if not np.allclose(
-            pixel_edges, sim_edges, rtol=0., atol=1e-6 * wavelength_step):
-            raise ValueError(
-                'Cannot downsample to output pixel size {0}.'
-                .format(output_pixel_size))
-        # Save the centers of each output pixel.
-        self._output_wavelength = 0.5 * (pixel_edges[1:] + pixel_edges[:-1])
-
-
     @property
     def output_wavelength(self):
         """Output pixel central wavelengths.
-
-        This array is automatically updated when :attr:`output_pixel_size` is
-        changed.
         """
-        return _output_wavelength * self._wavelength_unit
+        return self._output_wavelength * self._wavelength_unit
 
 
 def initialize(config):

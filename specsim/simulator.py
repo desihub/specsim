@@ -149,8 +149,27 @@ class Simulator(object):
                 name='num_dark_electrons_{0}'.format(name),
                 dtype=float, length=num_rows))
             self.simulated.add_column(astropy.table.Column(
-                name='num_electrons_variance_{0}'.format(name),
+                name='read_noise_electrons_{0}'.format(name),
                 dtype=float, length=num_rows))
+
+        # Initialize each camera's table of results downsampled to
+        # output pixels.
+        self.camera_output = []
+        for camera in self.instrument.cameras:
+            table = astropy.table.Table(
+                meta=dict(description='{0}-camera output'.format(camera.name)))
+            num_rows = len(camera.output_wavelength)
+            table.add_column(astropy.table.Column(
+                name='wavelength', data=camera.output_wavelength))
+            table.add_column(astropy.table.Column(
+                name='num_source_electrons', dtype=float, length=num_rows))
+            table.add_column(astropy.table.Column(
+                name='num_sky_electrons', dtype=float, length=num_rows))
+            table.add_column(astropy.table.Column(
+                name='num_dark_electrons', dtype=float, length=num_rows))
+            table.add_column(astropy.table.Column(
+                name='read_noise_electrons', dtype=float, length=num_rows))
+            self.camera_output.append(table)
 
         # Initialize the downsampled results.
         self.downsampling = config.simulator.downsampling
@@ -233,7 +252,7 @@ class Simulator(object):
             ).to(1).value
 
         # Loop over cameras to calculate their individual responses.
-        for camera in self.instrument.cameras:
+        for output, camera in zip(self.camera_output, self.instrument.cameras):
 
             # Get references to this camera's columns.
             num_source_electrons = self.simulated[
@@ -242,8 +261,8 @@ class Simulator(object):
                 'num_sky_electrons_{0}'.format(camera.name)]
             num_dark_electrons = self.simulated[
                 'num_dark_electrons_{0}'.format(camera.name)]
-            num_electrons_variance = self.simulated[
-                'num_electrons_variance_{0}'.format(camera.name)]
+            read_noise_electrons = self.simulated[
+                'read_noise_electrons_{0}'.format(camera.name)]
 
             # Calculate the mean number of source electrons detected in the CCD.
             num_source_electrons[:] = camera.apply_resolution(
@@ -258,13 +277,19 @@ class Simulator(object):
                 camera.dark_current_per_bin *
                 self.instrument.exposure_time).to(u.electron).value
 
-            # Calculate the variance in the number of detected electrons.
-            num_electrons_variance[:] = (
-                num_source_electrons +
-                num_sky_electrons +
-                num_dark_electrons +
-                camera.read_noise_per_bin.to(u.electron).value ** 2
-            )
+            # Copy the read noise in units of electrons.
+            read_noise_electrons[:] = (
+                camera.read_noise_per_bin.to(u.electron).value)
+
+            # Calculate the corresponding downsampled output quantities.
+            output['num_source_electrons'] = (
+                camera.downsample(num_source_electrons))
+            output['num_sky_electrons'] = (
+                camera.downsample(num_sky_electrons))
+            output['num_dark_electrons'] = (
+                camera.downsample(num_dark_electrons))
+            output['read_noise_electrons'] = np.sqrt(
+                camera.downsample(read_noise_electrons ** 2))
 
         '''----------------------------------------------------------------'''
         downsampling = self.downsampling

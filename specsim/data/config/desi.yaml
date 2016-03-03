@@ -7,11 +7,22 @@ base_path: '{DESIMODEL}/data'
 # Be verbose during the simulation?
 verbose: no
 
-# Specify the wavelength grid to use for simulation.
+# Specify the wavelength grid to use for simulation. For comparison, the
+# table below summarizes the ranges of non-zero throughput in each camera,
+# wavelengths that can disperse into CDDs (with a 5-sigma cut), and the
+# extents of each CCD's active pixels.
+#
+#   Range     b(min)   b(max)   r(min)   r(max)   z(min)   z(max)
+#            Angstrom Angstrom Angstrom Angstrom Angstrom Angstrom
+# ---------- -------- -------- -------- -------- -------- --------
+# Throughput 3533.000 5998.000 5564.000 7805.000 7360.000 9913.000
+# Simulation 3550.000 ................................... 9850.000
+#   Response 3565.400 5952.600 5621.700 7744.300 7431.000 9838.000
+#        CCD 3569.000 5949.000 5625.000 7741.000 7435.000 9834.000
 wavelength_grid:
     unit: Angstrom
-    min: 3500.3
-    max: 9999.7
+    min: 3550.0
+    max: 9850.0
     step: 0.1
 
 # The atmosphere configuration is interpreted and validated by the

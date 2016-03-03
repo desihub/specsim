@@ -180,7 +180,7 @@ class Camera(object):
     """
     def __init__(self, name, wavelength, throughput, row_size,
                  fwhm_resolution, neff_spatial, read_noise, dark_current,
-                 gain, num_sigmas_clip):
+                 gain, num_sigmas_clip, output_pixel_size):
         self.name = name
         self._wavelength = wavelength.to(self._wavelength_unit).value
         self.throughput = throughput
@@ -326,6 +326,9 @@ class Camera(object):
         # Convert to CSR format for faster matrix multiplies.
         self._resolution_matrix = self._resolution_matrix.tocsr()
 
+        # Initialize the output pixels.
+        self.output_pixel_size = output_pixel_size
+
 
     def apply_resolution(self, flux):
         """
@@ -381,6 +384,50 @@ class Camera(object):
         return self._neff_spatial * u.pixel
 
 
+    @property
+    def output_pixel_size(self):
+        """Size of output pixels.
+
+        Must be a multiple of the simulation wavelength grid.
+        """
+        return self._output_pixel_size * self._wavelength_unit
+
+
+    @output_pixel_size.setter
+    def output_pixel_size(self, output_pixel_size):
+        self._output_pixel_size = (
+            output_pixel_size.to(self._wavelength_unit).value)
+        # Check that we can downsample simulation pixels to obtain
+        # output pixels.
+        wavelength_step = self._wavelength[1] - self._wavelength[0]
+        self._downsampling = int(round(
+            self._output_pixel_size / wavelength_step))
+        num_downsampled = int(
+            (self._wavelength_max - self._wavelength_min) //
+            self._output_pixel_size)
+        pixel_edges = (
+            self._wavelength_min +
+            np.arange(num_downsampled + 1) * self._output_pixel_size)
+        sim_edges = self._wavelength[self.ccd_slice][::self._downsampling]
+        if not np.allclose(
+            pixel_edges, sim_edges, rtol=0., atol=1e-6 * wavelength_step):
+            raise ValueError(
+                'Cannot downsample to output pixel size {0}.'
+                .format(output_pixel_size))
+        # Save the centers of each output pixel.
+        self._output_wavelength = 0.5 * (pixel_edges[1:] + pixel_edges[:-1])
+
+
+    @property
+    def output_wavelength(self):
+        """Output pixel central wavelengths.
+
+        This array is automatically updated when :attr:`output_pixel_size` is
+        changed.
+        """
+        return _output_wavelength * self._wavelength_unit
+
+
 def initialize(config):
     """Initialize the instrument model from configuration parameters.
 
@@ -404,13 +451,14 @@ def initialize(config):
             camera.ccd, ['row_size', 'fwhm_resolution', 'neff_spatial'])
         throughput = config.load_table(camera.throughput, 'throughput')
         constants = config.get_constants(camera,
-            ['read_noise', 'dark_current', 'gain', 'num_sigmas_clip'])
+            ['read_noise', 'dark_current', 'gain', 'num_sigmas_clip',
+             'output_pixel_size'])
         initialized_cameras.append(Camera(
             camera_name, config.wavelength, throughput,
             ccd['row_size'], ccd['fwhm_resolution'],
             ccd['neff_spatial'], constants['read_noise'],
             constants['dark_current'], constants['gain'],
-            constants['num_sigmas_clip']))
+            constants['num_sigmas_clip'], constants['output_pixel_size']))
 
     constants = config.get_constants(
         config.instrument,

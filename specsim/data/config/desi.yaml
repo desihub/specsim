@@ -9,8 +9,11 @@ verbose: no
 
 # Specify the wavelength grid to use for simulation. For comparison, the
 # table below summarizes the ranges of non-zero throughput in each camera,
-# wavelengths that can disperse into CDDs (with a 5-sigma cut), and the
-# extents of each CCD's active pixels.
+# wavelengths that can disperse into CCDs (with a 5-sigma cut), and the
+# extents of each CCD's active pixels covered by all fibers (as defined by
+# cameras.*.ccd.table below). Note that individual fibers will generally have
+# slightly more coverage, so we are simulating the worst-case coverage of
+# all fibers.
 #
 #   Range     b(min)   b(max)   r(min)   r(max)   z(min)   z(max)
 #            Angstrom Angstrom Angstrom Angstrom Angstrom Angstrom

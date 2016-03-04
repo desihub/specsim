@@ -170,6 +170,9 @@ class Simulator(object):
             table.add_column(astropy.table.Column(
                 name='read_noise_electrons', dtype=float, length=num_rows))
             table.add_column(astropy.table.Column(
+                name='flux_calibration', dtype=float, length=num_rows,
+                unit=flux_unit))
+            table.add_column(astropy.table.Column(
                 name='observed_flux', dtype=float, length=num_rows,
                 unit=flux_unit))
             table.add_column(astropy.table.Column(
@@ -289,16 +292,15 @@ class Simulator(object):
             output['read_noise_electrons'] = np.sqrt(
                 camera.downsample(read_noise_electrons ** 2))
 
-            # Calculate the effective calibration from source flux above the
-            # atmosphere to detected electrons in this camera, downsampled
-            # to output pixels.
-            calibration = camera.downsample(
+            # Calculate the effective calibration from detected electrons to
+            # source flux above the atmosphere, downsampled to output pixels.
+            output['flux_calibration'] = 1.0 / camera.downsample(
                 camera.apply_resolution(
                     camera.throughput * source_flux_to_photons))
 
             # Calculate the calibrated flux in this camera.
             output['observed_flux'] = (
-                output['num_source_electrons'] / calibration)
+                output['flux_calibration'] * output['num_source_electrons'])
 
             # Calculate the corresponding flux inverse variance.
             electron_variance = (
@@ -307,7 +309,7 @@ class Simulator(object):
                 output['num_dark_electrons'] +
                 output['read_noise_electrons'] ** 2)
             output['flux_inverse_variance'] = (
-                calibration ** 2 / electron_variance)
+                output['flux_calibration'] ** -2 * electron_variance ** -1)
 
         '''----------------------------------------------------------------'''
         downsampling = self.downsampling

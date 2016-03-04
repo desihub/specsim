@@ -360,6 +360,37 @@ class Camera(object):
         self._downsampled_shape = (num_downsampled, self._downsampling)
 
 
+    def get_output_resolution_matrix(self):
+        """Return the output resolution matrix.
+
+        The output resolution is calculated by summing output pixel
+        blocks of the full resolution matrix.  This is equivalent to
+        the convolution of our resolution with a boxcar representing
+        an output pixel.
+
+        This operation is relatively slow and requires a lot of memory
+        since the full resolution matrix is expanded to a dense array
+        during the calculation.
+
+        The result is returned as a dense matrix but will generally be
+        sparse, so can be converted to one of the scipy.sparse formats.
+        The result is not saved internally.
+
+        Edge effects are not handled very gracefully in order to return
+        a square matrix.
+
+        Returns
+        -------
+        numpy.ndarray
+            Square array of resolution matrix elements.
+        """
+        n = len(self._output_wavelength)
+        m = self._downsampling
+        i0 = self.ccd_slice.start - self.response_slice.start
+        return (self._resolution_matrix[: n * m, i0 : i0 + n * m].toarray()
+                .reshape(n, m, n, m).sum(axis=3).sum(axis=1) / float(m))
+
+
     def downsample(self, data, method=np.sum):
         """Downsample data tabulated on the simulation grid to output pixels.
         """

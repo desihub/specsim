@@ -172,6 +172,8 @@ class Simulator(object):
             table.add_column(astropy.table.Column(
                 name='random_noise_electrons', dtype=float, length=num_rows))
             table.add_column(astropy.table.Column(
+                name='variance_electrons', dtype=float, length=num_rows))
+            table.add_column(astropy.table.Column(
                 name='flux_calibration', dtype=float, length=num_rows,
                 unit=flux_unit))
             table.add_column(astropy.table.Column(
@@ -293,6 +295,11 @@ class Simulator(object):
                 camera.downsample(num_dark_electrons))
             output['read_noise_electrons'] = np.sqrt(
                 camera.downsample(read_noise_electrons ** 2))
+            output['variance_electrons'] = (
+                output['num_source_electrons'] +
+                output['num_sky_electrons'] +
+                output['num_dark_electrons'] +
+                output['read_noise_electrons'] ** 2)
 
             # Calculate the effective calibration from detected electrons to
             # source flux above the atmosphere, downsampled to output pixels.
@@ -305,13 +312,9 @@ class Simulator(object):
                 output['flux_calibration'] * output['num_source_electrons'])
 
             # Calculate the corresponding flux inverse variance.
-            electron_variance = (
-                output['num_source_electrons'] +
-                output['num_sky_electrons'] +
-                output['num_dark_electrons'] +
-                output['read_noise_electrons'] ** 2)
             output['flux_inverse_variance'] = (
-                output['flux_calibration'] ** -2 * electron_variance ** -1)
+                output['flux_calibration'] ** -2 *
+                output['variance_electrons'] ** -1)
 
             # Zero our random noise realization column.
             output['random_noise_electrons'][:] = 0.
@@ -481,7 +484,7 @@ class Simulator(object):
         The noise is generated in units of detected electrons.  To propagate
         the generated noise to a corresponding calibrated flux noise, use::
 
-            output['random_noise_electrons'] * output['flux_calibration']
+            output['flux_calibration'] * output['random_noise_electrons']
 
         Parameters
         ----------
@@ -493,7 +496,7 @@ class Simulator(object):
         if random_state is None:
             random_state = np.random.RandomState()
 
-        for output in self.camera_outputs:
+        for output in self.camera_output:
             mean_electrons = (
                 output['num_source_electrons'] +
                 output['num_sky_electrons'] + output['num_dark_electrons'])

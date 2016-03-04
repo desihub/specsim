@@ -169,12 +169,18 @@ class Simulator(object):
                 name='num_dark_electrons', dtype=float, length=num_rows))
             table.add_column(astropy.table.Column(
                 name='read_noise_electrons', dtype=float, length=num_rows))
+            table.add_column(astropy.table.Column(
+                name='observed_flux', dtype=float, length=num_rows,
+                unit=flux_unit))
+            table.add_column(astropy.table.Column(
+                name='flux_inverse_variance', dtype=float, length=num_rows,
+                unit=flux_unit ** -2))
             self.camera_output.append(table)
 
-        # Initialize the downsampled results.
-        self.downsampling = config.simulator.downsampling
 
         '''----------------------------------------------------------------'''
+        self.downsampling = config.simulator.downsampling
+
         # Lookup the telescope's effective area in cm^2.
         self.effArea = self.instrument.effective_area.to(u.cm**2).value
 
@@ -188,24 +194,6 @@ class Simulator(object):
             quick_camera = QuickCamera(camera)
             self.cameras.append(quick_camera)
         '''----------------------------------------------------------------'''
-
-
-    @property
-    def downsampling(self):
-        """Integer downsampling factor of simulation wavelength grid.
-        """
-        return self._downsampling
-
-
-    @downsampling.setter
-    def downsampling(self, downsampling):
-        self._downsampling = int(downsampling)
-        num_downsampled = len(self.simulated) // self._downsampling
-        downsampled_shape = (num_downsampled, self._downsampling)
-        num_rounded = num_downsampled * self._downsampling
-        self._downsample = (
-            lambda data, method:
-                method(data[:num_rounded].reshape(downsampled_shape), axis=-1))
 
 
     def simulate(self):
@@ -251,6 +239,16 @@ class Simulator(object):
             self.instrument.exposure_time
             ).to(1).value
 
+        # Calculate the calibration from constant unit source flux above
+        # the atmosphere to number of source photons entering the fiber.
+        # We use this below to calculate the flux inverse variance in
+        # each camera.
+        source_flux_to_photons = (
+            self.atmosphere.extinction *
+            self.instrument.get_fiber_acceptance(self.source) *
+            self.instrument.photons_per_bin *
+            self.instrument.exposure_time).to(source_flux.unit ** -1).value
+
         # Loop over cameras to calculate their individual responses.
         for output, camera in zip(self.camera_output, self.instrument.cameras):
 
@@ -290,6 +288,26 @@ class Simulator(object):
                 camera.downsample(num_dark_electrons))
             output['read_noise_electrons'] = np.sqrt(
                 camera.downsample(read_noise_electrons ** 2))
+
+            # Calculate the effective calibration from source flux above the
+            # atmosphere to detected electrons in this camera, downsampled
+            # to output pixels.
+            calibration = camera.downsample(
+                camera.apply_resolution(
+                    camera.throughput * source_flux_to_photons))
+
+            # Calculate the calibrated flux in this camera.
+            output['observed_flux'] = (
+                output['num_source_electrons'] / calibration)
+
+            # Calculate the corresponding flux inverse variance.
+            electron_variance = (
+                output['num_source_electrons'] +
+                output['num_sky_electrons'] +
+                output['num_dark_electrons'] +
+                output['read_noise_electrons'] ** 2)
+            output['flux_inverse_variance'] = (
+                calibration ** 2 / electron_variance)
 
         '''----------------------------------------------------------------'''
         downsampling = self.downsampling

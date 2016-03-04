@@ -170,6 +170,8 @@ class Simulator(object):
             table.add_column(astropy.table.Column(
                 name='read_noise_electrons', dtype=float, length=num_rows))
             table.add_column(astropy.table.Column(
+                name='random_noise_electrons', dtype=float, length=num_rows))
+            table.add_column(astropy.table.Column(
                 name='flux_calibration', dtype=float, length=num_rows,
                 unit=flux_unit))
             table.add_column(astropy.table.Column(
@@ -310,6 +312,9 @@ class Simulator(object):
                 output['read_noise_electrons'] ** 2)
             output['flux_inverse_variance'] = (
                 output['flux_calibration'] ** -2 * electron_variance ** -1)
+
+            # Zero our random noise realization column.
+            output['random_noise_electrons'][:] = 0.
 
         '''----------------------------------------------------------------'''
         downsampling = self.downsampling
@@ -459,6 +464,43 @@ class Simulator(object):
         # Return the downsampled vectors
         return results
         '''----------------------------------------------------------------'''
+
+
+    def generate_random_noise(self, random_state=None):
+        """Generate a random noise realization for the most recent simulation.
+
+        Fills the "random_noise_electrons" column in each camera's output
+        table, which is zeroed after each call to :meth:`simulate`. Can be
+        called repeatedly for the same simulated response to generate different
+        noise realizations.
+
+        Noise is modeled as a Poisson fluctuation of the mean number of detected
+        electrons from the source + sky + dark current, combined with a
+        Gaussian fluctuation of the mean read noise.
+
+        The noise is generated in units of detected electrons.  To propagate
+        the generated noise to a corresponding calibrated flux noise, use::
+
+            output['random_noise_electrons'] * output['flux_calibration']
+
+        Parameters
+        ----------
+        random_state : numpy.random.RandomState or None
+            The random number generation state to use for reproducible noise
+            realizations. A new state will be created with a randomized seed
+            if None is specified.
+        """
+        if random_state is None:
+            random_state = np.random.RandomState()
+
+        for output in self.camera_outputs:
+            mean_electrons = (
+                output['num_source_electrons'] +
+                output['num_sky_electrons'] + output['num_dark_electrons'])
+            output['random_noise_electrons'] = (
+                random_state.poisson(mean_electrons) - mean_electrons +
+                random_state.normal(
+                    scale=output['read_noise_electrons'], size=len(output)))
 
 
     def plot(self,results,labels=None,plotMin=None,plotMax=None,plotName='quicksim'):

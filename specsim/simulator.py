@@ -185,7 +185,7 @@ class Simulator(object):
             self.camera_output.append(table)
 
 
-        '''----------------------------------------------------------------'''
+        '''
         self.downsampling = config.simulator.downsampling
 
         # Lookup the telescope's effective area in cm^2.
@@ -200,7 +200,7 @@ class Simulator(object):
         for camera in self.instrument.cameras:
             quick_camera = QuickCamera(camera)
             self.cameras.append(quick_camera)
-        '''----------------------------------------------------------------'''
+        '''
 
 
     def simulate(self):
@@ -319,7 +319,7 @@ class Simulator(object):
             # Zero our random noise realization column.
             output['random_noise_electrons'][:] = 0.
 
-        '''----------------------------------------------------------------'''
+        '''
         downsampling = self.downsampling
         expTime = self.instrument.exposure_time.to(u.s).value
 
@@ -466,7 +466,7 @@ class Simulator(object):
 
         # Return the downsampled vectors
         return results
-        '''----------------------------------------------------------------'''
+        '''
 
 
     def generate_random_noise(self, random_state=None):
@@ -506,78 +506,10 @@ class Simulator(object):
                     scale=output['read_noise_electrons'], size=len(output)))
 
 
-    def plot(self,results,labels=None,plotMin=None,plotMax=None,plotName='quicksim'):
-        """
-        plot
+    def plot(self):
+        """Plot results of the last simulation.
 
-        Generates a pair of plots for the specified results from a previous call
-        to simulate(...). Specify plotMin,Max in Angstroms to restrict the range
-        of the plot. The caller is responsible for calling plt.show() and/or
-        plt.savefig(...) after this method returns. The optional
-        labels[0],labels[1] are used to label the two plots.
+        Uses the contents of the :attr:`simulated` and :attr:`camera_output`
+        astropy tables to plot the results of the last call to :meth:`simulate`.
         """
-        # Defer this import until we are actually asked to make a plot.
-        import matplotlib.pyplot as plt
-        # Select the colors used for each camera band. If there are more bands than colors, we
-        # will cycle through them.
-        colors = ((0,0,1),(1,0,0),(1,0,1))
-        # Determine the wavelength range to plot.
-        wave = results.wave
-        waveMin,waveMax = wave[0],wave[-1]
-        if plotMin and plotMin < waveMax:
-            waveMin = max(waveMin,plotMin)
-        if plotMax and plotMax > waveMin:
-            waveMax = min(waveMax,plotMax)
-        # Create an empty frame with the specified plot name.
-        fig = plt.figure(plotName,figsize=(10,8))
-        # Upper plot is in flux units.
-        plt.subplot(2,1,1)
-        plt.xlabel('Wavelength (Ang)')
-        plt.ylabel('Flux, Flux Error / (1e-17 erg/s/cm^2/Ang)')
-        plt.xlim((waveMin,waveMax))
-        # Plot the source spectrum as a black curve.
-        plt.plot(wave,results.srcflux,'k-')
-        plt.fill_between(wave,results.srcflux,0.,color=(0.7,0.7,0.7))
-        # Use the maximum source flux to set the vertical limits.
-        ymax = 2*np.max(results.srcflux)
-        plt.ylim((0.,ymax))
-        # Superimpose the contributions to the flux error from each camera.
-        elecNoise = np.sqrt(results.rdnoise**2 + results.dknoise**2)
-        for j,camera in enumerate(self.cameras):
-            snr = (results.snr)[:,j]
-            mask = snr > 0
-            color = colors[j%len(colors)]
-            # Calculate and plot the total flux error in each camera.
-            sigma = np.zeros_like(snr)
-            sigma[mask] = results[mask].obsflux/snr[mask]
-            plt.plot(wave[mask],sigma[mask],'.',markersize=2.,color=color,alpha=0.5)
-            # Calculate and plot the flux error contribution due to read noise only.
-            fluxNoise = np.zeros_like(snr)
-            fluxNoise[mask] = results[mask].obsflux*(elecNoise)[mask,j]/(results.nobj)[mask,j]
-            plt.plot(wave[mask],fluxNoise[mask],'.',markersize=2.,color=color,alpha=0.1)
-        # Inset a label if requested.
-        if labels:
-            xpos,ypos = 0.05,0.9
-            plt.annotate(labels[0],xy=(xpos,ypos),xytext=(xpos,ypos),
-                xycoords='axes fraction',textcoords='axes fraction')
-        # Lower plot is in SNR units.
-        plt.subplot(2,1,2)
-        plt.xlabel('Wavelength (Ang)')
-        binSize = results.wave[1]-results.wave[0]
-        plt.ylabel('Signal-to-Noise Ratio / (%.1f Ang)' % binSize)
-        plt.xlim((waveMin,waveMax))
-        # Superimpose the SNR contributions from each camera with transparent fills.
-        for j,camera in enumerate(self.cameras):
-            snr = (results.snr)[:,j]
-            mask = snr > 0
-            plt.fill_between(wave[mask],snr[mask],0.,alpha=0.3,color=colors[j%len(colors)])
-        # Plot the total SNR with black points.
-        plt.plot(wave,results.snrtot,'k.',markersize=2.)
-        # Inset a label if requested.
-        if labels:
-            xpos,ypos = 0.05,0.9
-            plt.annotate(labels[1],xy=(xpos,ypos),xytext=(xpos,ypos),
-                xycoords='axes fraction',textcoords='axes fraction')
-        # Clean up the plot aesthetics a bit.
-        fig.patch.set_facecolor('white')
-        plt.subplots_adjust(left=0.06,bottom=0.06,right=0.97,top=0.98,hspace=0.14)
+        pass

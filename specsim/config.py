@@ -28,6 +28,7 @@ import os
 import os.path
 import math
 import re
+import warnings
 
 import yaml
 
@@ -252,7 +253,11 @@ class Configuration(Node):
         for i, path in enumerate(paths):
             key = path_keys[i] if path_keys else 'default'
 
-            table = astropy.table.Table.read(path, **read_args)
+            with warnings.catch_warnings():
+                warnings.simplefilter(
+                    'ignore', category=astropy.units.core.UnitsWarning)
+                table = astropy.table.Table.read(path, **read_args)
+
             if self.verbose:
                 print('Loaded {0} rows from {1} with args {2}'
                       .format(len(table), path, read_args))

@@ -51,14 +51,8 @@ def main(args=None):
         help='AB magnitude that source flux will be normalized to.')
     parser.add_argument('-o', '--output', type=str, default=None,
         help='optional output file name')
-    parser.add_argument('--show-plot', action='store_true',
-        help='display a plot of the simulated spectrum')
     parser.add_argument('--save-plot', type=str, default=None,
         help='save plot to the specified filename')
-    parser.add_argument('--plot-min', type=float, default=None,
-        help='minimum wavelength to include in plot (default is full range)')
-    parser.add_argument('--plot-max', type = float, default = None,
-        help='maximum wavelength to include in plot (default is full range)')
     args = parser.parse_args(args)
 
     # Read the required configuration file.
@@ -93,7 +87,6 @@ def main(args=None):
     config.source.z_out = args.z_out
     config.source.filter_name = args.filter
     config.source.ab_magnitude_out = args.ab_mag
-    specSummary = config.source.name
 
     # Initialize the simulator.
     try:
@@ -102,65 +95,28 @@ def main(args=None):
         print(e)
         return -1
 
-    # Perform a quick simulation of the observed spectrum.
-    results = simulator.simulate()
+    # Perform the simulation.
+    simulator.simulate()
 
-    # Calculate the median total SNR in bins with some observed flux.
-    medianSNR = np.median(results[results.obsflux > 0].snrtot)
-    # Calculate the total SNR^2 for the combined cameras.
-    totalSNR2 = np.sum(results.snrtot**2)
-    # Print a summary of SNR statistics.
-    snrSummary = (
-        'Median S/N = {0:.3f}, Total (S/N)^2 = {1:.1f}'
-        .format(medianSNR,totalSNR2))
-    print(snrSummary)
-
-    # Save the results if requested (format matches original IDL code for now).
+    # Save the results, if requested.
     if args.output:
-        if args.verbose:
-            print('Saving results to %s' % args.output)
-        # Calculate the total number of observed source and sky photons
-        # in all cameras.
-        nobj = np.sum(results.nobj,axis=1)
-        nsky = np.sum(results.nsky,axis=1)
-        # Try opening the requested output file.
-        with open(args.output,'w') as out:
-            print('# AIRMASS=',simulator.atmosphere.airmass, file=out)
-            print('# MODEL=', simulator.source.type_name, file=out)
-            print('# EXPTIME=', simulator.instrument.exposure_time, file=out)
-            print('#', file=out)
-            print('# Median (S/N)=',medianSNR, file=out)
-            print('# Total (S/N)^2=',totalSNR2, file=out)
-            print('#', file=out)
-            print('# Wave    Flux        Invvar      S/N         Counts_obj  ' +
-                  'Counts_sky  Counts_read  FWHM', file=out)
-            print('# [Ang] [e-17 erg/s/cm^2/Ang] [1/(e-17 erg/s/cm^2/Ang)^2] []',
-                  '[electrons] [electrons] [electrons] [Ang]', file=out)
-            for i, row in enumerate(results):
-                rdnoise, psf = 0, 0
-                print(
-                    '%9.2f %11.4e %11.4e %11.4e %11.4e %11.4e %11.4e %7.3f' %
-                    (row.wave, row.obsflux, row.ivar, row.snrtot, nobj[i],
-                     nsky[i], rdnoise, psf), file=out)
+        base, ext = os.path.splitext(args.output)
+        if ext != '.fits':
+            print('Output file must have the .fits extension.')
+            return -1
+        print('Simulation output not yet implemented.')
 
     # Plot the results if requested.
-    if args.show_plot or args.save_plot:
+    if args.save_plot:
         # Defer these imports until now so that matplotlib is only required
         # if plots are requested.
         import matplotlib
-        if not args.show_plot:
-            # Use a backend with minimal requirements (X11, etc).
-            matplotlib.use('Agg')
+        # Use a backend with minimal requirements (X11, etc).
+        matplotlib.use('Agg')
         import matplotlib.pyplot as plt
-        # Make the plots, labeled with our SNR summary.
-        simulator.plot(results, labels=(specSummary, snrSummary),
-                       plotMin=args.plot_min, plotMax=args.plot_max)
-        # Save the plot if requested.
-        if args.save_plot:
-            plt.savefig(args.save_plot)
-            if args.verbose:
-                print('Saved generated plot to {0}'.format(args.save_plot))
-        # Show the plot interactively if requested.
-        if args.show_plot:
-            print('Close the plot window to exit...')
-            plt.show()
+
+        simulator.plot()
+
+        plt.savefig(args.save_plot, facecolor='white', edgecolor='none')
+        if args.verbose:
+            print('Saved generated plot to {0}'.format(args.save_plot))

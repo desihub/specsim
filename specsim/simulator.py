@@ -288,7 +288,7 @@ class Simulator(object):
 
 
 def plot_simulation(simulated, camera_output, title=None,
-                    min_electrons=2.5, figsize=(11, 8.5)):
+                    min_electrons=2.5, figsize=(11, 8.5), label_size='medium'):
     """Plot simulation output tables.
 
     This function is normally called via :meth:`Simulator.plot` but is provided
@@ -346,7 +346,7 @@ def plot_simulation(simulated, camera_output, title=None,
     ax1.legend(
         (line, sky_fill, src_fill),
         ('Source above atmosphere', 'Sky into fiber', 'Source into fiber'),
-        loc='best', fancybox=True, framealpha=0.5, ncol=3)
+        loc='best', fancybox=True, framealpha=0.5, ncol=3, fontsize=label_size)
 
     ax1.set_ylim(ymin, ymax)
     ax1.set_yscale('log')
@@ -364,7 +364,7 @@ def plot_simulation(simulated, camera_output, title=None,
     ax2.legend(
         (sky_fill, src_fill),
         ('Sky into fiber', 'Source into fiber'),
-        loc='best', fancybox=True, framealpha=0.5, ncol=2)
+        loc='best', fancybox=True, framealpha=0.5, ncol=2, fontsize=label_size)
 
     ax2.set_ylim(1e-1 * nmax, 10. * nmax)
     ax2.set_yscale('log')
@@ -402,7 +402,7 @@ def plot_simulation(simulated, camera_output, title=None,
         (sky_fill, src_fill, dark_fill, line1, line2),
         ('Sky detected', 'Source detected', 'Dark current',
          'RMS total noise', 'RMS read noise'),
-        loc='best', fancybox=True, framealpha=0.5, ncol=5)
+        loc='best', fancybox=True, framealpha=0.5, ncol=5, fontsize=label_size)
 
     ax3.set_ylim(min_electrons, 2e2 * min_electrons)
     ax3.set_yscale('log')
@@ -413,4 +413,5 @@ def plot_simulation(simulated, camera_output, title=None,
     # Remove x-axis ticks on the upper panels.
     plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
 
+    fig.patch.set_facecolor('white')
     plt.tight_layout()

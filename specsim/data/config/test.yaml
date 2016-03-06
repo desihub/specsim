@@ -86,7 +86,7 @@ instrument:
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
                 num_sigmas_clip: 4.5
-                output_pixel_size: 0.5 Angstrom
+                output_pixel_size: 1.2 Angstrom
             ccd:
                 table:
                     format: ascii.ecsv

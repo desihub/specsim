@@ -265,10 +265,152 @@ class Simulator(object):
                     scale=output['read_noise_electrons'], size=len(output)))
 
 
-    def plot(self):
+    def plot(self, title=None):
         """Plot results of the last simulation.
 
         Uses the contents of the :attr:`simulated` and :attr:`camera_output`
         astropy tables to plot the results of the last call to :meth:`simulate`.
+        See :func:`plot_simulation` for details.
+
+        Parameters
+        ----------
+        title : str or None
+            Plot title to use.  If None is specified, a title will be
+            automatically generated using the source name, airmass and
+            exposure time.
         """
-        pass
+        if title is None:
+            title = (
+                '{0}, X={1}, t={2}'
+                .format(self.source.name, self.atmosphere.airmass,
+                        self.instrument.exposure_time))
+        plot_simulation(self.simulated, self.camera_output, title)
+
+
+def plot_simulation(simulated, camera_output, title=None,
+                    min_electrons=2.5, figsize=(11, 8.5)):
+    """Plot simulation output tables.
+
+    This function is normally called via :meth:`Simulator.plot` but is provided
+    separately so that plots can be generated from results saved to a file.
+
+    Use :meth:`show <matplotlib.pyplot.show` and :meth:`savefig
+    <matplotlib.pyplot.savefig>` to show or save the resulting plot.
+
+    Requires that the matplotlib package is installed.
+
+    Parameters
+    ----------
+    simulated : astropy.table.Table
+        Simulation results on the high-resolution simulation wavelength grid.
+    camera_output : list
+        Lists of tables of per-camera simulation results tabulated on each
+        camera's output pixel grid.
+    title : str or None
+        Descriptive title to use for the plot.
+    min_electrons : float
+        Minimum y-axis value for displaying numbers of detected electrons.
+    figsize : tuple
+        Tuple (width, height) specifying the figure size to use in inches.
+        See :meth:`matplotlib.pyplot.subplots` for details.
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Rectangle
+
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=figsize, sharex=True)
+    if title is not None:
+        ax1.set_title(title)
+
+    wave = simulated['wavelength']
+    dwave = np.gradient(wave)
+    waveunit = '{0:Generic}'.format(wave.unit)
+    fluxunit = '{0:Generic}'.format(simulated['source_flux'].unit)
+
+    # Plot fluxes above the atmosphere and into the fiber.
+
+    src_flux = simulated['source_flux']
+    src_fiber_flux = simulated['source_fiber_flux']
+    sky_fiber_flux = simulated['sky_fiber_flux']
+
+    ymin, ymax = 0.1 * np.min(src_flux), 10. * np.max(src_flux)
+
+    line, = ax1.plot(wave, src_flux, 'r-')
+    ax1.fill_between(wave, src_fiber_flux + sky_fiber_flux,
+                     ymin, color='b', alpha=0.2, lw=0)
+    ax1.fill_between(wave, src_fiber_flux, ymin, color='r', alpha=0.2, lw=0)
+
+    # This kludge is because the label arg to fill_between() does not
+    # propagate to legend() in matplotlib < 1.5.
+    sky_fill = Rectangle((0, 0), 1, 1, fc='b', alpha=0.2)
+    src_fill = Rectangle((0, 0), 1, 1, fc='r', alpha=0.2)
+    ax1.legend(
+        (line, sky_fill, src_fill),
+        ('Source above atmosphere', 'Sky into fiber', 'Source into fiber'),
+        loc='best', fancybox=True, framealpha=0.5, ncol=3)
+
+    ax1.set_ylim(ymin, ymax)
+    ax1.set_yscale('log')
+    ax1.set_ylabel('Flux [{0}]'.format(fluxunit))
+
+    # Plot numbers of photons into the fiber.
+
+    nsky = simulated['num_sky_photons'] / dwave
+    nsrc = simulated['num_source_photons'] / dwave
+    nmax = np.max(nsrc)
+
+    ax2.fill_between(wave, nsky + nsrc, 1e-1 * nmax, color='b', alpha=0.2, lw=0)
+    ax2.fill_between(wave, nsrc, 1e-1 * nmax, color='r', alpha=0.2, lw=0)
+
+    ax2.legend(
+        (sky_fill, src_fill),
+        ('Sky into fiber', 'Source into fiber'),
+        loc='best', fancybox=True, framealpha=0.5, ncol=2)
+
+    ax2.set_ylim(1e-1 * nmax, 10. * nmax)
+    ax2.set_yscale('log')
+    ax2.set_ylabel('Mean photons / {0}'.format(waveunit))
+    ax2.set_xlim(wave[0], wave[-1])
+
+    # Plot numbers of electrons detected by each CCD.
+
+    for output in camera_output:
+
+        cwave = output['wavelength']
+        dwave = np.gradient(cwave)
+        nsky = output['num_sky_electrons'] / dwave
+        nsrc = output['num_source_electrons'] / dwave
+        ndark = output['num_dark_electrons'] / dwave
+        read_noise = output['read_noise_electrons'] / np.sqrt(dwave)
+        total_noise = np.sqrt(output['variance_electrons'] / dwave)
+        nmax = max(nmax, np.max(nsrc))
+
+        ax3.fill_between(
+            cwave, ndark + nsky + nsrc, min_electrons, color='b',
+            alpha=0.2, lw=0)
+        ax3.fill_between(
+            cwave, ndark + nsrc, min_electrons, color='r', alpha=0.2, lw=0)
+        ax3.fill_between(
+            cwave, ndark, min_electrons, color='k', alpha=0.2, lw=0)
+        ax3.scatter(cwave, total_noise, color='k', lw=0., s=0.5, alpha=0.5)
+        line2, = ax3.plot(cwave, read_noise, color='k', ls='--', alpha=0.5)
+
+    # This kludge is because the label arg to fill_between() does not
+    # propagate to legend() in matplotlib < 1.5.
+    line1, = ax3.plot([], [], 'k-')
+    dark_fill = Rectangle((0, 0), 1, 1, fc='k', alpha=0.2)
+    ax3.legend(
+        (sky_fill, src_fill, dark_fill, line1, line2),
+        ('Sky detected', 'Source detected', 'Dark current',
+         'RMS total noise', 'RMS read noise'),
+        loc='best', fancybox=True, framealpha=0.5, ncol=5)
+
+    ax3.set_ylim(min_electrons, 2e2 * min_electrons)
+    ax3.set_yscale('log')
+    ax3.set_ylabel('Mean electrons / {0}'.format(waveunit))
+    ax3.set_xlim(wave[0], wave[-1])
+    ax3.set_xlabel('Wavelength [{0}]'.format(waveunit))
+
+    # Remove x-axis ticks on the upper panels.
+    plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)
+
+    plt.tight_layout()

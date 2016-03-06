@@ -3,8 +3,8 @@
 """
 from __future__ import print_function, division
 
-import os
 import os.path
+import warnings
 
 import numpy as np
 
@@ -117,6 +117,10 @@ def main(args=None):
 
         simulator.plot()
 
-        plt.savefig(args.save_plot, facecolor='white', edgecolor='none')
+        with warnings.catch_warnings():
+            # Silence expected matplotlib warnings.
+            warnings.simplefilter('ignore', category=FutureWarning)
+            plt.savefig(args.save_plot, facecolor='white', edgecolor='none')
+
         if args.verbose:
             print('Saved generated plot to {0}'.format(args.save_plot))

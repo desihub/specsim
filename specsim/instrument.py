@@ -1,18 +1,27 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Model an instrument response for spectroscopic simulations.
 
-An instrument model is usually initialized from a configuration, for example:
+An instrument model is usually initialized from a configuration used to create
+a simulator and then accessible via its ``instrument`` attribute, for example:
 
-    >>> import specsim.config
-    >>> config = specsim.config.load_config('test')
-    >>> instrument = initialize(config)
-    >>> print(np.round(instrument.exposure_time, 1))
+    >>> import specsim.simulator
+    >>> simulator = specsim.simulator.Simulator('test')
+    >>> print(np.round(simulator.instrument.exposure_time, 1))
     1000.0 s
+    >>> simulator.atmosphere.airmass
+    1.0
+
+See :doc:`/api` for examples of changing model parameters defined in the
+configuration.  Certain parameters can also be changed after a model has
+been initialized, for example:
+
+    >>> simulator.instrument.exposure_time = 1200 * u.s
+
+See :class:`Instrument` and :class:`Camera` for details.
 """
 from __future__ import print_function, division
 
 import math
-import collections
 
 import numpy as np
 import scipy.sparse
@@ -22,13 +31,44 @@ import astropy.units as u
 
 
 class Instrument(object):
-    """
+    """Model the instrument response of a fiber spectrograph.
+
+    A spectrograph can have multiple cameras with different wavelength
+    coverage.
+
+    The only attribute that can be changed after an instrument has been
+    created is :attr:`exposure_time`.  File a github issue if you would like
+    to expand this list.
+
+    Parameters
+    ----------
+    name : str
+        Descriptive name of this instrument.
+    wavelength : nastropy.units.Quantity
+        Array of wavelength bin centers where the instrument response is
+        calculated, with units.
+    fiber_acceptance_dict : dict
+        Dictionary of fiber acceptance fractions tabulated for different
+        source models, with keys corresponding to source model names.
+    cameras : list
+        List of :class:`Camera` instances representing the camera(s) of
+        this instrument.
+    primary_mirror_diameter : astropy.units.Quantity
+        Diameter of the primary mirror, with units.
+    obscuration_diameter : astropy.units.Quantity
+        Diameter of a central obscuration of the primary mirror, with units.
+    support_width : astropy.units.Quantity
+        Width of the obscuring supports, with units.
+    fiber_diameter : astropy.units.Quantity
+        Angular field of view diameter of the simulated fibers, with units.
+    exposure_time : astropy.units.Quantity
+        Exposure time used to scale the instrument response, with units.
     """
     def __init__(self, name, wavelength, fiber_acceptance_dict, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
                  fiber_diameter, exposure_time):
         self.name = name
-        self.wavelength = wavelength
+        self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
         self.cameras = cameras
         self.primary_mirror_diameter = primary_mirror_diameter
@@ -51,12 +91,12 @@ class Instrument(object):
 
         # Calculate the energy per photon at each wavelength.
         hc = astropy.constants.h * astropy.constants.c
-        energy_per_photon = (hc / self.wavelength).to(u.erg)
+        energy_per_photon = (hc / self._wavelength).to(u.erg)
 
         # Calculate the rate of photons incident on the focal plane per
         # wavelength bin per unit spectral flux density. The fiber acceptance
         # fraction is not included in this calculation.
-        wavelength_bin_size = np.gradient(self.wavelength)
+        wavelength_bin_size = np.gradient(self._wavelength)
         self.photons_per_bin = (
             self.effective_area * wavelength_bin_size / energy_per_photon
             ).to((u.cm**2 * u.Angstrom) / u.erg)
@@ -77,7 +117,18 @@ class Instrument(object):
 
 
     def get_fiber_acceptance(self, source):
-        """
+        """Get the tabulated fiber acceptance function for the specified source.
+
+        Parameters
+        ----------
+        source : specsim.source.Source
+            The source whose fiber acceptance should be returned.
+
+        Returns
+        -------
+        numpy.ndarray
+            Array of fiber acceptance values in the range 0-1, tabulated at
+            at each :attr:`wavelength`.
         """
         if source.type_name not in self.source_types:
             raise ValueError(
@@ -91,6 +142,19 @@ class Instrument(object):
         """Plot a summary of this instrument's model.
 
         Requires that the matplotlib package is installed.
+
+        Parameters
+        ----------
+        flux : astropy.units.Quantity
+            Constant source flux to use for displaying the instrument response.
+        exposure_time : astropy.units.Quantity or None
+            Exposure time to use for displaying the instrument response.
+            Use the configured exposure time when this parameter is None.
+        cmap : str or matplotlib.colors.Colormap
+            Matplotlib colormap name or instance to use for displaying the
+            instrument response.  Colors are selected for each camera
+            according to its central wavelength, so a spectral color map
+            will give reasonably intuitive results.
         """
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
@@ -100,9 +164,9 @@ class Instrument(object):
         ax2_rhs = ax2.twinx()
         cmap = cm.get_cmap(cmap)
 
-        wave = self.wavelength.value
-        wave_unit = self.wavelength.unit
-        dwave = np.gradient(self.wavelength).value
+        wave = self._wavelength.value
+        wave_unit = self._wavelength.unit
+        dwave = np.gradient(wave)
 
         if exposure_time is None:
             exposure_time = self.exposure_time
@@ -173,10 +237,45 @@ class Instrument(object):
 
 
 class Camera(object):
-    """
+    """Model the response of a single fiber spectrograph camera.
+
+    No camera attributes can be changed after an instrument has been
+    created.  File a github issue if you would like to change this.
 
     Parameters
     ----------
+    name : str
+        A brief descriptive name for this camera.  Typically a single letter
+        indicating the wavelength band covered by this camera.
+    wavelength : astropy.units.Quantity
+        Array of wavelength bin centers where the instrument response is
+        calculated, with units.
+    throughput : numpy.ndarray
+        Array of throughput values tabulated at each wavelength bin center.
+    row_size : astropy.units.Quantity
+        Array of row size values tabulated at each wavelength bin center.
+        Units are required, e.g. Angstrom / pixel.
+    fwhm_resolution : astropy.units.Quantity
+        Array of wavelength resolution FWHM values tabulated at each wavelength
+        bin center. Units are required, e.g., Angstrom.
+    neff_spatial : astropy.units.Quantity
+        Array of effective trace sizes in the spatial (fiber) direction
+        tabulated at each wavelength bin center.  Units are required, e.g.
+        pixel.
+    read_noise : astropy.units.Quantity
+        Camera noise per readout operation.  Units are required, e.g. electron.
+    dark_current : astropy.units.Quantity
+        Nominal mean dark current from sensor.  Units are required, e.g.
+        electron / hour.
+    gain : astropy.units.Quantity
+        CCD amplifier gain.  Units are required, e.g., electron / adu.
+        (This is really 1/gain).
+    num_sigmas_clip : float
+        Number of sigmas where the resolution should be clipped when building
+        a sparse resolution matrix.
+    output_pixel_size : astropy.units.Quantity
+        Size of output pixels for this camera.  Units are required, e.g.
+        Angstrom.
     """
     def __init__(self, name, wavelength, throughput, row_size,
                  fwhm_resolution, neff_spatial, read_noise, dark_current,

@@ -4,6 +4,7 @@
 - Fix github issues #1, #4, #8, #9, #17, #18.
 - Silence astropy warnings for non-standard units in FITS files.
 - Clean up simulator module to streamline its use by desisim.
+- Refactor instrument model to handle downsampling to output pixels.
 - Implement scattered moon component of sky brightness (#9).
 - Apply extinction to sky emission by default (#8).
 

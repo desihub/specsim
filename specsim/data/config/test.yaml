@@ -123,9 +123,3 @@ source:
     # Set these parameters to normalize in a specified filter.
     filter_name:
     ab_magnitude_out:
-
-# The simulator configuration is interpreted and validated by the
-# specsim.simulator module.
-simulator:
-    # Number of simulation wavelength bins to combine into the output bins.
-    downsampling: 5

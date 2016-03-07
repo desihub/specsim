@@ -249,7 +249,7 @@ class Camera(object):
         indicating the wavelength band covered by this camera.
     wavelength : astropy.units.Quantity
         Array of wavelength bin centers where the instrument response is
-        calculated, with units.
+        calculated, with units.  Must be equally spaced.
     throughput : numpy.ndarray
         Array of throughput values tabulated at each wavelength bin center.
     row_size : astropy.units.Quantity
@@ -275,7 +275,8 @@ class Camera(object):
         a sparse resolution matrix.
     output_pixel_size : astropy.units.Quantity
         Size of output pixels for this camera.  Units are required, e.g.
-        Angstrom.
+        Angstrom. Must be a multiple of the the spacing of the wavelength
+        input parameter.
     """
     def __init__(self, name, wavelength, throughput, row_size,
                  fwhm_resolution, neff_spatial, read_noise, dark_current,

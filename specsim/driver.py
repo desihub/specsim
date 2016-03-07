@@ -10,6 +10,7 @@ import numpy as np
 
 from astropy.utils.compat import argparse
 import astropy.units as u
+import astropy.io.fits as fits
 
 import specsim.config
 import specsim.simulator
@@ -98,13 +99,35 @@ def main(args=None):
     # Perform the simulation.
     simulator.simulate()
 
+    # Summarize the results.
+    for output in simulator.camera_output:
+        camera_name = output.meta['name']
+        pixel_size = output.meta['pixel_size']
+        snr = (
+            output['num_source_electrons'] /
+            np.sqrt(output['variance_electrons']))
+        print('Median SNR in {0} camera = {1:.3f} / {2}'
+              .format(camera_name, np.median(snr), pixel_size))
+
     # Save the results, if requested.
     if args.output:
         base, ext = os.path.splitext(args.output)
         if ext != '.fits':
             print('Output file must have the .fits extension.')
             return -1
-        print('Simulation output not yet implemented.')
+        # Create an empty primary HDU for header keywords
+        primary = fits.PrimaryHDU()
+        hdr = primary.header
+        hdr['config'] = args.config
+        # Save each table to its own HDU.
+        simulated = fits.BinTableHDU(
+            name='simulated', data=simulator.simulated.as_array())
+        hdus = fits.HDUList([primary, simulated])
+        for output in simulator.camera_output:
+            hdus.append(fits.BinTableHDU(
+                name=output.meta['name'], data=output.as_array()))
+        # Write the file.
+        hdus.writeto(args.output, clobber=True)
 
     # Plot the results if requested.
     if args.save_plot:

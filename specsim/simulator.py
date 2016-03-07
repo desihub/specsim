@@ -92,8 +92,10 @@ class Simulator(object):
         # output pixels.
         self.camera_output = []
         for camera in self.instrument.cameras:
-            table = astropy.table.Table(
-                meta=dict(description='{0}-camera output'.format(camera.name)))
+            meta = dict(
+                name=camera.name,
+                pixel_size=camera.output_pixel_size)
+            table = astropy.table.Table(meta=meta)
             num_rows = len(camera.output_wavelength)
             table.add_column(astropy.table.Column(
                 name='wavelength', data=camera.output_wavelength))

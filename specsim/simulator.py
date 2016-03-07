@@ -4,6 +4,15 @@
 A simulator is usually initialized from a configuration, for example:
 
     >>> simulator = Simulator('test')
+
+See :doc:`/api` for examples of changing model parameters defined in the
+configuration.  Certain parameters can also be changed after a model has
+been initialized, for example:
+
+    >>> simulator.atmosphere.airmass = 1.5
+    >>> simulator.instrument.exposure_time = 1200 * u.s
+
+See :mod:`source`, :mod:`atmosphere` and :mod:`instrument` for details.
 """
 from __future__ import print_function, division
 
@@ -22,8 +31,9 @@ import specsim.source
 
 
 class Simulator(object):
-    """
-    Manage the simulation of an atmosphere, instrument, and source.
+    """Manage the simulation of a source, atmosphere and instrument.
+
+    A simulator has no configuration parameters of its own.
 
     Parameters
     ----------
@@ -113,6 +123,9 @@ class Simulator(object):
 
     def simulate(self):
         """Simulate a single exposure.
+
+        Simulation results are written to internal tables that are overwritten
+        each time this method is called.
         """
         # Get references to our results columns.
         wavelength = self.simulated['wavelength']

@@ -55,42 +55,42 @@ class Simulator(object):
         self.camera_slices = {}
         num_rows = len(config.wavelength)
         flux_unit = u.erg / (u.cm**2 * u.s * u.Angstrom)
-        self.simulated = astropy.table.Table(
+        self._simulated = astropy.table.Table(
             meta=dict(description='Specsim simulation results'))
-        self.simulated.add_column(astropy.table.Column(
+        self._simulated.add_column(astropy.table.Column(
             name='wavelength', data=config.wavelength))
-        self.simulated.add_column(astropy.table.Column(
+        self._simulated.add_column(astropy.table.Column(
             name='source_flux', dtype=float, length=num_rows, unit=flux_unit))
-        self.simulated.add_column(astropy.table.Column(
+        self._simulated.add_column(astropy.table.Column(
             name='source_fiber_flux', dtype=float, length=num_rows,
             unit=flux_unit))
-        self.simulated.add_column(astropy.table.Column(
+        self._simulated.add_column(astropy.table.Column(
             name='sky_fiber_flux', dtype=float, length=num_rows,
             unit=flux_unit))
-        self.simulated.add_column(astropy.table.Column(
+        self._simulated.add_column(astropy.table.Column(
             name='num_source_photons', dtype=float, length=num_rows))
-        self.simulated.add_column(astropy.table.Column(
+        self._simulated.add_column(astropy.table.Column(
             name='num_sky_photons', dtype=float, length=num_rows))
         for camera in self.instrument.cameras:
             name = camera.name
             self.camera_names.append(name)
             self.camera_slices[name] = camera.ccd_slice
-            self.simulated.add_column(astropy.table.Column(
+            self._simulated.add_column(astropy.table.Column(
                 name='num_source_electrons_{0}'.format(name),
                 dtype=float, length=num_rows))
-            self.simulated.add_column(astropy.table.Column(
+            self._simulated.add_column(astropy.table.Column(
                 name='num_sky_electrons_{0}'.format(name),
                 dtype=float, length=num_rows))
-            self.simulated.add_column(astropy.table.Column(
+            self._simulated.add_column(astropy.table.Column(
                 name='num_dark_electrons_{0}'.format(name),
                 dtype=float, length=num_rows))
-            self.simulated.add_column(astropy.table.Column(
+            self._simulated.add_column(astropy.table.Column(
                 name='read_noise_electrons_{0}'.format(name),
                 dtype=float, length=num_rows))
 
         # Initialize each camera's table of results downsampled to
         # output pixels.
-        self.camera_output = []
+        self._camera_output = []
         for camera in self.instrument.cameras:
             meta = dict(
                 name=camera.name,
@@ -120,7 +120,31 @@ class Simulator(object):
             table.add_column(astropy.table.Column(
                 name='flux_inverse_variance', dtype=float, length=num_rows,
                 unit=flux_unit ** -2))
-            self.camera_output.append(table)
+            self._camera_output.append(table)
+
+
+    @property
+    def simulated(self):
+        """Table of high-resolution simulation results.
+
+        This table is tabulated using the high-resolution wavelength used for
+        internal calclulations and overwritten during each call to
+        :meth:`simulate`.  See :doc:`/output` for details of this table's
+        contents.
+        """
+        return self._simulated
+
+
+    @property
+    def camera_output(self):
+        """List of per-camera simulation output tables.
+
+        Tables are listed in order of increasing wavelength and tabulated
+        using the output pixels defined for each camera.  Tables are overwritten
+        during each call to :meth:`simulate`.  See :doc:`/output` for details
+        of the contents of each table in this list.
+        """
+        return self._camera_output
 
 
     def simulate(self):
@@ -311,6 +335,8 @@ def plot_simulation(simulated, camera_output, title=None,
 
     Use :meth:`show <matplotlib.pyplot.show` and :meth:`savefig
     <matplotlib.pyplot.savefig>` to show or save the resulting plot.
+
+    See :doc:`/cmdline` for a sample plot.
 
     Requires that the matplotlib package is installed.
 

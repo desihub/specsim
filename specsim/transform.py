@@ -545,7 +545,8 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
 
         # Offset to the nearest time with the desired hour angle.
         # Correct for the fact that 360 deg corresponds to a sidereal day.
-        when = when - (lst - hour_angle).wrap_at('12 hours') * u.hour / (15 * u.deg) * sidereal
+        when = (when - (lst - hour_angle).wrap_at('12 hours') * u.hour /
+                (15 * u.deg) * sidereal)
 
     return when
 

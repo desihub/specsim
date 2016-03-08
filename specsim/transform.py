@@ -525,7 +525,9 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
         # Calculate the nominal local sidereal time of the target.
         try:
             lst = when.sidereal_time('apparent', longitude) - target_ra
-        except astropy.utils.iers.iers.IERSRangeError:
+        # Recent versions of astropy raise a subclass of IndexError
+        # astropy.utils.iers.iers.IERSRangeError
+        except IndexError:
             # Hardcode the mean UT1 - UTC offset for MJD in [54600, 57800]
             # in order to avoid issues with missing IERS tables.
             when.delta_ut1_utc = -0.1225

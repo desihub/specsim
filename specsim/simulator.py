@@ -125,7 +125,7 @@ class Simulator(object):
 
     @property
     def simulated(self):
-        """Table of high-resolution simulation results.
+        """astropy.table.Table: Table of high-resolution simulation results.
 
         This table is tabulated using the high-resolution wavelength used for
         internal calclulations and overwritten during each call to
@@ -137,7 +137,7 @@ class Simulator(object):
 
     @property
     def camera_output(self):
-        """List of per-camera simulation output tables.
+        """list: List of per-camera simulation output tables.
 
         Tables are listed in order of increasing wavelength and tabulated
         using the output pixels defined for each camera.  Tables are overwritten

@@ -83,5 +83,16 @@ The table below defines the columns of each table listed in
 | ``flux_inverse_variance``  | Inverse variance of ``observed_flux``          |
 +----------------------------+------------------------------------------------+
 
+The ``observed_flux`` and ``flux_inverse_variance`` columns are calculated
+assuming perfect flux calibration as::
+
+    observed_flux = flux_calibration * num_source_electrons
+    flux_inverse_variance = flux_calibration ** -2 * variance_electrons ** -1
+
 The ``random_noise_electrons`` column is zeroed during each call to
-:meth:
+:meth:`simulate <specsim.simulator.Simulator.simulate>`, and can then be
+optionally filled (repeatedly when useful) with :meth:`generate_random_noise
+<specsim.simulator.Simulator.generate_random_noise>`.  To propagate a noise
+realization in electrons to flux, use::
+
+    random_noise_flux = flux_calibration * random_noise_electrons

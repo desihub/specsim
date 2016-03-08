@@ -281,3 +281,9 @@ def test_adjust_missing_longitude():
     when = Time(56383, format='mjd', location=None)
     with pytest.raises(ValueError):
         adjusted = adjust_time_to_hour_angle(when, ra, 0.)
+
+
+def test_adjust_future():
+    ra = 45 * u.deg
+    when = Time(58000, format='mjd', location=observatories['APO'])
+    adjusted = adjust_time_to_hour_angle(when, ra, 0.)

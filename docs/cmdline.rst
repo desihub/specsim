@@ -2,7 +2,7 @@ Command-Line Program
 ====================
 
 This package includes a command-line program `quickspecsim` that simulates a
-single spectrum and saves the results as a text file and/or plot. To see the
+single spectrum and saves the results as a FITS file and/or plot. To see the
 available command-line options use::
 
     quickspecsim --help
@@ -12,12 +12,27 @@ The ``--config`` parameter specifies the top-level :doc:`configuration file
 simulates a constant flux density source using the test atmosphere and
 instrument models, producing the output::
 
-    Median S/N = 2.107, Total (S/N)^2 = 18068.7
+    Median SNR in b camera = 1.165 / 0.5 Angstrom
+    Median SNR in r camera = 0.941 / 0.5 Angstrom
+    Median SNR in z camera = 0.742 / 0.5 Angstrom
 
-Use the ``--show-plot`` and ``-save-plot`` options to visualize the simulation
-results, for example::
+Use the ``--output`` option to save the simulation results to a FITS file
+with the following structure (as reported by `fitsinfo
+<http://docs.astropy.org/en/stable/io/fits/usage/scripts.html
+#module-astropy.io.fits.scripts.fitsinfo>`__)::
 
-    quickspecsim -c desi --show-plot
+    No.    Name         Type      Cards   Dimensions   Format
+    0    PRIMARY     PrimaryHDU       5   ()
+    1    SIMULATED   BinTableHDU     45   63001R x 18C   [D, D, D, D, D, D, D, D, D, D, D, D, D, D, D, D, D, D]
+    2    B           BinTableHDU     29   4760R x 10C   [D, D, D, D, D, D, D, D, D, D]
+    3    R           BinTableHDU     29   4232R x 10C   [D, D, D, D, D, D, D, D, D, D]
+    4    Z           BinTableHDU     29   4798R x 10C   [D, D, D, D, D, D, D, D, D, D]
+
+
+Use the ``-save-plot`` option to visualize the simulation results,
+for example::
+
+    quickspecsim -c desi --save-plot sim.png
 
 produces the following plot of a simulated 22nd AB magnitude reference source:
 

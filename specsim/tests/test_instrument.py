@@ -14,6 +14,13 @@ import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 
 
+def test_resolution():
+    c = specsim.config.load_config('test')
+    i = initialize(c)
+    R = i.cameras[0].get_output_resolution_matrix()
+    np.allclose(R.sum(0)[3:-3], 1)
+
+
 def test_plot():
     c = specsim.config.load_config('test')
     i = initialize(c)

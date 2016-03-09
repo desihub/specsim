@@ -82,9 +82,11 @@ instrument:
     cameras:
         r:
             constants:
-                read_noise: 2.9 electron
+                read_noise: 2.9 electron/pixel**2
                 dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
+                num_sigmas_clip: 4.5
+                output_pixel_size: 1.2 Angstrom
             ccd:
                 table:
                     format: ascii.ecsv
@@ -121,9 +123,3 @@ source:
     # Set these parameters to normalize in a specified filter.
     filter_name:
     ab_magnitude_out:
-
-# The simulator configuration is interpreted and validated by the
-# specsim.simulator module.
-simulator:
-    # Number of simulation wavelength bins to combine into the output bins.
-    downsampling: 5

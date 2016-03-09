@@ -86,11 +86,10 @@ with wavelength bin widths and centers:
 
 The remaining calculations are performed separately for each camera, indexed
 by :math:`i`. The throughput function :math:`T_i(\lambda)` gives the combined
-wavelength-dependent probability of transmission through the fiber and camera
-optics, and then detection in the camera sensor resulting in a single
-electron-hole pair.
+wavelength-dependent probability that a photon incident on a fiber results in
+an electron detected in the camera's CCD.
 
-The distribution of generated electron-hole pairs over sensor pixels is
+The distribution of detected electrons over sensor pixels is
 determined by the camera's dispersion function :math:`d_i(\lambda)` and
 effective wavelength resolution :math:`\sigma_i(\lambda)`.  We first apply
 resolution effects using a convolution matrix :math:`R_{jk}`, resulting in:
@@ -99,11 +98,11 @@ resolution effects using a convolution matrix :math:`R_{jk}`, resulting in:
 
     N^{eh}_{ik} = \sum_j R_{jk} N^{\gamma}_j T_i(\lambda_j)
 
-electron-hole pairs generated in camera :math:`j` and associated with the
+electrons detected in camera :math:`j` and associated with the
 *detected* wavelength :math:`\overline{\lambda}_k`.  Next, the continuous pixel
 coordinate (in the wavelength direction) associated with the detected wavelength
 is calculated as :math:`d(\overline{\lambda}_k)` and used to re-bin
-electron-hole counts from the fine detected wavelength grid :math:`N^{eh}_{ik}`
+electron counts from the fine detected wavelength grid :math:`N^{eh}_{ik}`
 to sensor pixels :math:`N^{eh}_{ip}`.
 
 Finally, the sensor electronics response is characterized by a gain :math:`G_i`,
@@ -124,42 +123,38 @@ where :math:`n_{ip}` is the effective trace width in pixels for wavelength pixel
 :math:`p`, and we assume that read noise is uncorrelated between pixels (so its
 variance scales with :math:`n_{ip}`).
 
-.. |none| replace:: :math:`\text{---}`
-.. |sunit| replace:: :math:`\text{erg}/(\text{s cm}^2 \AA)`
-.. |bunit| replace:: :math:`\text{erg}/(\text{s cm}^2 \AA)/\text{arcsec}`
-.. |eunit| replace:: :math:`\text{mags}/\text{airmass}`
-.. |Gunit| replace:: :math:`\text{det.elec.} / \text{e-h pair}`
-.. |Iunit| replace:: :math:`\text{det.elec.} / \text{s} / \text{pixel}`
-.. |runit| replace:: :math:`\text{det.elec.} / \text{pixel}`
-
-+----------------------+-----------------------+---------------+-------------------------+
-| Parameter            | Units                 | Component     | Description             |
-+======================+=======================+===============+=========================+
-| :math:`\Delta t`     | :math:`\text{s}`      | Observation   | Exposure time           |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`X`            | |none|                | Observation   | Observing airmass       |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`\lambda_i`    | |Ang|                 | Simulation    | Fine wavelength grid    |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`s(\lambda)`   | |sunit|               | Source        | Source SED              |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`b(\lambda)`   | |bunit|               | Atmosphere    | Sky surface brightness  |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`e(\lambda)`   | |eunit|               | Atmosphere    | Atmospheric extinction  |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`A`            | :math:`\text{cm}^2`   | Telescope     | Primary unobscured area |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`a`            | :math:`\text{arcsec}` | Telescope     | Fiber entrance area     |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`f_S(\lambda)` | |none|                | Src+Atmos+Tel | Fiberloss fraction      |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`T_i(\lambda)` | |none|                | Tel+Camera    | Transmission throughput |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`I_{dk,i}`     | |Iunit|               | Camera        | Sensor darkcurrent      |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`G_i`          | |Gunit|               | Camera        | Readout gain            |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`\sigma_{ro,i}`| |runit|               | Camera        | Readout noise           |
-+----------------------+-----------------------+---------------+-------------------------+
-| :math:`n_{ip}`       | :math:`\text{pixels}` | Camera        | Trace width             |
-+----------------------+-----------------------+---------------+-------------------------+
++--------------------------+-------------------+-------------------------+
+| Parameter                | Component         | Description             |
++==========================+===================+=========================+
+| :math:`\Delta t`         | Instrument        | Exposure time           |
++--------------------------+-------------------+-------------------------+
+| :math:`X`                | Atmosphere        | Observing airmass       |
++--------------------------+-------------------+-------------------------+
+| :math:`\lambda_i`        | Configuration     | Fine wavelength grid    |
++--------------------------+-------------------+-------------------------+
+| :math:`s(\lambda)`       | Source            | Source SED              |
++--------------------------+-------------------+-------------------------+
+| :math:`b(\lambda)`       | Atmosphere        | Sky surface brightness  |
++--------------------------+-------------------+-------------------------+
+| :math:`e(\lambda)`       | Atmosphere        | Atmospheric extinction  |
++--------------------------+-------------------+-------------------------+
+| :math:`A`                | Instrument        | Primary unobscured area |
++--------------------------+-------------------+-------------------------+
+| :math:`a`                | Instrument        | Fiber entrance area     |
++--------------------------+-------------------+-------------------------+
+| :math:`f_S(\lambda)`     | Source+Instrument | Fiberloss fraction      |
++--------------------------+-------------------+-------------------------+
+| :math:`T_i(\lambda)`     | Camera            | Transmission throughput |
++--------------------------+-------------------+-------------------------+
+| :math:`d_i(\lambda)`     | Camera            | CCD row size            |
++--------------------------+-------------------+-------------------------+
+| :math:`\sigma_i(\lambda)`| Camera            | CCD resolution          |
++--------------------------+-------------------+-------------------------+
+| :math:`n_{ip}`           | Camera            | CCD trace width         |
++--------------------------+-------------------+-------------------------+
+| :math:`I_{dk,i}`         | Camera            | Sensor dark current     |
++--------------------------+-------------------+-------------------------+
+| :math:`G_i`              | Camera            | Readout gain            |
++--------------------------+-------------------+-------------------------+
+| :math:`\sigma_{ro,i}`    | Camera            | Readout noise           |
++--------------------------+-------------------+-------------------------+

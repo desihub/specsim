@@ -15,29 +15,26 @@ def test_ctor():
     config = specsim.config.load_config('test')
     sim1 = Simulator(config)
     sim2 = Simulator('test')
-    assert sim1.downsampling == sim2.downsampling
+    assert sim1.atmosphere.airmass == sim2.atmosphere.airmass
 
 
 def test_end_to_end():
     sim = Simulator('test')
-    results = sim.simulate()
-    medsnr = np.median(results[results.obsflux > 0].snrtot)
-    snrtot2 = np.sum(results.snrtot ** 2)
-    assert np.allclose([medsnr, snrtot2], [1.83393503, 13291.019])
+    sim.simulate()
+    nsrc = sim.simulated['num_source_electrons_r'].sum()
+    assert np.allclose(nsrc, 86996.4478)
 
-'''
+
 def test_zero_flux():
     sim = Simulator('test')
     sim.source.update_in(
         'Zero Flux', 'qso', sim.source.wavelength_in, 0 * sim.source.flux_in)
     sim.source.update_out()
-    results = sim.simulate()
+    sim.simulate()
     # Check that ivar is non-zero.
-    assert not np.all((results.camivar)[:, 0] == 0)
-    assert not np.all(results.ivar == 0)
-'''
+    assert not np.any(sim.camera_output[0]['flux_inverse_variance'] == 0)
 
 def test_plot():
     s = Simulator('test')
-    r = s.simulate()
-    s.plot(r)
+    s.simulate()
+    s.plot()

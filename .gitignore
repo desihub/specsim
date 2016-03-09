@@ -53,3 +53,4 @@ distribute-*.tar.gz
 *.dat
 *.png
 *.pdf
+*.fits

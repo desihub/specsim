@@ -1,7 +1,8 @@
-0.4 (unreleased)
+0.4 (2016-03-08)
 ----------------
 
-- Fix github issues #1, #4, #8, #9, #17, #18.
+- Fix github issues #1, #4, #8, #9, #17, #18, #26.
+- Implement workaround for missing IERS data in sidereal time calculation.
 - Silence astropy warnings for non-standard units in FITS files.
 - Clean up simulator module to streamline its use by desisim.
 - Refactor instrument model to handle downsampling to output pixels.

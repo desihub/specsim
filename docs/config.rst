@@ -133,9 +133,10 @@ included with this package and described below.
 DESI Configuration
 ------------------
 
-The DESI configuration refers to files maintained in the `desimodel
+The DESI configuration refers to data files maintained in the `desimodel
 <https://github.com/desihub/desimodel>`__ package, which the user must
-separately install.  The linkage is established via the ``DESIMODEL``
+`separately install <https://github.com/desihub/desimodel#desimodel-data>`__.
+The linkage is established via the ``DESIMODEL``
 environment variable via the following line in ``desi.yaml``::
 
     base_path: '{DESIMODEL}/data'

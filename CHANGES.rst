@@ -1,7 +1,8 @@
 0.5 (unreleased)
 ----------------
 
-- Update to latest astropy affiliate package template.
+- Fix github issues #41, #42.
+- Update to latest astropy affiliated package template.
 - Drop support for python 2.6 and add support for python 3.5.
 - Add testing against LTS release of astropy.
 - Drop testing against numpy 1.6 and add numpy 1.11.

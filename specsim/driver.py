@@ -17,7 +17,7 @@ import specsim.simulator
 
 
 # This is a setup.py entry-point, not a standalone script.
-# See http://astropy.readthedocs.org/en/latest/development/scripts.html
+# See http://astropy.readthedocs.io/en/latest/development/scripts.html
 
 def main(args=None):
     # parse command-line arguments

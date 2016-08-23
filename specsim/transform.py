@@ -430,7 +430,7 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
         The sky coordinate frame that the input alt-az observations should be
         transformed to.  The default `'icrs'` corresponds to J2000 RA,DEC.
         Some other useful frames are `'fk5'` and `'galactic'`.  See the
-        `astropy docs <http://astropy.readthedocs.org/
+        `astropy docs <http://astropy.readthedocs.io/
         en/stable/coordinates/index.html#reference-api>`__ for details.
 
     Returns

@@ -20,7 +20,7 @@ packages, use instead::
     pip install specsim --user
 
 The documentation of the latest stable release is `here
-<http://specsim.readthedocs.org/en/stable/>`__. The required dependencies listed
+<http://specsim.readthedocs.io/en/stable/>`__. The required dependencies listed
 below will be automatically installed by this command.
 
 To update to a newer stable release after your initial install, use::
@@ -49,7 +49,7 @@ packages, use instead::
     python setup.py install --user
 
 The documentation of the latest developer release is `here
-<http://specsim.readthedocs.org/en/latest/>`_. The required dependencies listed
+<http://specsim.readthedocs.io/en/latest/>`_. The required dependencies listed
 below will be automatically installed by the `setup.py` step above.
 
 Any changes you make to your git cloned package after running the `setup.py`
@@ -77,7 +77,7 @@ a scientific python distribution such as  `anaconda
 * `scipy <http://www.scipy.org/scipylib/index.html>`__
 * `astropy <http://www.astropy.org/>`__
 * `pyyaml <http://pyyaml.org/wiki/PyYAML>`__
-* `speclite <http://speclite.readthedocs.org>`__ (version >= 0.3)
+* `speclite <http://speclite.readthedocs.io>`__ (version >= 0.3)
 
 Optional Dependency: matplotlib
 -------------------------------

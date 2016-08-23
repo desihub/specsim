@@ -56,7 +56,7 @@ class Source(object):
         are redshifted from z_in to this value to obtain :attr:`flux_out`.
     filter_name : str or None
         Name of the `speclite filter response
-        <http://speclite.readthedocs.org/en/stable/filters.html>`__ to use
+        <http://speclite.readthedocs.io/en/stable/filters.html>`__ to use
         for normalizing :attr:`flux_out`. Ignored when ab_magnitude_out is None.
     ab_magnitude_out : float or None
         AB magnitude to use for normalizing :attr:`flux_out`.  Note that any

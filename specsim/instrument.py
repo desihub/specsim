@@ -25,6 +25,7 @@ import math
 
 import numpy as np
 import scipy.sparse
+import scipy.interpolate
 
 import astropy.constants
 import astropy.units as u
@@ -62,16 +63,20 @@ class Instrument(object):
     fiber_diameter : astropy.units.Quantity
         Physical diameter of the simulated fibers, with units of length.
         Converted to an on-sky diameter using the plate scale.
-    plate_scale : astropy.units.Quantity
-        Plate scale used to convert from on-sky angles to physical
-        plate separations. This is a nominal value, averaged over the
-        field of view and assumed to be isotropic.
     exposure_time : astropy.units.Quantity
         Exposure time used to scale the instrument response, with units.
+    radial_scale : callable
+        Callable function that returns the plate scale in the radial
+        (meridional) direction (with appropriate units) as a function of
+        focal-plane distance (with length units) from the boresight.
+    azimuthal_scale : callable
+        Callable function that returns the plate scale in the azimuthal
+        (sagittal) direction (with appropriate units) as a function of
+        focal-plane distance (with length units) from the boresight.
     """
     def __init__(self, name, wavelength, fiber_acceptance_dict, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
-                 fiber_diameter, plate_scale, exposure_time):
+                 fiber_diameter, exposure_time, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
@@ -80,8 +85,9 @@ class Instrument(object):
         self.obscuration_diameter = obscuration_diameter
         self.support_width = support_width
         self.fiber_diameter = fiber_diameter
-        self.plate_scale = plate_scale
         self.exposure_time = exposure_time
+        self.radial_scale = radial_scale
+        self.azimuthal_scale = azimuthal_scale
 
         self.source_types = self.fiber_acceptance_dict.keys()
 
@@ -92,9 +98,14 @@ class Instrument(object):
         self.effective_area = (
             math.pi * ((0.5 * D) ** 2 - (0.5 * obs) ** 2) - 4 * support_area)
 
-        # Calculate the fiber area on the sky.
-        on_sky_radius = 0.5 * self.fiber_diameter / self.plate_scale
-        self.fiber_area = np.pi * on_sky_radius ** 2
+        # Calculate the fiber area on the sky assuming the fiber is
+        # positioned at the center of the focal plane.
+        focal_plane_r = 0 * u.mm
+        radial_size = (
+            0.5 * self.fiber_diameter / self.radial_scale(focal_plane_r))
+        azimuthal_size = (
+            0.5 * self.fiber_diameter / self.azimuthal_scale(focal_plane_r))
+        self.fiber_area = np.pi * radial_size * azimuthal_size
 
         # Calculate the energy per photon at each wavelength.
         hc = astropy.constants.h * astropy.constants.c
@@ -615,7 +626,35 @@ def initialize(config):
     constants = config.get_constants(
         config.instrument,
         ['exposure_time', 'primary_mirror_diameter', 'obscuration_diameter',
-         'support_width', 'fiber_diameter', 'plate_scale'])
+         'support_width', 'fiber_diameter'])
+
+    try:
+        # Try to read a tabulated plate scale first.
+        plate_scale = config.load_table(
+            config.instrument.plate_scale,
+            ['radius', 'radial_scale', 'azimuthal_scale'], interpolate=False)
+        r_vec = plate_scale['radius']
+        sr_vec = plate_scale['radial_scale']
+        sa_vec = plate_scale['azimuthal_scale']
+        # Build dimensionless linear interpolators for the radial and azimuthal
+        # scales using the native units from the tabulated data.
+        sr_interpolate = scipy.interpolate.interp1d(
+            r_vec.value, sr_vec.value, kind='linear', copy=True)
+        sa_interpolate = scipy.interpolate.interp1d(
+            r_vec.value, sa_vec.value, kind='linear', copy=True)
+        # Wrap interpolators in lambdas that take care of units.
+        radial_scale = lambda r: (
+            sr_interpolate(r.to(r_vec.unit).value) * sr_vec.unit)
+        azimuthal_scale = lambda r: (
+            sa_interpolate(r.to(r_vec.unit).value) * sa_vec.unit)
+    except AttributeError:
+        # Fall back to a constant value.
+        plate_scale_constant = config.get_constants(
+            config.instrument.plate_scale, ['value'])
+        value = plate_scale_constant['value']
+        # Create lambdas that return the constant plate scale with units.
+        radial_scale = lambda r: value
+        azimuthal_scale = lambda r: value
 
     fiber_acceptance_dict = config.load_table(
         config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
@@ -624,7 +663,7 @@ def initialize(config):
         name, config.wavelength, fiber_acceptance_dict, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
-        constants['plate_scale'], constants['exposure_time'])
+        constants['exposure_time'], radial_scale, azimuthal_scale)
 
     if config.verbose:
         # Print some derived quantities.

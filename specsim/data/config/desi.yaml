@@ -99,7 +99,14 @@ instrument:
         obscuration_diameter: 1.8 m
         support_width: 0.025 m
         fiber_diameter: 107.0 um
-        plate_scale: 70.39473684210526 um / arcsec
+    plate_scale:
+        table:
+            path: focalplane/platescale.txt
+            format: ascii
+            columns:
+                radius: { index: 0, unit: mm }
+                radial_scale: { index: 6, unit: um/arcsec }
+                azimuthal_scale: { index: 7, unit: um/arcsec }
     fiberloss:
         table:
             format: ascii

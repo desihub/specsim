@@ -60,13 +60,18 @@ class Instrument(object):
     support_width : astropy.units.Quantity
         Width of the obscuring supports, with units.
     fiber_diameter : astropy.units.Quantity
-        Angular field of view diameter of the simulated fibers, with units.
+        Physical diameter of the simulated fibers, with units of length.
+        Converted to an on-sky diameter using the plate scale.
+    plate_scale : astropy.units.Quantity
+        Plate scale used to convert from on-sky angles to physical
+        plate separations. This is a nominal value, averaged over the
+        field of view and assumed to be isotropic.
     exposure_time : astropy.units.Quantity
         Exposure time used to scale the instrument response, with units.
     """
     def __init__(self, name, wavelength, fiber_acceptance_dict, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
-                 fiber_diameter, exposure_time):
+                 fiber_diameter, plate_scale, exposure_time):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
@@ -75,6 +80,7 @@ class Instrument(object):
         self.obscuration_diameter = obscuration_diameter
         self.support_width = support_width
         self.fiber_diameter = fiber_diameter
+        self.plate_scale = plate_scale
         self.exposure_time = exposure_time
 
         self.source_types = self.fiber_acceptance_dict.keys()
@@ -86,8 +92,9 @@ class Instrument(object):
         self.effective_area = (
             math.pi * ((0.5 * D) ** 2 - (0.5 * obs) ** 2) - 4 * support_area)
 
-        # Calculate the fiber area.
-        self.fiber_area = math.pi * (0.5 * self.fiber_diameter) ** 2
+        # Calculate the fiber area on the sky.
+        on_sky_radius = 0.5 * self.fiber_diameter / self.plate_scale
+        self.fiber_area = np.pi * on_sky_radius ** 2
 
         # Calculate the energy per photon at each wavelength.
         hc = astropy.constants.h * astropy.constants.c
@@ -608,7 +615,7 @@ def initialize(config):
     constants = config.get_constants(
         config.instrument,
         ['exposure_time', 'primary_mirror_diameter', 'obscuration_diameter',
-         'support_width', 'fiber_diameter'])
+         'support_width', 'fiber_diameter', 'plate_scale'])
 
     fiber_acceptance_dict = config.load_table(
         config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
@@ -617,7 +624,7 @@ def initialize(config):
         name, config.wavelength, fiber_acceptance_dict, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
-        constants['exposure_time'])
+        constants['plate_scale'], constants['exposure_time'])
 
     if config.verbose:
         # Print some derived quantities.

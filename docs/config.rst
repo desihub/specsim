@@ -155,7 +155,7 @@ configuration scheme:
 +=============================+================================================+
 | `area.M1_diameter`          | `instrument.constants.primary_mirror_diameter` |
 +-----------------------------+------------------------------------------------+
-| `fibers.diameter_arcsec`    | `instrument.constants.fiber_diameter`          |
+| `fibers.diameter_um`        | `instrument.constants.fiber_diameter`          |
 +-----------------------------+------------------------------------------------+
 | `area.obscuration_diameter` | `instrument.constants.obscuration_diameter`    |
 +-----------------------------+------------------------------------------------+

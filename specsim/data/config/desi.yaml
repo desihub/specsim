@@ -98,8 +98,8 @@ instrument:
         primary_mirror_diameter: 3.797 m
         obscuration_diameter: 1.8 m
         support_width: 0.025 m
-        # Averaged over the focal plane for 107.0 um physical diameter.
-        fiber_diameter: 1.52 arcsec
+        fiber_diameter: 107.0 um
+        plate_scale: 70.39473684210526 um / arcsec
     fiberloss:
         table:
             format: ascii

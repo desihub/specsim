@@ -28,6 +28,7 @@ import specsim.config
 import specsim.atmosphere
 import specsim.instrument
 import specsim.source
+import specsim.observation
 
 
 class Simulator(object):
@@ -49,6 +50,7 @@ class Simulator(object):
         self.atmosphere = specsim.atmosphere.initialize(config)
         self.instrument = specsim.instrument.initialize(config)
         self.source = specsim.source.initialize(config)
+        self.observation = specsim.observation.initialize(config)
 
         # Initialize our table of simulation results.
         self.camera_names = []

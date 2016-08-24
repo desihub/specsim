@@ -155,6 +155,20 @@ class Configuration(Node):
                 raise ValueError('Environment variable not set: {0}.'.format(e))
 
 
+    def get_sky_coordinate(self, parent):
+        """Create a sky coordinate from a configuration node.
+
+        Parameters
+        ----------
+        parent : :class:`Node`
+            Parent node in this configuration whose ``sky_coordinate`` child
+            will be processed.
+        """
+        node = parent.sky_coordinate
+        frame = getattr(node, 'frame', None)
+        return astropy.coordinates.SkyCoord(node.coordinates, frame=frame)
+
+
     def get_constants(self, parent, required_names=None):
         """Interpret a constants node in this configuration.
 

@@ -254,3 +254,11 @@ source:
     # Set these parameters to normalize in a specified filter.
     filter_name:
     ab_magnitude_out:
+
+# The observation configuration is interpreted and validated by the
+# specsim.observation module.
+observation:
+    pointing:
+        sky_coordinate:
+            coordinates: 0h 0d
+            frame: icrs

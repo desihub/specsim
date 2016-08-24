@@ -72,7 +72,7 @@ instrument:
         fiber_diameter: 107.0 um
     plate_scale:
         constants:
-            value: 70.39473684210526 um / arcsec
+            value: 70.4 um / arcsec
     fiberloss:
         table:
             format: ascii

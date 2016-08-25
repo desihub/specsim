@@ -38,6 +38,8 @@ import scipy.interpolate
 import astropy.units
 import astropy.table
 import astropy.utils.data
+import astropy.coordinates
+import astropy.time
 
 
 class Node(object):
@@ -161,7 +163,7 @@ class Configuration(Node):
         Parameters
         ----------
         parent : :class:`Node`
-            Parent node in this configuration whose ``sky_coordinate`` child
+            Parent node in this configuration whose ``sky`` child
             will be processed.
 
         Returns
@@ -172,6 +174,26 @@ class Configuration(Node):
         node = parent.sky
         frame = getattr(node, 'frame', None)
         return astropy.coordinates.SkyCoord(node.coordinates, frame=frame)
+
+
+    def get_timestamp(self, parent):
+        """Create a timestamp from a configuration node.
+
+        Parameters
+        ----------
+        parent : :class:`Node`
+            Parent node in this configuration whose ``timestamp`` child
+            will be processed.
+
+        Returns
+        -------
+        astropy.time.Time
+            Timestamp object constructed from node parameters.
+        """
+        node = parent.timestamp
+        format = getattr(node, 'format', None)
+        scale = getattr(node, 'scale', None)
+        return astropy.time.Time(node.when, format=format, scale=scale)
 
 
     def get_constants(self, parent, required_names=None):

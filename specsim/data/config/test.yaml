@@ -133,8 +133,13 @@ source:
 # The observation configuration is interpreted and validated by the
 # specsim.observation module.
 observation:
+    observatory: APO
     constants:
         exposure_time: 1000.0 s
+    exposure_start:
+        timestamp:
+            when: 57625
+            format: mjd
     pointing:
         sky:
             coordinates: 0h 0d

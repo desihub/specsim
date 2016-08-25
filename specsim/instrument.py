@@ -155,7 +155,7 @@ class Instrument(object):
 
 
     def plot(self, flux=1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom),
-             exposure_time=None, cmap='nipy_spectral'):
+             exposure_time=1000 * u.s, cmap='nipy_spectral'):
         """Plot a summary of this instrument's model.
 
         Requires that the matplotlib package is installed.
@@ -164,7 +164,7 @@ class Instrument(object):
         ----------
         flux : astropy.units.Quantity
             Constant source flux to use for displaying the instrument response.
-        exposure_time : astropy.units.Quantity or None
+        exposure_time : astropy.units.Quantity
             Exposure time to use for displaying the instrument response.
         cmap : str or matplotlib.colors.Colormap
             Matplotlib colormap name or instance to use for displaying the

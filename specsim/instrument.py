@@ -158,6 +158,13 @@ class Instrument(object):
     def field_radius_to_angle(self, radius):
         """Convert focal plane radius to an angle relative to the boresight.
 
+        The mapping is derived from the radial (meridional) plate scale
+        function :math:`dr/d\\theta(r)` via the integral:
+
+        .. math::
+
+            \\theta(r) = \int_0^{r} \\frac{dr}{dr/d\\theta(r')}\, dr'
+
         The input values must be within the field of view.
         Use :meth:`field_angle_to_radius` for the inverse transform.
 
@@ -184,6 +191,9 @@ class Instrument(object):
 
     def field_angle_to_radius(self, radius):
         """Convert focal plane radius to an angle relative to the boresight.
+
+        The mapping :math:`r(\\theta)` is calculated by numerically inverting
+        the function :math:`\\theta(r)`.
 
         The input values must be within the field of view.
         Use :meth:`field_radius_to_angle` for the inverse transform.

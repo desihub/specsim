@@ -189,7 +189,7 @@ class Instrument(object):
             radius.to(self._radius_unit)) * self._angle_unit
 
 
-    def field_angle_to_radius(self, radius):
+    def field_angle_to_radius(self, angle):
         """Convert focal plane radius to an angle relative to the boresight.
 
         The mapping :math:`r(\\theta)` is calculated by numerically inverting
@@ -215,8 +215,8 @@ class Instrument(object):
         ValueError
             One or more input values are outside the allowed range.
         """
-        return self._radius_to_angle(
-            radius.to(self._radius_unit)) * self._angle_unit
+        return self._angle_to_radius(
+            angle.to(self._angle_unit)) * self._radius_unit
 
 
     def plot_field_distortion(self):

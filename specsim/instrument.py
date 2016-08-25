@@ -63,6 +63,10 @@ class Instrument(object):
     fiber_diameter : astropy.units.Quantity
         Physical diameter of the simulated fibers, with units of length.
         Converted to an on-sky diameter using the plate scale.
+    field_radius : astropy.units.Quantity
+        Maximum radius of the field of view in length units measured at
+        the focal plane. Converted to an angular field of view using the
+        plate scale.
     exposure_time : astropy.units.Quantity
         Exposure time used to scale the instrument response, with units.
     radial_scale : callable
@@ -76,7 +80,7 @@ class Instrument(object):
     """
     def __init__(self, name, wavelength, fiber_acceptance_dict, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
-                 fiber_diameter, exposure_time, radial_scale, azimuthal_scale):
+                 fiber_diameter, field_radius, exposure_time, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
@@ -85,6 +89,7 @@ class Instrument(object):
         self.obscuration_diameter = obscuration_diameter
         self.support_width = support_width
         self.fiber_diameter = fiber_diameter
+        self.field_radius = field_radius
         self.exposure_time = exposure_time
         self.radial_scale = radial_scale
         self.azimuthal_scale = azimuthal_scale
@@ -626,7 +631,7 @@ def initialize(config):
     constants = config.get_constants(
         config.instrument,
         ['exposure_time', 'primary_mirror_diameter', 'obscuration_diameter',
-         'support_width', 'fiber_diameter'])
+         'support_width', 'fiber_diameter', 'field_radius'])
 
     try:
         # Try to read a tabulated plate scale first.
@@ -663,6 +668,7 @@ def initialize(config):
         name, config.wavelength, fiber_acceptance_dict, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
+        constants['field_radius'],
         constants['exposure_time'], radial_scale, azimuthal_scale)
 
     if config.verbose:

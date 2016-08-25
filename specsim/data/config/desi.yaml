@@ -99,6 +99,7 @@ instrument:
         obscuration_diameter: 1.8 m
         support_width: 0.025 m
         fiber_diameter: 107.0 um
+        field_radius: 414.0 mm
     plate_scale:
         table:
             path: focalplane/platescale.txt

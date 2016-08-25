@@ -166,6 +166,11 @@ class Simulator(object):
         # Get the source flux incident on the atmosphere.
         source_flux[:] = self.source.flux_out.to(source_flux.unit)
 
+        # Locate the source centroid on the focal plane, as a function
+        # of wavelength and time during the exposure.
+        focal_x, focal_y = self.observation.locate_on_focal_plane(
+            self.source.sky_position, self.instrument)
+
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (
             source_flux *

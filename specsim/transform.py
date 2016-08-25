@@ -39,6 +39,8 @@ low_altitude_threshold : :class:`astropy.coordinates.Angle`
     will issue a `UserWarning` if they encounter a lower value, unless
     refraction has been disabled by specifying zero pressure.
 """
+from __future__ import print_function, division
+
 import warnings
 
 import numpy as np

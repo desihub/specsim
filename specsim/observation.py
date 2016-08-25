@@ -14,6 +14,10 @@ After initialization, all aspects of an observation can be modified at runtime.
 """
 from __future__ import print_function, division
 
+import numpy as np
+
+import astropy.units as u
+
 import specsim.transform
 
 
@@ -50,9 +54,39 @@ class Observation(object):
         self.exposure_time = exposure_time
         self.exposure_start = exposure_start
         self.pointing = pointing
+        # Initialize an observing model at the middle of the exposure and
+        # at the central wavelength of the simulation, i.e., ignore temporal
+        # and chromatic variations (for now).
+        exposure_midpoint = self.exposure_start + 0.5 * self.exposure_time
+        central_wavelength = 0.5 * (wavelength[0] + wavelength[-1])
         self.observing_model = specsim.transform.create_observing_model(
-            self.location, self.exposure_start + 0.5 * self.exposure_time,
-            wavelength, temperature, pressure, relative_humidity)
+            self.location, exposure_midpoint, central_wavelength,
+            temperature, pressure, relative_humidity)
+        # Calculate the boresight angles (fixed, since we do not consider
+        # temporal or chromatic effects yet).
+        self.boresight_altaz = specsim.transform.sky_to_altaz(
+            self.pointing, self.observing_model)
+
+
+    def locate_on_focal_plane(self, sky_position, instrument):
+        """
+        """
+        altaz = specsim.transform.sky_to_altaz(
+            sky_position, self.observing_model)
+        # Calculate field angles relative to the boresight.
+        x, y = specsim.transform.altaz_to_focalplane(
+            altaz.alt, altaz.az,
+            self.boresight_altaz.alt, self.boresight_altaz.az)
+        # Convert field angles to focal-plane coordinates.
+        angle = np.sqrt(x ** 2 + y ** 2)
+        if angle > 0:
+            radius = instrument.field_angle_to_radius(angle)
+            scale = radius / angle
+        else:
+            scale = 0 * u.mm / u.arcsec
+        x *= scale
+        y *= scale
+        return x, y
 
 
 def initialize(config):
@@ -92,5 +126,8 @@ def initialize(config):
         cond = obs.observing_model
         print('Conditions: pressure {0:.1f}, temperature {1:.1f}, RH {2:.3f}.'
               .format(cond.pressure, cond.temperature, cond.relative_humidity))
+        altaz = obs.boresight_altaz
+        print('Boresight (alt, az) = ({0:.1f}, {1:.1f}).'
+              .format(altaz.alt, altaz.az))
 
     return obs

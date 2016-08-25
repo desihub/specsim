@@ -81,6 +81,8 @@ class Source(object):
         self.update_in(name, type_name, wavelength_in, flux_in, z_in)
         self.update_out(z_out, filter_name, ab_magnitude_out)
 
+        self.sky_position = sky_position
+
 
     def update_in(self, name, type_name, wavelength_in, flux_in, z_in=None):
         """Update this source model.

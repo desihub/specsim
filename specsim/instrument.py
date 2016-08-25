@@ -257,7 +257,8 @@ class Instrument(object):
         # Calculate the dimensionless fiber area ratio.
         fiber_area_ratio = (fiber_area / mean_fiber_area).si.value
 
-        # Calculate the dimensionless ratio of azimuthal / radial scales.
+        # Calculate the dimensionless ratio of azimuthal / radial plate scales
+        # which is the ratio of the on-sky radial / azimuthal extends.
         shape_ratio = (self.azimuthal_scale(radius) /
                        self.radial_scale(radius)).si.value
 
@@ -277,8 +278,8 @@ class Instrument(object):
 
         ax2.plot(angle, fiber_area_ratio, 'b', lw=2, label='Area ratio')
         ax2.plot(angle, shape_ratio, 'k', lw=2, ls='--',
-                 label='Azimuthal/radial scales')
-        ax2.set_ylabel('Fiber area and shape ratios', fontsize='large')
+                 label='Radial/azimuthal')
+        ax2.set_ylabel('Fiber sky area and shape ratios', fontsize='large')
         ax2.grid()
         ax2.legend(loc='upper right')
 
@@ -289,6 +290,8 @@ class Instrument(object):
                      verticalalignment='bottom', fontsize='large')
 
         ax2.set_xlabel('Field angle [deg]', fontsize='large')
+        plt.subplots_adjust(
+            left=0.10, right=0.98, bottom=0.07, top=0.97, hspace=0.05)
 
 
     def get_fiber_acceptance(self, source):

@@ -24,6 +24,7 @@ import math
 import numpy as np
 import scipy.sparse
 import scipy.interpolate
+import scipy.integrate
 
 import astropy.constants
 import astropy.units as u
@@ -90,7 +91,7 @@ class Instrument(object):
 
         self.source_types = self.fiber_acceptance_dict.keys()
 
-        # Calculate the geometric area.
+        # Calculate the effective area of the primary mirror.
         D = self.primary_mirror_diameter
         obs = self.obscuration_diameter
         support_area = 0.5*(D - obs) * self.support_width
@@ -105,6 +106,27 @@ class Instrument(object):
         azimuthal_size = (
             0.5 * self.fiber_diameter / self.azimuthal_scale(focal_plane_r))
         self.fiber_area = np.pi * radial_size * azimuthal_size
+
+        # Tabulate the mapping between focal plane radius and boresight
+        # opening angle by integrating the radial plate scale.
+        # Use mm and radians as the canonical units.
+        self._radius_unit, self._angle_unit = u.mm, u.rad
+        radius = np.linspace(
+            0., self.field_radius.to(self._radius_unit).value, 1000)
+        dradius_dangle = self.radial_scale(radius * self._radius_unit).to(
+            self._radius_unit / self._angle_unit).value
+        angle = scipy.integrate.cumtrapz(
+            1. / dradius_dangle, radius, initial=0.)
+
+        # Record the maximum field angle corresponding to our field radius.
+        self.field_angle = angle[-1] * self._angle_unit
+
+        # Build dimensionless linear interpolating functions of the
+        # radius <-> angle map using the canonical units.
+        self._radius_to_angle = scipy.interpolate.interp1d(
+            radius, angle, kind='linear', copy=True, bounds_error=True)
+        self._angle_to_radius = scipy.interpolate.interp1d(
+            angle, radius, kind='linear', copy=True, bounds_error=True)
 
         # Calculate the energy per photon at each wavelength.
         hc = astropy.constants.h * astropy.constants.c
@@ -131,6 +153,60 @@ class Instrument(object):
 
         # Sort cameras in order of increasing wavelength.
         self.cameras = [x for (y, x) in sorted(zip(wave_mid, self.cameras))]
+
+
+    def field_radius_to_angle(self, radius):
+        """Convert focal plane radius to an angle relative to the boresight.
+
+        The input values must be within the field of view.
+        Use :meth:`field_angle_to_radius` for the inverse transform.
+
+        Parameters
+        ----------
+        radius : astropy.units.Quantity
+            One or more radius values where the angle should be calculated.
+            Values must be between 0 and ``field radius``.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            Opening angle(s) relative to the boresight corresponding to
+            the input radius value(s).
+
+        Raises
+        ------
+        ValueError
+            One or more input values are outside the allowed range.
+        """
+        return self._radius_to_angle(
+            radius.to(self._radius_unit)) * self._angle_unit
+
+
+    def field_angle_to_radius(self, radius):
+        """Convert focal plane radius to an angle relative to the boresight.
+
+        The input values must be within the field of view.
+        Use :meth:`field_radius_to_angle` for the inverse transform.
+
+        Parameters
+        ----------
+        angle : astropy.units.Quantity
+            One or more angle values where the radius should be calculated.
+            Values must be between 0 and ``field_angle``.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            Radial coordinate(s) in the focal plane corresponding to the
+            input angle value(s).
+
+        Raises
+        ------
+        ValueError
+            One or more input values are outside the allowed range.
+        """
+        return self._radius_to_angle(
+            radius.to(self._radius_unit)) * self._angle_unit
 
 
     def get_fiber_acceptance(self, source):
@@ -648,8 +724,9 @@ def initialize(config):
             config.instrument.plate_scale, ['value'])
         value = plate_scale_constant['value']
         # Create lambdas that return the constant plate scale with units.
-        radial_scale = lambda r: value
-        azimuthal_scale = lambda r: value
+        # Use np.ones_like to ensure correct broadcasting.
+        radial_scale = lambda r: value * np.ones_like(r.value)
+        azimuthal_scale = lambda r: value * np.ones_like(r.value)
 
     fiber_acceptance_dict = config.load_table(
         config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
@@ -666,6 +743,9 @@ def initialize(config):
               .format(instrument.effective_area))
         print('Fiber entrance area: {0:.3f}'
               .format(instrument.fiber_area))
+        print('Field of view diameter: {0:.1f} = {1:.2f}.'
+              .format(2 * instrument.field_radius.to(u.mm),
+                      2 * instrument.field_angle.to(u.deg)))
         print('Source types: {0}.'.format(instrument.source_types))
 
     return instrument

@@ -48,6 +48,9 @@ class Source(object):
         Array of increasing input wavelengths with units.
     flux_in : astropy.units.Quantity
         Array of input flux values tabulated at wavelength_in.
+    sky_position : astropy.coordinates.SkyCoord
+        Location of this source in the sky. A source will not be visible
+        unless its location is within the instrument field of view.
     z_in : float or None
         Redshift of (wavelength_in, flux_in) to assume for redshift transforms.
         Ignored unless z_out is set and must be set when z_out is set.
@@ -63,7 +66,7 @@ class Source(object):
         redshift transform is applied before normalizing.
     """
     def __init__(self, name, type_name, wavelength_out, wavelength_in, flux_in,
-                 z_in=None, z_out=None, filter_name=None,
+                 sky_position, z_in=None, z_out=None, filter_name=None,
                  ab_magnitude_out=None):
 
         wavelength_out = np.asanyarray(wavelength_out)
@@ -256,15 +259,20 @@ def initialize(config):
     # Load a table of (wavelength_in, flux_in) without any interpolation.
     table = config.load_table(
         config.source, ['wavelength', 'flux'], interpolate=False)
+    # Get the sky position of this source.
+    sky_position = config.get_sky(config.source.location)
     # Create a new Source object.
     source = Source(
         config.source.name, config.source.type, config.wavelength,
-        table['wavelength'], table['flux'], config.source.z_in,
+        table['wavelength'], table['flux'], sky_position, config.source.z_in,
         config.source.z_out, config.source.filter_name,
         config.source.ab_magnitude_out)
     if config.verbose:
         print("Initialized source '{0}' of type '{1}'."
               .format(source.name, source.type_name))
+        radec = sky_position.transform_to('icrs')
+        print('Source located at (ra, dec) = ({0}, {1}).'
+              .format(radec.ra, radec.dec))
         if config.source.z_out is not None:
             print('Redshift transformed from {0:.3f} to {1:.3f}.'
                   .format(config.source.z_in, config.source.z_out))

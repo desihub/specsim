@@ -40,5 +40,5 @@ def initialize(config):
         An initialized observation.
     """
     node = config.observation
-    pointing = config.get_sky_coordinate(node.pointing)
+    pointing = config.get_sky(node.pointing)
     return Observation(pointing)

@@ -248,6 +248,10 @@ source:
                 index: 1
                 # Note the factor of 1e-17 in the units!
                 unit: 1e-17 erg / (Angstrom cm2 s)
+    # Location of the source on the sky. A source will not be visible if
+    # it lies out the observation field of view.
+    location:
+        sky: {coordinates: 0h 0d, frame: icrs }
     # Set these parameters to apply a redshift transformation.
     z_in:
     z_out:
@@ -259,6 +263,6 @@ source:
 # specsim.observation module.
 observation:
     pointing:
-        sky_coordinate:
+        sky:
             coordinates: 0h 0d
             frame: icrs

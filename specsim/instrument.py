@@ -209,6 +209,78 @@ class Instrument(object):
             radius.to(self._radius_unit)) * self._angle_unit
 
 
+    def plot_field_distortion(self):
+        """Plot focal plane distortions over the field of view.
+
+        Requires that the matplotlib package is installed.
+        """
+        import matplotlib.pyplot as plt
+
+        # Tabulate the field radius - angle mapping.
+        radius = np.linspace(0., self.field_radius.to(u.mm).value, 500) * u.mm
+        angle = self.field_radius_to_angle(radius).to(u.deg)
+
+        # Calculate the r**2 weighted mean inverse radial scale by minimizing
+        # angle - mean_inv_radial_scale * radius with respect to
+        # mean_inv_radial_scale.
+        mean_inv_radial_scale = (
+            np.sum(radius ** 3 * angle) / np.sum(radius ** 4))
+        mean_radial_scale = (1. / mean_inv_radial_scale).to(u.um / u.arcsec)
+
+        # Calculate the angular distortion relative to the mean radial scale.
+        distortion = (angle - radius * mean_inv_radial_scale).to(u.arcsec)
+
+        # Eliminate round off error so that the zero distortion case is
+        # correctly recovered.
+        distortion = np.round(distortion, decimals=5)
+
+        # Calculate the fiber area as a function of radius.
+        radial_size = (
+            0.5 * self.fiber_diameter / self.radial_scale(radius))
+        azimuthal_size = (
+            0.5 * self.fiber_diameter / self.azimuthal_scale(radius))
+        fiber_area = (np.pi * radial_size * azimuthal_size).to(u.arcsec ** 2)
+
+        # Calculate the r**2 weighted mean fiber area.
+        mean_fiber_area = np.sum(radius ** 2 * fiber_area) / np.sum(radius ** 2)
+
+        # Calculate the dimensionless fiber area ratio.
+        fiber_area_ratio = (fiber_area / mean_fiber_area).si.value
+
+        # Calculate the dimensionless ratio of azimuthal / radial scales.
+        shape_ratio = (self.azimuthal_scale(radius) /
+                       self.radial_scale(radius)).si.value
+
+        # Make the plots.
+        fig, (ax1, ax2) = plt.subplots(2, sharex=True, figsize=(8, 8))
+
+        ax1.plot(angle, distortion, 'b-', lw=2)
+        ax1.set_ylabel('Field angle distortion [arcsec]', fontsize='large')
+        ax1.set_xlim(0., self.field_angle.to(u.deg).value)
+        ax1.grid()
+
+        ax1.axhline(0., color='r')
+        xy = 0.5 * self.field_angle.to(u.deg).value, 0.
+        label = '{0:.1f}'.format(mean_radial_scale)
+        ax1.annotate(label, xy, xy, color='r', horizontalalignment='center',
+                     verticalalignment='bottom', fontsize='large')
+
+        ax2.plot(angle, fiber_area_ratio, 'b', lw=2, label='Area ratio')
+        ax2.plot(angle, shape_ratio, 'k', lw=2, ls='--',
+                 label='Azimuthal/radial scales')
+        ax2.set_ylabel('Fiber area and shape ratios', fontsize='large')
+        ax2.grid()
+        ax2.legend(loc='upper right')
+
+        ax2.axhline(1., color='r')
+        xy = 0.5 * self.field_angle.to(u.deg).value, 1.
+        label = '{0:.3f}'.format(mean_fiber_area)
+        ax2.annotate(label, xy, xy, color='r', horizontalalignment='center',
+                     verticalalignment='bottom', fontsize='large')
+
+        ax2.set_xlabel('Field angle [deg]', fontsize='large')
+
+
     def get_fiber_acceptance(self, source):
         """Get the tabulated fiber acceptance function for the specified source.
 

@@ -25,3 +25,9 @@ def test_plot():
     c = specsim.config.load_config('test')
     i = initialize(c)
     i.plot()
+
+
+def test_distortion_plot():
+    c = specsim.config.load_config('test')
+    i = initialize(c)
+    i.plot_field_distortion()

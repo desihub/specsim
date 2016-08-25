@@ -136,6 +136,16 @@ observation:
     observatory: APO
     constants:
         exposure_time: 1000.0 s
+        # Atmospheric pressure at the telescope (not at sea level) used
+        # to calculate atmospheric refraction.  Leave commented out to use a
+        # nominal value calculated for the observatory elevation.
+        pressure: 79 kPa
+        # Air temperature at the telescope used to calculate atmospheric
+        # refraction (but only has a small effect).
+        temperature: 15 deg_C
+        # Relative humidity (0-1) at the telescope used to calculate atmospheric
+        # refraction (but only has a small effect).
+        relative_humidity: 0.
     exposure_start:
         timestamp:
             when: 57625

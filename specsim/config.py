@@ -196,7 +196,7 @@ class Configuration(Node):
         return astropy.time.Time(node.when, format=format, scale=scale)
 
 
-    def get_constants(self, parent, required_names=None):
+    def get_constants(self, parent, required_names=None, optional_names=None):
         """Interpret a constants node in this configuration.
 
         Parameters
@@ -209,6 +209,10 @@ class Configuration(Node):
             method to succeed.  If None, then no specific names are required.
             When specified, exactly these names are required and any other
             names will raise a RuntimeError.
+        optional_names : iterable or None
+            List of constant names that are optional for the parent node.
+            When specified, all non-required names must be listed here or
+            else a RuntimeError will be raised.
 
         Returns
         -------
@@ -221,14 +225,31 @@ class Configuration(Node):
         Raises
         ------
         RuntimeError
-            Constants present in the node do not match the required names.
+            Constants present in the node do not match the required or
+            optional names.
         """
         constants = {}
         node = parent.constants
         names = sorted(node.keys())
-        if required_names is not None and sorted(required_names) != names:
-            raise RuntimeError(
-                'Expected {0} for "{1}"'.format(required_names, node))
+        # All required names must be present, if specified.
+        if required_names is not None:
+            if not (set(required_names) <= set(names)):
+                raise RuntimeError(
+                    'Expected {0} for "{1}"'.format(required_names, node))
+            else:
+                extra_names = set(names) - set(required_names)
+        else:
+            extra_names = set(names)
+        # All non-required names must be listed in optional_names, if specified.
+        if optional_names is not None:
+            extra_names -= set(optional_names)
+        # If either required_names or optional_names is specified, there
+        # should not be any extra names.
+        if required_names is not None or optional_names is not None:
+            if extra_names:
+                raise RuntimeError(
+                    'Unexpected "{0}" constants: {1}.'
+                    .format(node, extra_names))
         for name in names:
             value = getattr(node, name)
             unit = None

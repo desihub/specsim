@@ -14,11 +14,6 @@ After initialization, all aspects of an observation can be modified at runtime.
 """
 from __future__ import print_function, division
 
-import numpy as np
-
-import astropy.coordinates
-import astropy.units as u
-
 import specsim.transform
 
 
@@ -31,18 +26,26 @@ class Observation(object):
         Observatory location on the surface of the earth.
     exposure_time : astropy.units.Quantity
         Open shutter exposure time for this observation.
+    exposure_start : astropy.time.Time
+        Time when the shutter opens and the exposure starts.
     pointing : astropy.coordinates.SkyCoord
         Sky position where the telescope boresight is pointing during the
         observation.
-    wavelength : nastropy.units.Quantity
+    wavelength : astropy.units.Quantity
         Array of wavelength bin centers where the simulated spectrum is
         calculated, with units.
-    timestamp : astropy.time.Time
-        Time when the shutter opens and the exposure starts.
+    pressure : astropy.units.Quantity
+        Used to create an :func:`observing model
+        <specsim.transform.create_observing_model>`.
+    temperature : astropy.units.Quantity
+        Used to create an :func:`observing model
+        <specsim.transform.create_observing_model>`.
+    relative_humidity : astropy.units.Quantity
+        Used to create an :func:`observing model
+        <specsim.transform.create_observing_model>`.
     """
     def __init__(self, location, exposure_time, exposure_start, pointing,
-                 wavelength,
-                 temperature=15*u.deg_C, pressure=None, relative_humidity=0):
+                 wavelength, pressure, temperature, relative_humidity):
         self.location = location
         self.exposure_time = exposure_time
         self.exposure_start = exposure_start
@@ -66,13 +69,18 @@ def initialize(config):
         An initialized observation.
     """
     node = config.observation
-    constants = config.get_constants(config.observation, ['exposure_time'])
+    constants = config.get_constants(
+        config.observation,
+        ['exposure_time', 'temperature', 'relative_humidity'],
+        optional_names=['pressure'])
+    pressure = constants.get('pressure', None)
     location = specsim.transform.observatories[node.observatory]
     pointing = config.get_sky(node.pointing)
     exposure_start = config.get_timestamp(node.exposure_start)
     obs = Observation(
         location, constants['exposure_time'], exposure_start, pointing,
-        config.wavelength)
+        config.wavelength, pressure, constants['temperature'],
+        constants['relative_humidity'])
 
     if config.verbose:
         print('Observatory located at {0}.'.format(obs.location))
@@ -81,5 +89,8 @@ def initialize(config):
             point.ra, point.dec))
         print('Exposure start MJD {0:.3f}, duration {1}.'.format(
             obs.exposure_start.mjd, obs.exposure_time))
+        cond = obs.observing_model
+        print('Conditions: pressure {0:.1f}, temperature {1:.1f}, RH {2:.3f}.'
+              .format(cond.pressure, cond.temperature, cond.relative_humidity))
 
     return obs

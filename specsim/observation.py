@@ -21,8 +21,17 @@ import astropy.coordinates
 
 class Observation(object):
     """Model the parameters describing a single spectroscopic observation.
+
+    Parameters
+    ----------
+    exposure_time : astropy.units.Quantity
+        Open shutter exposure time for this observation.
+    pointing : astropy.coordinates.SkyCoord
+        Sky position where the telescope boresight is pointing during the
+        observation.
     """
-    def __init__(self, pointing):
+    def __init__(self, exposure_time, pointing):
+        self.exposure_time = exposure_time
         self.pointing = pointing
 
 
@@ -40,5 +49,6 @@ def initialize(config):
         An initialized observation.
     """
     node = config.observation
+    constants = config.get_constants(config.observation, ['exposure_time'])
     pointing = config.get_sky(node.pointing)
-    return Observation(pointing)
+    return Observation(constants['exposure_time'], pointing)

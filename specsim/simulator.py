@@ -10,7 +10,7 @@ configuration.  Certain parameters can also be changed after a model has
 been initialized, for example:
 
     >>> simulator.atmosphere.airmass = 1.5
-    >>> simulator.instrument.exposure_time = 1200 * u.s
+    >>> simulator.observation.exposure_time = 1200 * u.s
 
 See :mod:`source`, :mod:`atmosphere` and :mod:`instrument` for details.
 """
@@ -184,7 +184,7 @@ class Simulator(object):
         num_source_photons[:] = (
             source_fiber_flux *
             self.instrument.photons_per_bin *
-            self.instrument.exposure_time
+            self.observation.exposure_time
             ).to(1).value
 
         # Calculate the mean number of sky photons entering the fiber
@@ -192,7 +192,7 @@ class Simulator(object):
         num_sky_photons[:] = (
             sky_fiber_flux *
             self.instrument.photons_per_bin *
-            self.instrument.exposure_time
+            self.observation.exposure_time
             ).to(1).value
 
         # Calculate the calibration from constant unit source flux above
@@ -203,7 +203,7 @@ class Simulator(object):
             self.atmosphere.extinction *
             self.instrument.get_fiber_acceptance(self.source) *
             self.instrument.photons_per_bin *
-            self.instrument.exposure_time).to(source_flux.unit ** -1).value
+            self.observation.exposure_time).to(source_flux.unit ** -1).value
 
         # Loop over cameras to calculate their individual responses.
         for output, camera in zip(self.camera_output, self.instrument.cameras):
@@ -229,7 +229,7 @@ class Simulator(object):
             # Calculate the mean number of dark current electrons in the CCD.
             num_dark_electrons[:] = (
                 camera.dark_current_per_bin *
-                self.instrument.exposure_time).to(u.electron).value
+                self.observation.exposure_time).to(u.electron).value
 
             # Copy the read noise in units of electrons.
             read_noise_electrons[:] = (
@@ -324,7 +324,7 @@ class Simulator(object):
             title = (
                 '{0}, X={1}, t={2}'
                 .format(self.source.name, self.atmosphere.airmass,
-                        self.instrument.exposure_time))
+                        self.observation.exposure_time))
         plot_simulation(self.simulated, self.camera_output, title)
 
 

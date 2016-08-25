@@ -79,7 +79,7 @@ def main(args=None):
         if args.moon_separation is not None:
             moon.separation_angle = args.moon_separation * u.deg
 
-    config.instrument.constants.exposure_time = (
+    config.observation.constants.exposure_time = (
         '{0} s'.format(args.exposure_time))
 
     if args.model is not None:

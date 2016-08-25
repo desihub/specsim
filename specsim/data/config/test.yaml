@@ -65,7 +65,6 @@ atmosphere:
 instrument:
     name: Test Instrument
     constants:
-        exposure_time: 1000.0 s
         primary_mirror_diameter: 3.797 m
         obscuration_diameter: 1.8 m
         support_width: 0.025 m
@@ -134,6 +133,8 @@ source:
 # The observation configuration is interpreted and validated by the
 # specsim.observation module.
 observation:
+    constants:
+        exposure_time: 1000.0 s
     pointing:
         sky:
             coordinates: 0h 0d

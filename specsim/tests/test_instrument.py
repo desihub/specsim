@@ -24,4 +24,4 @@ def test_resolution():
 def test_plot():
     c = specsim.config.load_config('test')
     i = initialize(c)
-    i.plot()
+    i.plot(exposure_time=1000 * u.s)

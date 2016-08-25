@@ -6,16 +6,14 @@ a simulator and then accessible via its ``instrument`` attribute, for example:
 
     >>> import specsim.simulator
     >>> simulator = specsim.simulator.Simulator('test')
-    >>> print(np.round(simulator.instrument.exposure_time, 1))
-    1000.0 s
-    >>> simulator.atmosphere.airmass
-    1.0
+    >>> print(np.round(simulator.instrument.fiber_diameter, 1))
+    107.0 um
+    >>> print(np.round(simulator.instrument.cameras[0].read_noise, 1))
+    2.9 electron / pix2
 
 See :doc:`/api` for examples of changing model parameters defined in the
-configuration.  Certain parameters can also be changed after a model has
-been initialized, for example:
-
-    >>> simulator.instrument.exposure_time = 1200 * u.s
+configuration. No attributes can be changed after a simulator has
+been created.  File a github issue if you would like to change this.
 
 See :class:`Instrument` and :class:`Camera` for details.
 """
@@ -37,9 +35,8 @@ class Instrument(object):
     A spectrograph can have multiple cameras with different wavelength
     coverage.
 
-    The only attribute that can be changed after an instrument has been
-    created is :attr:`exposure_time`.  File a github issue if you would like
-    to expand this list.
+    No instrument attributes can be changed after an instrument has been
+    created. File a github issue if you would like to change this.
 
     Parameters
     ----------
@@ -67,8 +64,6 @@ class Instrument(object):
         Maximum radius of the field of view in length units measured at
         the focal plane. Converted to an angular field of view using the
         plate scale.
-    exposure_time : astropy.units.Quantity
-        Exposure time used to scale the instrument response, with units.
     radial_scale : callable
         Callable function that returns the plate scale in the radial
         (meridional) direction (with appropriate units) as a function of
@@ -80,7 +75,7 @@ class Instrument(object):
     """
     def __init__(self, name, wavelength, fiber_acceptance_dict, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
-                 fiber_diameter, field_radius, exposure_time, radial_scale, azimuthal_scale):
+                 fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
@@ -90,7 +85,6 @@ class Instrument(object):
         self.support_width = support_width
         self.fiber_diameter = fiber_diameter
         self.field_radius = field_radius
-        self.exposure_time = exposure_time
         self.radial_scale = radial_scale
         self.azimuthal_scale = azimuthal_scale
 
@@ -172,7 +166,6 @@ class Instrument(object):
             Constant source flux to use for displaying the instrument response.
         exposure_time : astropy.units.Quantity or None
             Exposure time to use for displaying the instrument response.
-            Use the configured exposure time when this parameter is None.
         cmap : str or matplotlib.colors.Colormap
             Matplotlib colormap name or instance to use for displaying the
             instrument response.  Colors are selected for each camera
@@ -190,9 +183,6 @@ class Instrument(object):
         wave = self._wavelength.value
         wave_unit = self._wavelength.unit
         dwave = np.gradient(wave)
-
-        if exposure_time is None:
-            exposure_time = self.exposure_time
 
         for source_type in self.source_types:
             # Plot fiber acceptance fractions without labels.
@@ -630,7 +620,7 @@ def initialize(config):
 
     constants = config.get_constants(
         config.instrument,
-        ['exposure_time', 'primary_mirror_diameter', 'obscuration_diameter',
+        ['primary_mirror_diameter', 'obscuration_diameter',
          'support_width', 'fiber_diameter', 'field_radius'])
 
     try:
@@ -668,8 +658,7 @@ def initialize(config):
         name, config.wavelength, fiber_acceptance_dict, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
-        constants['field_radius'],
-        constants['exposure_time'], radial_scale, azimuthal_scale)
+        constants['field_radius'], radial_scale, azimuthal_scale)
 
     if config.verbose:
         # Print some derived quantities.

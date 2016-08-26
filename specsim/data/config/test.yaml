@@ -148,8 +148,11 @@ observation:
         relative_humidity: 0.
     exposure_start:
         timestamp:
-            when: 57625
+            when: 55000.5
             format: mjd
+        # This optional parameter adjusts the timestamp by +/-12h to
+        # achieve the specified hour angle for the boresight (ra, dec).
+        adjust_to_hour_angle: -0.5h
     pointing:
         sky:
             coordinates: 0h 0d

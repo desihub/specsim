@@ -17,6 +17,7 @@ from __future__ import print_function, division
 import numpy as np
 
 import astropy.units as u
+import astropy.coordinates
 
 import specsim.transform
 
@@ -111,18 +112,32 @@ def initialize(config):
     location = specsim.transform.observatories[node.observatory]
     pointing = config.get_sky(node.pointing)
     exposure_start = config.get_timestamp(node.exposure_start)
+    adjust_ha = getattr(node.exposure_start, 'adjust_to_hour_angle', None)
+    if adjust_ha is not None:
+        nominal_start = exposure_start
+        point_radec = pointing.transform_to('icrs')
+        hour_angle = astropy.coordinates.Angle(adjust_ha)
+        exposure_start = specsim.transform.adjust_time_to_hour_angle(
+            nominal_start, point_radec.ra, hour_angle, location.longitude)
+
     obs = Observation(
         location, constants['exposure_time'], exposure_start, pointing,
         config.wavelength, pressure, constants['temperature'],
         constants['relative_humidity'])
 
     if config.verbose:
-        print('Observatory located at {0}.'.format(obs.location))
+        print('Observatory located at (lat, lon, elev) = ',
+              '({0:.1f}, {1:.1f}, {2:.1f}).'
+              .format(*obs.location.to_geodetic()))
         point = obs.pointing.transform_to('icrs')
         print('Observing field center (ra, dec) = ({0}, {1}).'.format(
             point.ra, point.dec))
         print('Exposure start MJD {0:.3f}, duration {1}.'.format(
             obs.exposure_start.mjd, obs.exposure_time))
+        if adjust_ha is not None:
+            dt = exposure_start - nominal_start
+            print('Adjusted by {0:+.3f} for {1}.'
+                  .format(dt.to(u.hour), hour_angle.to_string(unit=u.hour)))
         cond = obs.observing_model
         print('Conditions: pressure {0:.1f}, temperature {1:.1f}, RH {2:.3f}.'
               .format(cond.pressure, cond.temperature, cond.relative_humidity))

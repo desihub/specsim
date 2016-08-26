@@ -163,13 +163,19 @@ class Simulator(object):
         num_source_photons = self.simulated['num_source_photons']
         num_sky_photons = self.simulated['num_sky_photons']
 
-        # Get the source flux incident on the atmosphere.
-        source_flux[:] = self.source.flux_out.to(source_flux.unit)
-
         # Locate the source centroid on the focal plane, as a function
         # of wavelength and time during the exposure.
         focal_x, focal_y = self.observation.locate_on_focal_plane(
             self.source.sky_position, self.instrument)
+
+        # Set the observing airmass in the atmosphere model using
+        # Eqn.3 of Krisciunas & Schaefer 1991.
+        obs_zenith = 90 * u.deg - self.observation.boresight_altaz.alt
+        obs_airmass = (1 - 0.96 * np.sin(obs_zenith) ** 2) ** -0.5
+        self.atmosphere.airmass = obs_airmass
+
+        # Get the source flux incident on the atmosphere.
+        source_flux[:] = self.source.flux_out.to(source_flux.unit)
 
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (

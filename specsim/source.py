@@ -280,18 +280,14 @@ def initialize(config):
     table = config.load_table(
         config.source, ['wavelength', 'flux'], interpolate=False)
     # Get the position of this source.
-    if hasattr(config.source.location, 'constants'):
-        constants = config.get_constants(
-            config.source.location, ['focal_x', 'focal_y'])
+    constants = config.get_constants(
+        config.source.location, optional_names=['focal_x', 'focal_y'])
+    if 'focal_x' in constants and 'focal_y' in constants:
         focal_xy = constants['focal_x'], constants['focal_y']
-        # Sky position is optional when x,y are specified.
-        if hasattr(config.source.location, 'sky'):
-            sky_position = config.get_sky(config.source.location)
-        else:
-            sky_position = None
     else:
         focal_xy = None
-        # Sky position is required when (x,y) are not specified.
+    # Sky position is optional (and ignored) when x,y are specified.
+    if hasattr(config.source.location, 'sky'):
         sky_position = config.get_sky(config.source.location)
     # Create a new Source object.
     source = Source(

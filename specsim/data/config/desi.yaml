@@ -251,13 +251,13 @@ source:
     # Location of the source on the sky. A source will not be visible if
     # it lies out the observation field of view.
     location:
-        # Un-comment this constants block to hardcode the focal plane
-        # coordinates where this source is observed.  Otherwise, they
-        # are calculated from its sky position and the observing
-        # conditions.
-        #constants:
-        #    focal_x: 0 mm
-        #    focal_y: 0 mm
+        # If focal-plane (x,y) coordinates are specified, they will be
+        # calculated from the sky coordinates and observing conditions.
+        constants:
+            #focal_x: 0 mm
+            #focal_y: 100 mm
+        # Sky coordinates are optional (and ignored) when focal-plane (x,y)
+        # are specified.
         sky: {coordinates: 0h 0d, frame: icrs }
     # Set these parameters to apply a redshift transformation.
     z_in:

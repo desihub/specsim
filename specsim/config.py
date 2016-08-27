@@ -42,6 +42,49 @@ import astropy.coordinates
 import astropy.time
 
 
+# Extract a number from a string with optional leading and
+# trailing whitespace.
+_float_pattern = re.compile(
+    '\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
+
+
+def parse_quantity(string):
+    """Parse a string containing a numeric value with optional units.
+
+    The result is a :class:`Quantity <astropy.units.Quantity` object even
+    when units are not present. Optional units are interpreted by
+    :class:`astropy.units.Unit`. Some valid examples::
+
+        1.23
+        1.23um
+        123 um / arcsec
+        1 electron/adu
+
+    Used by :meth:`Configuration.get_constants`.
+
+    Parameters
+    ----------
+    string : str
+        String to parse.
+
+    Returns
+    -------
+    astropy.units.Quantity
+
+    Raises
+    ------
+    ValueError
+        Unable to parse quantity.
+    """
+    # Look for a valid number starting the string.
+    found_number = _float_pattern.match(string)
+    if not found_number:
+        raise ValueError('Unable to parse quantity.')
+    value = float(found_number.group(1))
+    unit = string[found_number.end():]
+    return astropy.units.Quantity(value, unit)
+
+
 class Node(object):
     """A single node of a configuration data structure.
     """
@@ -196,21 +239,10 @@ class Configuration(Node):
         return astropy.time.Time(node.when, format=format, scale=scale)
 
 
-    # Extract a number from a string with optional leading and
-    # trailing whitespace.
-    _float_pattern = re.compile(
-        '\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
-
     def get_constants(self, parent, required_names=None, optional_names=None):
         """Interpret a constants node in this configuration.
 
-        Constant values consist of a number followed by an optional unit
-        interpreted by :class:`astropy.units.Unit`. Some valid examples::
-
-            1.23
-            1.23um
-            123 um / arcsec
-            1 electron/adu
+        Constant values are parsed by :func:`parse_quantity`.
 
         Parameters
         ----------
@@ -270,16 +302,14 @@ class Configuration(Node):
 
         for name in names:
             value = getattr(node, name)
-            unit = None
-            if isinstance(value, basestring):
-                # Look for a valid number starting the string.
-                found_number = self._float_pattern.match(value)
-                if not found_number:
-                    raise RuntimeError('Invalid value for {0}.{1}: {2}'
-                                       .format(node, name, value))
-                value = float(found_number.group(1))
-                unit = found_number.string[found_number.end():]
-            constants[name] = astropy.units.Quantity(value, unit)
+            try:
+                if isinstance(value, basestring):
+                    constants[name] = parse_quantity(value)
+                else:
+                    constants[name] = astropy.units.Quantity(float(value))
+            except ValueError:
+                raise RuntimeError('Invalid value for {0}.{1}: {2}'
+                                   .format(node, name, value))
         return constants
 
 

@@ -40,6 +40,10 @@ def main(args=None):
     parser.add_argument('--moon-separation', type=float, default=None,
         metavar='S',
         help='opening angle between moon and this observation in degrees')
+    parser.add_argument('--focal-x', type=str, default=None, metavar='X',
+        help='Override x coordinate of source on focal plane (with units)')
+    parser.add_argument('--focal-y', type=str, default=None, metavar='X',
+        help='Override y coordinate of source on focal plane (with units)')
     parser.add_argument('--model', type=str, default=None,
         help='source fiberloss model to use (uses default if not set)')
     parser.add_argument('--z-in', type=float, default=None,
@@ -89,10 +93,18 @@ def main(args=None):
     config.source.filter_name = args.filter
     config.source.ab_magnitude_out = args.ab_mag
 
+    if args.focal_x is not None:
+        if args.focal_y is None:
+            print('Must set both focal-x and focal-y.')
+            return -1
+        else:
+            config.source.location.constants.focal_x = args.focal_x
+            config.source.location.constants.focal_y = args.focal_y
+
     # Initialize the simulator.
     try:
         simulator = specsim.simulator.Simulator(config)
-    except Exception as e:
+    except RuntimeError as e:
         print(e)
         return -1
 
@@ -100,6 +112,9 @@ def main(args=None):
     simulator.simulate()
 
     # Summarize the results.
+    print('Source at focal plane (x, y) = ({0:.1f}, {1:.1f}).'
+          .format(simulator.focal_x, simulator.focal_y))
+    print('Observing airmass is {0:.3f}.'.format(simulator.atmosphere.airmass))
     for output in simulator.camera_output:
         camera_name = output.meta['name']
         pixel_size = output.meta['pixel_size']

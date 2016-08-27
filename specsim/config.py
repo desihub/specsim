@@ -196,8 +196,21 @@ class Configuration(Node):
         return astropy.time.Time(node.when, format=format, scale=scale)
 
 
+    # Extract a number from a string with optional leading and
+    # trailing whitespace.
+    _float_pattern = re.compile(
+        '\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
+
     def get_constants(self, parent, required_names=None, optional_names=None):
         """Interpret a constants node in this configuration.
+
+        Constant values consist of a number followed by an optional unit
+        interpreted by :class:`astropy.units.Unit`. Some valid examples::
+
+            1.23
+            1.23um
+            123 um / arcsec
+            1 electron/adu
 
         Parameters
         ----------
@@ -254,15 +267,18 @@ class Configuration(Node):
                 raise RuntimeError(
                     'Unexpected "{0}.constants" names: {1}.'
                     .format(parent, extra_names))
+
         for name in names:
             value = getattr(node, name)
             unit = None
             if isinstance(value, basestring):
-                # A white space delimeter is required between value and units.
-                tokens = value.split(None, 1)
-                value = float(tokens[0])
-                if len(tokens) > 1:
-                    unit = tokens[1]
+                # Look for a valid number starting the string.
+                found_number = self._float_pattern.match(value)
+                if not found_number:
+                    raise RuntimeError('Invalid value for {0}.{1}: {2}'
+                                       .format(node, name, value))
+                value = float(found_number.group(1))
+                unit = found_number.string[found_number.end():]
             constants[name] = astropy.units.Quantity(value, unit)
         return constants
 

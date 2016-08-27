@@ -125,8 +125,8 @@ source:
         # If focal-plane (x,y) coordinates are left blank, they will be
         # calculated from the sky coordinates and observing conditions.
         constants:
-            focal_x: 0 mm
-            focal_y: 100 mm
+            focal_x: 0mm
+            focal_y: 100mm
         # Sky coordinates are optional (and ignored) when focal-plane (x,y)
         # are specified.
         sky: {coordinates: 0h 0d, frame: icrs }

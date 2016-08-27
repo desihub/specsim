@@ -119,6 +119,8 @@ def initialize(config):
         hour_angle = astropy.coordinates.Angle(adjust_ha)
         exposure_start = specsim.transform.adjust_time_to_hour_angle(
             nominal_start, point_radec.ra, hour_angle, location.longitude)
+        # Put the requested HA at the middle of the exposure.
+        exposure_start -= 0.5 * constants['exposure_time']
 
     obs = Observation(
         location, constants['exposure_time'], exposure_start, pointing,
@@ -136,8 +138,8 @@ def initialize(config):
             obs.exposure_start.mjd, obs.exposure_time))
         if adjust_ha is not None:
             dt = exposure_start - nominal_start
-            print('Adjusted by {0:+.3f} for {1}.'
-                  .format(dt.to(u.hour), hour_angle.to_string(unit=u.hour)))
+            print('Adjusted by {0:+.3f} for HA {1}.'
+                  .format(dt.to(u.hour), hour_angle))
         cond = obs.observing_model
         print('Conditions: pressure {0:.1f}, temperature {1:.1f}, RH {2:.3f}.'
               .format(cond.pressure, cond.temperature, cond.relative_humidity))

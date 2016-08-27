@@ -230,12 +230,16 @@ class Configuration(Node):
         """
         constants = {}
         node = parent.constants
-        names = sorted(node.keys())
+        if node is None:
+            names = []
+        else:
+            names = sorted(node.keys())
         # All required names must be present, if specified.
         if required_names is not None:
             if not (set(required_names) <= set(names)):
                 raise RuntimeError(
-                    'Expected {0} for "{1}"'.format(required_names, node))
+                    'Expected {0} for "{1}.constants"'
+                    .format(required_names, parent))
             else:
                 extra_names = set(names) - set(required_names)
         else:
@@ -248,8 +252,8 @@ class Configuration(Node):
         if required_names is not None or optional_names is not None:
             if extra_names:
                 raise RuntimeError(
-                    'Unexpected "{0}" constants: {1}.'
-                    .format(node, extra_names))
+                    'Unexpected "{0}.constants" names: {1}.'
+                    .format(parent, extra_names))
         for name in names:
             value = getattr(node, name)
             unit = None

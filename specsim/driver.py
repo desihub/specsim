@@ -27,8 +27,8 @@ def main(args=None):
         help='provide verbose output on progress')
     parser.add_argument('-c', '--config', default='test',
         help='name of the simulation configuration to use')
-    parser.add_argument('--exposure-time', type=float, default=1000.,
-        help='exposure time in seconds to use.')
+    parser.add_argument('--exposure-time', type=str, default='1000s',
+        help='exposure time in to use (with units)')
     parser.add_argument('--sky-condition', type=str, default=None,
         help='sky condition to use (uses default if not set)')
     parser.add_argument('--airmass', type=float, default=1.,
@@ -83,8 +83,7 @@ def main(args=None):
         if args.moon_separation is not None:
             moon.separation_angle = args.moon_separation * u.deg
 
-    config.observation.constants.exposure_time = (
-        '{0} s'.format(args.exposure_time))
+    config.observation.constants.exposure_time = args.exposure_time
 
     if args.model is not None:
         config.source.type = args.model

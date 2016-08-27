@@ -167,12 +167,13 @@ configuration scheme:
 +-----------------------------+------------------------------------------------+
 | `ccd.*.gain`                | `instrument.cameras.*.constants.gain`          |
 +-----------------------------+------------------------------------------------+
-| `exptime`                   | `instrument.constants.exposure_time`           |
+| `exptime`                   | `observation.constants.exposure_time`          |
 +-----------------------------+------------------------------------------------+
 
 In addition to name mappings above, the specsim configuration values all have
 machine-readable units attached in a :ref:`constants section <config-constants>`
-(unlike the corresponding `desimodel` values, where units are specified in comments).
+(unlike the corresponding `desimodel` values, where units are specified in
+comments).
 
 Atmosphere
 ^^^^^^^^^^

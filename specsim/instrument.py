@@ -98,15 +98,6 @@ class Instrument(object):
         self.effective_area = (
             math.pi * ((0.5 * D) ** 2 - (0.5 * obs) ** 2) - 4 * support_area)
 
-        # Calculate the fiber area on the sky assuming the fiber is
-        # positioned at the center of the focal plane.
-        focal_plane_r = 0 * u.mm
-        radial_size = (
-            0.5 * self.fiber_diameter / self.radial_scale(focal_plane_r))
-        azimuthal_size = (
-            0.5 * self.fiber_diameter / self.azimuthal_scale(focal_plane_r))
-        self.fiber_area = np.pi * radial_size * azimuthal_size
-
         # Tabulate the mapping between focal plane radius and boresight
         # opening angle by integrating the radial plate scale.
         # Use mm and radians as the canonical units.
@@ -826,8 +817,6 @@ def initialize(config):
         # Print some derived quantities.
         print('Telescope effective area: {0:.3f}'
               .format(instrument.effective_area))
-        print('Fiber entrance area: {0:.3f}'
-              .format(instrument.fiber_area))
         print('Field of view diameter: {0:.1f} = {1:.2f}.'
               .format(2 * instrument.field_radius.to(u.mm),
                       2 * instrument.field_angle.to(u.deg)))

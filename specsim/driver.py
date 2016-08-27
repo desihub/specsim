@@ -92,20 +92,24 @@ def main(args=None):
     config.source.filter_name = args.filter
     config.source.ab_magnitude_out = args.ab_mag
 
-    if args.focal_x is not None:
-        if args.focal_y is None:
-            print('Must set both focal-x and focal-y.')
-            return -1
-        else:
-            config.source.location.constants.focal_x = args.focal_x
-            config.source.location.constants.focal_y = args.focal_y
-
     # Initialize the simulator.
     try:
         simulator = specsim.simulator.Simulator(config)
     except RuntimeError as e:
         print(e)
         return -1
+
+    # Set parameters after configuration.
+    simulator.observation.exposure_time = specsim.config.parse_quantity(
+        args.exposure_time)
+    if args.focal_x is not None:
+        if args.focal_y is None:
+            print('Must set both focal-x and focal-y.')
+            return -1
+        else:
+            focal_x = specsim.config.parse_quantity(args.focal_x)
+            focal_y = specsim.config.parse_quantity(args.focal_y)
+            simulator.source.focal_xy = focal_x, focal_y
 
     # Perform the simulation.
     simulator.simulate()

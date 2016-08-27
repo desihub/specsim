@@ -129,7 +129,7 @@ source:
             focal_y: 100mm
         # Sky coordinates are optional (and ignored) when focal-plane (x,y)
         # are specified.
-        sky: {coordinates: 0h 0d, frame: icrs }
+        sky: { coordinates: 0h 0d, frame: icrs }
     # Set these parameters to apply a redshift transformation.
     z_in:
     z_out:

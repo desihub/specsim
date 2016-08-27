@@ -35,6 +35,12 @@ class Source(object):
     :meth:`update_in` and :meth:`update_out`. A simulation uses only the
     attribute :attr:`flux_out` for its calculations.
 
+    The simulation needs to locate a source in the focal plane.  This is
+    either done by specifying (x,y) coordinates in the focal plane, or else
+    by specifying the sky position of the source and calculating its
+    focal plane coordinates from the observing time, pointing and atmospheric
+    conditions.
+
     Parameters
     ----------
     name : str
@@ -48,9 +54,17 @@ class Source(object):
         Array of increasing input wavelengths with units.
     flux_in : astropy.units.Quantity
         Array of input flux values tabulated at wavelength_in.
-    sky_position : astropy.coordinates.SkyCoord
+    focal_xy : tuple or None
+        Tuple of astropy.units.Quantity objects giving the focal plane
+        coordinates where this source is observed.  When None, the focal
+        plane position is calculated from the sky_position and observing
+        conditions.
+    sky_position : astropy.coordinates.SkyCoord or None
         Location of this source in the sky. A source will not be visible
-        unless its location is within the instrument field of view.
+        unless its location is within the instrument field of view. Used to
+        determine the location of this source on the focal plane, using
+        the observing time, pointing and atmospheric conditions. Ignored
+        when focal_xy is not None.
     z_in : float or None
         Redshift of (wavelength_in, flux_in) to assume for redshift transforms.
         Ignored unless z_out is set and must be set when z_out is set.
@@ -66,8 +80,8 @@ class Source(object):
         redshift transform is applied before normalizing.
     """
     def __init__(self, name, type_name, wavelength_out, wavelength_in, flux_in,
-                 sky_position, z_in=None, z_out=None, filter_name=None,
-                 ab_magnitude_out=None):
+                 focal_xy, sky_position, z_in=None, z_out=None,
+                 filter_name=None, ab_magnitude_out=None):
 
         wavelength_out = np.asanyarray(wavelength_out)
         if len(wavelength_out.shape) != 1:
@@ -81,6 +95,10 @@ class Source(object):
         self.update_in(name, type_name, wavelength_in, flux_in, z_in)
         self.update_out(z_out, filter_name, ab_magnitude_out)
 
+        if focal_xy is None and sky_position is None:
+            raise ValueError(
+                'Either focal_xy or sky_position must be specified.')
+        self.focal_xy = focal_xy
         self.sky_position = sky_position
 
 
@@ -261,20 +279,36 @@ def initialize(config):
     # Load a table of (wavelength_in, flux_in) without any interpolation.
     table = config.load_table(
         config.source, ['wavelength', 'flux'], interpolate=False)
-    # Get the sky position of this source.
-    sky_position = config.get_sky(config.source.location)
+    # Get the position of this source.
+    if hasattr(config.source.location, 'constants'):
+        constants = config.get_constants(
+            config.source.location, ['focal_x', 'focal_y'])
+        focal_xy = constants['focal_x'], constants['focal_y']
+        # Sky position is optional when x,y are specified.
+        if hasattr(config.source.location, 'sky'):
+            sky_position = config.get_sky(config.source.location)
+        else:
+            sky_position = None
+    else:
+        focal_xy = None
+        # Sky position is required when (x,y) are not specified.
+        sky_position = config.get_sky(config.source.location)
     # Create a new Source object.
     source = Source(
         config.source.name, config.source.type, config.wavelength,
-        table['wavelength'], table['flux'], sky_position, config.source.z_in,
-        config.source.z_out, config.source.filter_name,
+        table['wavelength'], table['flux'], focal_xy, sky_position,
+        config.source.z_in, config.source.z_out, config.source.filter_name,
         config.source.ab_magnitude_out)
     if config.verbose:
         print("Initialized source '{0}' of type '{1}'."
               .format(source.name, source.type_name))
-        radec = sky_position.transform_to('icrs')
-        print('Source located at (ra, dec) = ({0}, {1}).'
-              .format(radec.ra, radec.dec))
+        if focal_xy is not None:
+            print('Source located at (x, y) = ({0}, {1}).'
+                  .format(*focal_xy))
+        if sky_position is not None:
+            radec = sky_position.transform_to('icrs')
+            print('Source located at (ra, dec) = ({0}, {1}).'
+                  .format(radec.ra, radec.dec))
         if config.source.z_out is not None:
             print('Redshift transformed from {0:.3f} to {1:.3f}.'
                   .format(config.source.z_in, config.source.z_out))

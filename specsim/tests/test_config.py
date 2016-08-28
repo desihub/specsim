@@ -80,6 +80,17 @@ def test_parse_quantity():
     assert parse_quantity('1.23 m') == 1.23 * u.m
     assert parse_quantity('1.23 m/s') == 1.23 * u.m / u.s
     assert parse_quantity('1.23 m / s') == 1.23 * u.m / u.s
+    with pytest.raises(ValueError):
+        parse_quantity('123 abc')
+    with pytest.raises(ValueError):
+        parse_quantity('m/s')
+
+
+def test_parse_dimensions():
+    assert parse_quantity('1min', 's') == 60 * u.s
+    assert parse_quantity('1min', u.s) == 60 * u.s
+    with pytest.raises(ValueError):
+        parse_quantity('1m', u.s)
 
 
 def test_table():

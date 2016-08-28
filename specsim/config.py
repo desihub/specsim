@@ -48,7 +48,7 @@ _float_pattern = re.compile(
     '\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
 
 
-def parse_quantity(string):
+def parse_quantity(string, dimensions=None):
     """Parse a string containing a numeric value with optional units.
 
     The result is a :class:`Quantity <astropy.units.Quantity` object even
@@ -66,10 +66,16 @@ def parse_quantity(string):
     ----------
     string : str
         String to parse.
+    dimensions : str or astropy.units.Unit or None
+        The units of the input quantity are expected to have the same
+        dimensions as these units, if not None.  Raises a ValueError if
+        the input quantity is not convertible to dimensions.
 
     Returns
     -------
     astropy.units.Quantity
+        If dimensions is not None, the returned quantity will be converted
+        to its units.
 
     Raises
     ------
@@ -82,7 +88,16 @@ def parse_quantity(string):
         raise ValueError('Unable to parse quantity.')
     value = float(found_number.group(1))
     unit = string[found_number.end():]
-    return astropy.units.Quantity(value, unit)
+    quantity = astropy.units.Quantity(value, unit)
+    if dimensions is not None:
+        try:
+            if not isinstance(dimensions, astropy.units.Unit):
+                dimensions = astropy.units.Unit(dimensions)
+            quantity = quantity.to(dimensions)
+        except (ValueError, astropy.units.UnitConversionError):
+            raise ValueError('Quantity "{0}" is not convertible to {1}.'
+                             .format(string, dimensions))
+    return quantity
 
 
 class Node(object):

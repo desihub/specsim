@@ -83,8 +83,6 @@ def main(args=None):
         if args.moon_separation is not None:
             moon.separation_angle = args.moon_separation * u.deg
 
-    config.observation.constants.exposure_time = args.exposure_time
-
     if args.model is not None:
         config.source.type = args.model
     config.source.z_in = args.z_in
@@ -100,16 +98,20 @@ def main(args=None):
         return -1
 
     # Set parameters after configuration.
-    simulator.observation.exposure_time = specsim.config.parse_quantity(
-        args.exposure_time)
-    if args.focal_x is not None:
-        if args.focal_y is None:
-            print('Must set both focal-x and focal-y.')
-            return -1
-        else:
-            focal_x = specsim.config.parse_quantity(args.focal_x)
-            focal_y = specsim.config.parse_quantity(args.focal_y)
-            simulator.source.focal_xy = focal_x, focal_y
+    try:
+        simulator.observation.exposure_time = specsim.config.parse_quantity(
+            args.exposure_time, u.s)
+        if args.focal_x is not None:
+            if args.focal_y is None:
+                print('Must set both focal-x and focal-y.')
+                return -1
+            else:
+                focal_x = specsim.config.parse_quantity(args.focal_x, u.mm)
+                focal_y = specsim.config.parse_quantity(args.focal_y, u.mm)
+                simulator.source.focal_xy = focal_x, focal_y
+    except ValueError as e:
+        print(e)
+        return -1
 
     # Perform the simulation.
     simulator.simulate()

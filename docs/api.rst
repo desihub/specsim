@@ -50,6 +50,10 @@ repeating the initialization step, for example::
 .. automodapi:: specsim.instrument
     :no-inheritance-diagram:
 
+.. _camera-api:
+.. automodapi:: specsim.camera
+    :no-inheritance-diagram:
+
 .. _source-api:
 .. automodapi:: specsim.source
     :no-inheritance-diagram:

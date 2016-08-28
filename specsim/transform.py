@@ -39,6 +39,8 @@ low_altitude_threshold : :class:`astropy.coordinates.Angle`
     will issue a `UserWarning` if they encounter a lower value, unless
     refraction has been disabled by specifying zero pressure.
 """
+from __future__ import print_function, division
+
 import warnings
 
 import numpy as np
@@ -522,31 +524,35 @@ def adjust_time_to_hour_angle(nominal_time, target_ra, hour_angle,
     when = nominal_time.copy()
     num_iterations = 0
     while True:
-        # Calculate the nominal local sidereal time of the target.
-        try:
-            lst = when.sidereal_time('apparent', longitude) - target_ra
-        # Recent versions of astropy raise a subclass of IndexError
-        # astropy.utils.iers.iers.IERSRangeError
-        except IndexError:
-            # Hardcode the mean UT1 - UTC offset for MJD in [54600, 57800]
-            # in order to avoid issues with missing IERS tables.
-            when.delta_ut1_utc = -0.1225
-            lst = when.sidereal_time('apparent', longitude) - target_ra
+        with warnings.catch_warnings():
+            # Ignore the UnicodeWarning that occurs in the astropy
+            # implementation of sidereal_time().
+            warnings.filterwarnings('ignore', 'Unicode')
+            # Calculate the nominal local sidereal time of the target.
+            try:
+                lst = when.sidereal_time('apparent', longitude) - target_ra
+            # Recent versions of astropy raise a subclass of IndexError
+            # astropy.utils.iers.iers.IERSRangeError
+            except IndexError:
+                # Hardcode the mean UT1 - UTC offset for MJD in [54600, 57800]
+                # in order to avoid issues with missing IERS tables.
+                when.delta_ut1_utc = -0.1225
+                lst = when.sidereal_time('apparent', longitude) - target_ra
 
-        # Are we close enough?
-        if np.abs((lst - hour_angle).wrap_at('12 hours')) <= max_error:
-            break
+            # Are we close enough?
+            if np.abs((lst - hour_angle).wrap_at('12 hours')) <= max_error:
+                break
 
-        # Have we run out of iterations?
-        if num_iterations >= max_iterations:
-            raise RuntimeError(
-                'Reached max_iterations = {}.'.format(max_iterations))
-        num_iterations += 1
+            # Have we run out of iterations?
+            if num_iterations >= max_iterations:
+                raise RuntimeError(
+                    'Reached max_iterations = {}.'.format(max_iterations))
+            num_iterations += 1
 
-        # Offset to the nearest time with the desired hour angle.
-        # Correct for the fact that 360 deg corresponds to a sidereal day.
-        when = (when - (lst - hour_angle).wrap_at('12 hours') * u.hour /
-                (15 * u.deg) * sidereal)
+            # Offset to the nearest time with the desired hour angle.
+            # Correct for the fact that 360 deg corresponds to a sidereal day.
+            when = (when - (lst - hour_angle).wrap_at('12 hours') * u.hour /
+                    (15 * u.deg) * sidereal)
 
     return when
 

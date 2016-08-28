@@ -94,12 +94,19 @@ instrument:
     name: DESI
     constants:
         # These values are copied from desimodel/data/desi.yaml
-        exposure_time: 1000.0 s
         primary_mirror_diameter: 3.797 m
         obscuration_diameter: 1.8 m
         support_width: 0.025 m
-        # Averaged over the focal plane for 107.0 um physical diameter.
-        fiber_diameter: 1.52 arcsec
+        fiber_diameter: 107.0 um
+        field_radius: 414.0 mm
+    plate_scale:
+        table:
+            path: focalplane/platescale.txt
+            format: ascii
+            columns:
+                radius: { index: 0, unit: mm }
+                radial_scale: { index: 6, unit: um/arcsec }
+                azimuthal_scale: { index: 7, unit: um/arcsec }
     fiberloss:
         table:
             format: ascii
@@ -241,9 +248,48 @@ source:
                 index: 1
                 # Note the factor of 1e-17 in the units!
                 unit: 1e-17 erg / (Angstrom cm2 s)
+    # Location of the source on the sky. A source will not be visible if
+    # it lies out the observation field of view.
+    location:
+        # If focal-plane (x,y) coordinates are specified, they will be
+        # calculated from the sky coordinates and observing conditions.
+        constants:
+            #focal_x: 0 mm
+            #focal_y: 100 mm
+        # Sky coordinates are optional (and ignored) when focal-plane (x,y)
+        # are specified.
+        sky: { coordinates: 0h 0d, frame: icrs }
     # Set these parameters to apply a redshift transformation.
     z_in:
     z_out:
     # Set these parameters to normalize in a specified filter.
     filter_name:
     ab_magnitude_out:
+
+# The observation configuration is interpreted and validated by the
+# specsim.observation module.
+observation:
+    observatory: KPNO
+    constants:
+        exposure_time: 1000.0 s
+        # Atmospheric pressure at the telescope (not at sea level) used
+        # to calculate atmospheric refraction.  Leave commented out to use a
+        # nominal value calculated for the observatory elevation.
+        #pressure: 79 kPa
+        # Air temperature at the telescope used to calculate atmospheric
+        # refraction (but only has a small effect).
+        temperature: 15 deg_C
+        # Relative humidity (0-1) at the telescope used to calculate atmospheric
+        # refraction (but only has a small effect).
+        relative_humidity: 0.
+    exposure_start:
+        timestamp:
+            when: 55000.5
+            format: mjd
+        # This optional parameter adjusts the timestamp by +/-12h to
+        # achieve the specified hour angle for the boresight (ra, dec).
+        #adjust_to_hour_angle: -0.5h
+    pointing:
+        sky:
+            coordinates: 0h 0d
+            frame: icrs

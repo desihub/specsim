@@ -27,8 +27,8 @@ def main(args=None):
         help='provide verbose output on progress')
     parser.add_argument('-c', '--config', default='test',
         help='name of the simulation configuration to use')
-    parser.add_argument('--exposure-time', type=float, default=1000.,
-        help='exposure time in seconds to use.')
+    parser.add_argument('--exposure-time', type=str, default='1000s',
+        help='exposure time in to use (with units)')
     parser.add_argument('--sky-condition', type=str, default=None,
         help='sky condition to use (uses default if not set)')
     parser.add_argument('--airmass', type=float, default=1.,
@@ -40,6 +40,10 @@ def main(args=None):
     parser.add_argument('--moon-separation', type=float, default=None,
         metavar='S',
         help='opening angle between moon and this observation in degrees')
+    parser.add_argument('--focal-x', type=str, default=None, metavar='X',
+        help='Override x coordinate of source on focal plane (with units)')
+    parser.add_argument('--focal-y', type=str, default=None, metavar='X',
+        help='Override y coordinate of source on focal plane (with units)')
     parser.add_argument('--model', type=str, default=None,
         help='source fiberloss model to use (uses default if not set)')
     parser.add_argument('--z-in', type=float, default=None,
@@ -79,9 +83,6 @@ def main(args=None):
         if args.moon_separation is not None:
             moon.separation_angle = args.moon_separation * u.deg
 
-    config.instrument.constants.exposure_time = (
-        '{0} s'.format(args.exposure_time))
-
     if args.model is not None:
         config.source.type = args.model
     config.source.z_in = args.z_in
@@ -92,7 +93,23 @@ def main(args=None):
     # Initialize the simulator.
     try:
         simulator = specsim.simulator.Simulator(config)
-    except Exception as e:
+    except RuntimeError as e:
+        print(e)
+        return -1
+
+    # Set parameters after configuration.
+    try:
+        simulator.observation.exposure_time = specsim.config.parse_quantity(
+            args.exposure_time, u.s)
+        if args.focal_x is not None:
+            if args.focal_y is None:
+                print('Must set both focal-x and focal-y.')
+                return -1
+            else:
+                focal_x = specsim.config.parse_quantity(args.focal_x, u.mm)
+                focal_y = specsim.config.parse_quantity(args.focal_y, u.mm)
+                simulator.source.focal_xy = focal_x, focal_y
+    except ValueError as e:
         print(e)
         return -1
 
@@ -100,6 +117,9 @@ def main(args=None):
     simulator.simulate()
 
     # Summarize the results.
+    print('Source at focal plane (x, y) = ({0:.1f}, {1:.1f}).'
+          .format(simulator.focal_x, simulator.focal_y))
+    print('Observing airmass is {0:.3f}.'.format(simulator.atmosphere.airmass))
     for output in simulator.camera_output:
         camera_name = output.meta['name']
         pixel_size = output.meta['pixel_size']

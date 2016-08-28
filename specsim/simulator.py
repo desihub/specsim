@@ -10,7 +10,7 @@ configuration.  Certain parameters can also be changed after a model has
 been initialized, for example:
 
     >>> simulator.atmosphere.airmass = 1.5
-    >>> simulator.instrument.exposure_time = 1200 * u.s
+    >>> simulator.observation.exposure_time = 1200 * u.s
 
 See :mod:`source`, :mod:`atmosphere` and :mod:`instrument` for details.
 """
@@ -28,6 +28,7 @@ import specsim.config
 import specsim.atmosphere
 import specsim.instrument
 import specsim.source
+import specsim.observation
 
 
 class Simulator(object):
@@ -49,6 +50,7 @@ class Simulator(object):
         self.atmosphere = specsim.atmosphere.initialize(config)
         self.instrument = specsim.instrument.initialize(config)
         self.source = specsim.source.initialize(config)
+        self.observation = specsim.observation.initialize(config)
 
         # Initialize our table of simulation results.
         self.camera_names = []
@@ -151,7 +153,8 @@ class Simulator(object):
         """Simulate a single exposure.
 
         Simulation results are written to internal tables that are overwritten
-        each time this method is called.
+        each time this method is called.  Some metadata is also saved as
+        attributes of this object: `focal_x`, `focal_y`, `fiber_area`.
         """
         # Get references to our results columns.
         wavelength = self.simulated['wavelength']
@@ -160,6 +163,35 @@ class Simulator(object):
         sky_fiber_flux = self.simulated['sky_fiber_flux']
         num_source_photons = self.simulated['num_source_photons']
         num_sky_photons = self.simulated['num_sky_photons']
+
+        # Locate the source centroid on the focal plane.
+        if self.source.focal_xy is None:
+            self.focal_x, self.focal_y = self.observation.locate_on_focal_plane(
+                self.source.sky_position, self.instrument)
+
+            # Set the observing airmass in the atmosphere model using
+            # Eqn.3 of Krisciunas & Schaefer 1991.
+            obs_zenith = 90 * u.deg - self.observation.boresight_altaz.alt
+            obs_airmass = (1 - 0.96 * np.sin(obs_zenith) ** 2) ** -0.5
+            self.atmosphere.airmass = obs_airmass
+        else:
+            self.focal_x, self.focal_y = self.source.focal_xy
+
+        # Check that the source is within the field of view.
+        focal_r = np.sqrt(self.focal_x ** 2 + self.focal_y ** 2)
+        if focal_r > self.instrument.field_radius:
+            raise RuntimeError(
+                'Source is located outside the field of view: r = {0:.1f}'
+                .format(focal_r))
+
+        # Calculate the on-sky fiber area at this focal-plane location.
+        radial_fiber_size = (
+            0.5 * self.instrument.fiber_diameter /
+            self.instrument.radial_scale(focal_r))
+        azimuthal_fiber_size = (
+            0.5 * self.instrument.fiber_diameter /
+            self.instrument.azimuthal_scale(focal_r))
+        self.fiber_area = np.pi * radial_fiber_size * azimuthal_fiber_size
 
         # Get the source flux incident on the atmosphere.
         source_flux[:] = self.source.flux_out.to(source_flux.unit)
@@ -174,7 +206,7 @@ class Simulator(object):
         # Calculate the sky flux entering a fiber.
         sky_fiber_flux[:] = (
             self.atmosphere.surface_brightness *
-            self.instrument.fiber_area
+            self.fiber_area
             ).to(sky_fiber_flux.unit)
 
         # Calculate the mean number of source photons entering the fiber
@@ -182,7 +214,7 @@ class Simulator(object):
         num_source_photons[:] = (
             source_fiber_flux *
             self.instrument.photons_per_bin *
-            self.instrument.exposure_time
+            self.observation.exposure_time
             ).to(1).value
 
         # Calculate the mean number of sky photons entering the fiber
@@ -190,7 +222,7 @@ class Simulator(object):
         num_sky_photons[:] = (
             sky_fiber_flux *
             self.instrument.photons_per_bin *
-            self.instrument.exposure_time
+            self.observation.exposure_time
             ).to(1).value
 
         # Calculate the calibration from constant unit source flux above
@@ -201,7 +233,7 @@ class Simulator(object):
             self.atmosphere.extinction *
             self.instrument.get_fiber_acceptance(self.source) *
             self.instrument.photons_per_bin *
-            self.instrument.exposure_time).to(source_flux.unit ** -1).value
+            self.observation.exposure_time).to(source_flux.unit ** -1).value
 
         # Loop over cameras to calculate their individual responses.
         for output, camera in zip(self.camera_output, self.instrument.cameras):
@@ -227,7 +259,7 @@ class Simulator(object):
             # Calculate the mean number of dark current electrons in the CCD.
             num_dark_electrons[:] = (
                 camera.dark_current_per_bin *
-                self.instrument.exposure_time).to(u.electron).value
+                self.observation.exposure_time).to(u.electron).value
 
             # Copy the read noise in units of electrons.
             read_noise_electrons[:] = (
@@ -322,7 +354,7 @@ class Simulator(object):
             title = (
                 '{0}, X={1}, t={2}'
                 .format(self.source.name, self.atmosphere.airmass,
-                        self.instrument.exposure_time))
+                        self.observation.exposure_time))
         plot_simulation(self.simulated, self.camera_output, title)
 
 

@@ -7,6 +7,9 @@
 - Add testing against LTS release of astropy.
 - Drop testing against numpy 1.6 and add numpy 1.11.
 - Update readthedocs URLs (.org -> .io).
+- Implement optional radial and azimuthal plate scales varying with radius.
+- Add observation config parameters to support sky <-> xy transforms.
+- Refactor instrument module into separate instrument and camera modules.
 
 0.4 (2016-03-08)
 ----------------

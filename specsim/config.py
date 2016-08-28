@@ -38,6 +38,66 @@ import scipy.interpolate
 import astropy.units
 import astropy.table
 import astropy.utils.data
+import astropy.coordinates
+import astropy.time
+
+
+# Extract a number from a string with optional leading and
+# trailing whitespace.
+_float_pattern = re.compile(
+    '\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
+
+
+def parse_quantity(string, dimensions=None):
+    """Parse a string containing a numeric value with optional units.
+
+    The result is a :class:`Quantity <astropy.units.Quantity` object even
+    when units are not present. Optional units are interpreted by
+    :class:`astropy.units.Unit`. Some valid examples::
+
+        1.23
+        1.23um
+        123 um / arcsec
+        1 electron/adu
+
+    Used by :meth:`Configuration.get_constants`.
+
+    Parameters
+    ----------
+    string : str
+        String to parse.
+    dimensions : str or astropy.units.Unit or None
+        The units of the input quantity are expected to have the same
+        dimensions as these units, if not None.  Raises a ValueError if
+        the input quantity is not convertible to dimensions.
+
+    Returns
+    -------
+    astropy.units.Quantity
+        If dimensions is not None, the returned quantity will be converted
+        to its units.
+
+    Raises
+    ------
+    ValueError
+        Unable to parse quantity.
+    """
+    # Look for a valid number starting the string.
+    found_number = _float_pattern.match(string)
+    if not found_number:
+        raise ValueError('Unable to parse quantity.')
+    value = float(found_number.group(1))
+    unit = string[found_number.end():]
+    quantity = astropy.units.Quantity(value, unit)
+    if dimensions is not None:
+        try:
+            if not isinstance(dimensions, astropy.units.Unit):
+                dimensions = astropy.units.Unit(dimensions)
+            quantity = quantity.to(dimensions)
+        except (ValueError, astropy.units.UnitConversionError):
+            raise ValueError('Quantity "{0}" is not convertible to {1}.'
+                             .format(string, dimensions))
+    return quantity
 
 
 class Node(object):
@@ -155,8 +215,49 @@ class Configuration(Node):
                 raise ValueError('Environment variable not set: {0}.'.format(e))
 
 
-    def get_constants(self, parent, required_names=None):
+    def get_sky(self, parent):
+        """Create a sky coordinate from a configuration node.
+
+        Parameters
+        ----------
+        parent : :class:`Node`
+            Parent node in this configuration whose ``sky`` child
+            will be processed.
+
+        Returns
+        -------
+        astropy.coordinates.SkyCoord
+            Sky coordinates object constructed from node parameters.
+        """
+        node = parent.sky
+        frame = getattr(node, 'frame', None)
+        return astropy.coordinates.SkyCoord(node.coordinates, frame=frame)
+
+
+    def get_timestamp(self, parent):
+        """Create a timestamp from a configuration node.
+
+        Parameters
+        ----------
+        parent : :class:`Node`
+            Parent node in this configuration whose ``timestamp`` child
+            will be processed.
+
+        Returns
+        -------
+        astropy.time.Time
+            Timestamp object constructed from node parameters.
+        """
+        node = parent.timestamp
+        format = getattr(node, 'format', None)
+        scale = getattr(node, 'scale', None)
+        return astropy.time.Time(node.when, format=format, scale=scale)
+
+
+    def get_constants(self, parent, required_names=None, optional_names=None):
         """Interpret a constants node in this configuration.
+
+        Constant values are parsed by :func:`parse_quantity`.
 
         Parameters
         ----------
@@ -168,6 +269,10 @@ class Configuration(Node):
             method to succeed.  If None, then no specific names are required.
             When specified, exactly these names are required and any other
             names will raise a RuntimeError.
+        optional_names : iterable or None
+            List of constant names that are optional for the parent node.
+            When specified, all non-required names must be listed here or
+            else a RuntimeError will be raised.
 
         Returns
         -------
@@ -180,24 +285,46 @@ class Configuration(Node):
         Raises
         ------
         RuntimeError
-            Constants present in the node do not match the required names.
+            Constants present in the node do not match the required or
+            optional names.
         """
         constants = {}
         node = parent.constants
-        names = sorted(node.keys())
-        if required_names is not None and sorted(required_names) != names:
-            raise RuntimeError(
-                'Expected {0} for "{1}"'.format(required_names, node))
+        if node is None:
+            names = []
+        else:
+            names = sorted(node.keys())
+        # All required names must be present, if specified.
+        if required_names is not None:
+            if not (set(required_names) <= set(names)):
+                raise RuntimeError(
+                    'Expected {0} for "{1}.constants"'
+                    .format(required_names, parent))
+            else:
+                extra_names = set(names) - set(required_names)
+        else:
+            extra_names = set(names)
+        # All non-required names must be listed in optional_names, if specified.
+        if optional_names is not None:
+            extra_names -= set(optional_names)
+        # If either required_names or optional_names is specified, there
+        # should not be any extra names.
+        if required_names is not None or optional_names is not None:
+            if extra_names:
+                raise RuntimeError(
+                    'Unexpected "{0}.constants" names: {1}.'
+                    .format(parent, extra_names))
+
         for name in names:
             value = getattr(node, name)
-            unit = None
-            if isinstance(value, basestring):
-                # A white space delimeter is required between value and units.
-                tokens = value.split(None, 1)
-                value = float(tokens[0])
-                if len(tokens) > 1:
-                    unit = tokens[1]
-            constants[name] = astropy.units.Quantity(value, unit)
+            try:
+                if isinstance(value, basestring):
+                    constants[name] = parse_quantity(value)
+                else:
+                    constants[name] = astropy.units.Quantity(float(value))
+            except ValueError:
+                raise RuntimeError('Invalid value for {0}.{1}: {2}'
+                                   .format(node, name, value))
         return constants
 
 

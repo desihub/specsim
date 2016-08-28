@@ -34,7 +34,7 @@ repeating the initialization step, for example::
     results1 = simulator.simulate()
 
     simulator.atmosphere.airmass = 1.5
-    simulator.instrument.exposure_time = 20 * u.min
+    simulator.observation.exposure_time = 20 * u.min
     simulator.source.update_out(filter_name='sdss2010-r', ab_magnitude_out=21.0)
     results2 = simulator.simulate()
 
@@ -50,8 +50,16 @@ repeating the initialization step, for example::
 .. automodapi:: specsim.instrument
     :no-inheritance-diagram:
 
+.. _camera-api:
+.. automodapi:: specsim.camera
+    :no-inheritance-diagram:
+
 .. _source-api:
 .. automodapi:: specsim.source
+    :no-inheritance-diagram:
+
+.. _observation-api:
+.. automodapi:: specsim.observation
     :no-inheritance-diagram:
 
 .. _simulator-api:

@@ -155,7 +155,7 @@ configuration scheme:
 +=============================+================================================+
 | `area.M1_diameter`          | `instrument.constants.primary_mirror_diameter` |
 +-----------------------------+------------------------------------------------+
-| `fibers.diameter_arcsec`    | `instrument.constants.fiber_diameter`          |
+| `fibers.diameter_um`        | `instrument.constants.fiber_diameter`          |
 +-----------------------------+------------------------------------------------+
 | `area.obscuration_diameter` | `instrument.constants.obscuration_diameter`    |
 +-----------------------------+------------------------------------------------+
@@ -167,12 +167,13 @@ configuration scheme:
 +-----------------------------+------------------------------------------------+
 | `ccd.*.gain`                | `instrument.cameras.*.constants.gain`          |
 +-----------------------------+------------------------------------------------+
-| `exptime`                   | `instrument.constants.exposure_time`           |
+| `exptime`                   | `observation.constants.exposure_time`          |
 +-----------------------------+------------------------------------------------+
 
 In addition to name mappings above, the specsim configuration values all have
 machine-readable units attached in a :ref:`constants section <config-constants>`
-(unlike the corresponding `desimodel` values, where units are specified in comments).
+(unlike the corresponding `desimodel` values, where units are specified in
+comments).
 
 Atmosphere
 ^^^^^^^^^^

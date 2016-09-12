@@ -1,9 +1,9 @@
 0.5 (unreleased)
 ----------------
 
-- Fix github issues #41, #42.
+- Fix github issues #41, #42, #47.
 - Update to latest astropy affiliated package template.
-- Drop support for python 2.6 and add support for python 3.5.
+- Drop support for python 2.6 and add support for python 3.5 (w/o 2to3).
 - Add testing against LTS release of astropy.
 - Drop testing against numpy 1.6 and add numpy 1.11.
 - Update readthedocs URLs (.org -> .io).

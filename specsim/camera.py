@@ -191,7 +191,7 @@ class Camera(object):
 
         # Fill sparse matrix arrays.
         sparse_start = 0
-        for i in xrange(matrix_stop - matrix_start):
+        for i in range(matrix_stop - matrix_start):
             eval_slice = slice(eval_start[i], eval_stop[i])
             w = self._wavelength[eval_slice]
             dw = self._wavelength_bin_size[eval_slice]

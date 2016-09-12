@@ -50,6 +50,10 @@ import astropy.coordinates
 import astropy.constants
 from astropy import units as u
 
+try:
+    basestring          #- exists in py2
+except NameError:
+    basestring = str    #- for py3
 
 observatories = {
     'APO': astropy.coordinates.EarthLocation.from_geodetic(

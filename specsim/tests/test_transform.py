@@ -1,5 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 
+from __future__ import absolute_import, division, print_function
+
 from astropy.tests.helper import pytest, remote_data
 from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
     observatories, create_observing_model, sky_to_altaz, altaz_to_sky, \
@@ -180,7 +182,7 @@ def test_alt_warn_pressure_array():
         altaz_to_sky(alt, 0*u.deg, obs_model)
     alt = np.array([alt0 - 1, alt0 + 1]) * u.deg
     with pytest.raises(UserWarning):
-        print altaz_to_sky(alt[:, np.newaxis], 0*u.deg, obs_model).shape
+        print(altaz_to_sky(alt[:, np.newaxis], 0*u.deg, obs_model).shape)
 
 
 @remote_data

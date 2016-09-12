@@ -30,6 +30,10 @@ import specsim.instrument
 import specsim.source
 import specsim.observation
 
+try:
+    basestring          #- exists in py2
+except NameError:
+    basestring = str    #- for py3
 
 class Simulator(object):
     """Manage the simulation of a source, atmosphere and instrument.

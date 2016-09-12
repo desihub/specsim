@@ -41,6 +41,10 @@ import astropy.utils.data
 import astropy.coordinates
 import astropy.time
 
+try:
+    basestring          #- exists in py2
+except NameError:
+    basestring = str    #- for py3
 
 # Extract a number from a string with optional leading and
 # trailing whitespace.
@@ -370,7 +374,7 @@ class Configuration(Node):
             # Look for parent.table.path first.
             paths.append(os.path.join(self.abs_base_path, node.path))
         except AttributeError:
-            path_keys = node.paths.keys()
+            path_keys = list(node.paths.keys())
             for key in path_keys:
                 path = getattr(node.paths, key)
                 paths.append(os.path.join(self.abs_base_path, path))

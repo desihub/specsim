@@ -1,7 +1,7 @@
 0.6 (unreleased)
 ----------------
 
-- No changes yet.
+- Create DOI for v0.5 https://doi.org/10.5281/zenodo.154130.
 
 0.5 (2016-09-12)
 ----------------

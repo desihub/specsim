@@ -6,6 +6,9 @@ Quick simulations of fiber spectrograph response.
 Status reports for developers
 -----------------------------
 
+.. image:: https://zenodo.org/badge/41930235.svg
+   :target: https://zenodo.org/badge/latestdoi/41930235
+
 .. image:: https://travis-ci.org/desihub/specsim.png?branch=master
     :target: https://travis-ci.org/desihub/specsim
     :alt: Test Status

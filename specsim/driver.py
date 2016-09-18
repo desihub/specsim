@@ -79,9 +79,9 @@ def main(args=None):
         if args.moon_phase is not None:
             moon.moon_phase = args.moon_phase
         if args.moon_zenith is not None:
-            moon.moon_zenith = args.moon_zenith * u.deg
+            moon.moon_zenith = '{0:f}deg'.format(args.moon_zenith)
         if args.moon_separation is not None:
-            moon.separation_angle = args.moon_separation * u.deg
+            moon.separation_angle = '{0:f}deg'.format(args.moon_separation)
 
     if args.model is not None:
         config.source.type = args.model

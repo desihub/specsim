@@ -84,7 +84,10 @@ atmosphere:
             path: spectra/ZenithExtinction-KPNO.dat
     # Should extinction be applied to the sky emission?
     extinct_emission: yes
-    # Airmass to use.
+    # Airmass to use when the pointing is not calculated from the source
+    # and observation parameters. The focal_x and focal_y parameters of
+    # source.location.constants must be set in order for the airmass
+    # specified here to be used.
     airmass: 1.0
 
 # The instrument configuration is interpreted and validated by the
@@ -251,11 +254,14 @@ source:
     # Location of the source on the sky. A source will not be visible if
     # it lies out the observation field of view.
     location:
-        # If focal-plane (x,y) coordinates are specified, they will be
-        # calculated from the sky coordinates and observing conditions.
+        # If focal-plane (x,y) coordinates are not specified, they will be
+        # calculated from the sky coordinates and observing conditions
+        # and the corresponding airmass will be used for the atmosphere model.
         constants:
-            #focal_x: 0 mm
-            #focal_y: 100 mm
+            # Comment out these lines to have (x,y) and the airmass
+            # calculated automatically for this source and observation.
+            focal_x: 0 mm
+            focal_y: 100 mm
         # Sky coordinates are optional (and ignored) when focal-plane (x,y)
         # are specified.
         sky: { coordinates: 0h 0d, frame: icrs }

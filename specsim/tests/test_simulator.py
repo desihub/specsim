@@ -34,6 +34,21 @@ def test_zero_flux():
     # Check that ivar is non-zero.
     assert not np.any(sim.camera_output[0]['flux_inverse_variance'] == 0)
 
+
+def test_changing_airmass():
+    sim = specsim.simulator.Simulator('test')
+
+    sim.atmosphere.airmass = 1.0
+    sim.simulate()
+    sky1 = sim.camera_output[0]['num_sky_electrons'].copy()
+    sim.atmosphere.airmass = 2.0
+    sim.simulate()
+    sky2 = sim.camera_output[0]['num_sky_electrons'].copy()
+
+    sum1, sum2 = np.sum(sky1), np.sum(sky2)
+    assert sum1 > 0 and sum2 > 0 and sum1 != sum2
+
+
 def test_plot():
     s = Simulator('test')
     s.simulate()

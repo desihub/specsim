@@ -26,7 +26,7 @@ def test_downsampling():
 
     # Use an intermediate dense matrix for downsampling.
     # This is the old implementation of get_output_resolution_matrix()
-    # that used too much memory.
+    # which uses too much memory.
     n = len(camera._output_wavelength)
     m = camera._downsampling
     i0 = camera.ccd_slice.start - camera.response_slice.start
@@ -34,6 +34,6 @@ def test_downsampling():
          .reshape(n, m, n, m).sum(axis=3).sum(axis=1) / float(m))
 
     # Use the new sparse implementation of get_output_resolution_matrix().
-    R2 = camera.get_output_resolution_matrix() #.toarray()
+    R2 = camera.get_output_resolution_matrix()
 
-    assert np.allclose(R1, R2)
+    assert np.allclose(R1, R2.toarray())

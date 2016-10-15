@@ -274,6 +274,34 @@ class Camera(object):
         n = len(self._output_wavelength)
         m = self._downsampling
         i0 = self.ccd_slice.start - self.response_slice.start
+        # Initialize CSR format arrays for the output matrix.
+        indptr_out = np.empty((n + 1,), int)
+        indices_out = []
+        data_out = []
+        # Loop over rows of the CSR format sparse data.
+        indices = self._resolution_matrix.indices
+        indptr = self._resolution_matrix.indptr
+        data = self._resolution_matrix.data
+        cols_sum = np.empty(n * m, int)
+        data_sum = np.empty(n * m, float)
+        for i in range(0, n * m, m):
+            cols_sum[:] = 0
+            for k in range(i, i + m):
+                # Find the columns with data in this row.
+                cols = indices[indptr[k]: indptr[k + 1]]
+                # Trim columns outside of our downsampling window.
+                trimmed = (cols >= i0) & (cols < i0 + n * m)
+                cols = cols[trimmed] - i0
+                # Count the rows contributing to each column.
+                cols_sum[cols] += 1
+                # Sum the data across rows for each column.
+                data_sum[cols] += data[indptr[k]: indptr[k + 1]][trimmed]
+            cols_out = cols_sum.reshape(n, m).sum(axis=1)
+            nonzero = np.where(cols_out > 0)[0]
+            indptr_out[i // m] = nonzero[0]
+            indptr_out[(i // m) + 1] = nonzero[-1] + 1
+            #data_out = data_sum.reshape(n, m).sum(axis=1) / float(m)
+
         return (self._resolution_matrix[: n * m, i0 : i0 + n * m].toarray()
                 .reshape(n, m, n, m).sum(axis=3).sum(axis=1) / float(m))
 

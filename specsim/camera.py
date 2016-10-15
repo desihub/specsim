@@ -248,7 +248,7 @@ class Camera(object):
 
 
     def get_output_resolution_matrix(self):
-        """Return the output resolution matrix in CSR sparse format.
+        """Return the output resolution matrix in DIA sparse format.
 
         The output resolution is calculated by summing output pixel
         blocks of the full resolution matrix.  This is equivalent to
@@ -261,14 +261,10 @@ class Camera(object):
         not used internally and is re-calcuated each time this method
         is called.
 
-        The output is a CSR-format sparse matrix, which is optimized for
-        fast matrix-vector products and can be efficiently converted to
-        the DIA sparse format using :meth:`scipy.sparse.csr_matrix.todia`.
-
         Returns
         -------
-        numpy.ndarray
-            Square array of resolution matrix elements in the CSR
+        :class:`scipy.sparse.dia_matrix`
+            Square array of resolution matrix elements in the DIA
             sparse format.
         """
         n = len(self._output_wavelength)
@@ -314,8 +310,10 @@ class Camera(object):
         indices_out = np.hstack(indices_out)
 
         # Build the output matrix in CSR format.
-        return scipy.sparse.csr_matrix(
-            (data_out, indices_out, indptr_out), (n, n))
+        R = scipy.sparse.csr_matrix((data_out, indices_out, indptr_out), (n, n))
+
+        # Convert to DIA format and return.
+        return R.todia()
 
 
     def downsample(self, data, method=np.sum):

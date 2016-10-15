@@ -253,18 +253,17 @@ class Camera(object):
         The output resolution is calculated by summing output pixel
         blocks of the full resolution matrix.  This is equivalent to
         the convolution of our resolution with a boxcar representing
-        an output pixel.
+        an output pixel. Edge effects are not handled very gracefully
+        in order to return a square matrix.
 
         The memory required for this operation scales with the number
-        of non-zero elements in the returned matrix. The result is not
-        cached.
+        of non-zero elements in the returned matrix. This matrix is
+        not used internally and is re-calcuated each time this method
+        is called.
 
         The output is a CSR-format sparse matrix, which is optimized for
         fast matrix-vector products and can be efficiently converted to
-        the DIA sparse format.
-
-        Edge effects are not handled very gracefully in order to return
-        a square matrix.
+        the DIA sparse format using :meth:`scipy.sparse.csr_matrix.todia`.
 
         Returns
         -------

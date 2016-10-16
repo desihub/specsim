@@ -2,6 +2,8 @@
 ----------------
 
 - Create DOI for v0.5 https://doi.org/10.5281/zenodo.154130.
+- Re-implement Camera.get_output_resolution_matrix to return a sparse
+  matrix, which uses significantly less memory and runs 4-5x faster.
 
 0.5 (2016-09-12)
 ----------------

@@ -248,34 +248,72 @@ class Camera(object):
 
 
     def get_output_resolution_matrix(self):
-        """Return the output resolution matrix.
+        """Return the output resolution matrix in DIA sparse format.
 
         The output resolution is calculated by summing output pixel
         blocks of the full resolution matrix.  This is equivalent to
         the convolution of our resolution with a boxcar representing
-        an output pixel.
+        an output pixel. Edge effects are not handled very gracefully
+        in order to return a square matrix.
 
-        This operation is relatively slow and requires a lot of memory
-        since the full resolution matrix is expanded to a dense array
-        during the calculation.
-
-        The result is returned as a dense matrix but will generally be
-        sparse, so can be converted to one of the scipy.sparse formats.
-        The result is not saved internally.
-
-        Edge effects are not handled very gracefully in order to return
-        a square matrix.
+        The memory required for this operation scales with the number
+        of non-zero elements in the returned matrix. This matrix is
+        not used internally and is re-calcuated each time this method
+        is called.
 
         Returns
         -------
-        numpy.ndarray
-            Square array of resolution matrix elements.
+        :class:`scipy.sparse.dia_matrix`
+            Square array of resolution matrix elements in the DIA
+            sparse format.
         """
         n = len(self._output_wavelength)
         m = self._downsampling
         i0 = self.ccd_slice.start - self.response_slice.start
-        return (self._resolution_matrix[: n * m, i0 : i0 + n * m].toarray()
-                .reshape(n, m, n, m).sum(axis=3).sum(axis=1) / float(m))
+        output_slice = slice(i0, i0 + n * m)
+        # Initialize CSR format arrays for building the output matrix.
+        indptr_out = np.empty((n + 1,), int)
+        indices_out = []
+        data_out = []
+        row_size = self._resolution_matrix.shape[1]
+        cols_sum = np.empty(row_size, int)
+        data_sum = np.empty(row_size, float)
+        # Loop over rows of the CSR format sparse data.
+        indices_in = self._resolution_matrix.indices
+        indptr_in = self._resolution_matrix.indptr
+        data_in = self._resolution_matrix.data
+        # Loop over rows in the full resolution matrix.
+        num_out = 0
+        for i in range(0, n * m, m):
+            cols_sum[:] = 0
+            data_sum[:] = 0.
+            # Loop over rows that will be combined into a single output row.
+            for k in range(i, i + m):
+                packed = slice(indptr_in[k], indptr_in[k + 1])
+                # Find the columns with data in this row.
+                expanded = indices_in[packed]
+                # Count the rows contributing to each column.
+                cols_sum[expanded] += 1
+                # Sum the data across rows for each column.
+                data_sum[expanded] += data_in[packed]
+            # Combine into a single output row.
+            data = data_sum[output_slice].reshape(n, m).sum(axis=1) / m
+            counts = cols_sum[output_slice].reshape(n, m).sum(axis=1)
+            indices = np.where(counts > 0)[0]
+            indices_out.append(indices)
+            data_out.append(data[indices])
+            indptr_out[i // m] = num_out
+            num_out += len(indices)
+            indptr_out[(i // m) + 1] = num_out
+        # Combine row arrays.
+        data_out = np.hstack(data_out)
+        indices_out = np.hstack(indices_out)
+
+        # Build the output matrix in CSR format.
+        R = scipy.sparse.csr_matrix((data_out, indices_out, indptr_out), (n, n))
+
+        # Convert to DIA format and return.
+        return R.todia()
 
 
     def downsample(self, data, method=np.sum):

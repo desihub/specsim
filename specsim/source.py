@@ -263,6 +263,17 @@ class Source(object):
         return self._flux_out
 
 
+class Profile(object):
+
+    def __init__(self, half_light_radius, minor_major_axis_ratio,
+                 position_angle, sersic_index):
+
+        self.half_light_radius = half_light_radius
+        self.minor_major_axis_ratio = minor_major_axis_ratio
+        self.position_angle = position_angle
+        self.sersic_index = sersic_index
+
+
 def initialize(config):
     """Initialize the source model from configuration parameters.
 
@@ -289,6 +300,19 @@ def initialize(config):
     # Sky position is optional (and ignored) when x,y are specified.
     if hasattr(config.source.location, 'sky'):
         sky_position = config.get_sky(config.source.location)
+    # Get the source profile on the sky.
+    if hasattr(config.source, 'profile'):
+        fraction = config.source.profile.disk_fraction
+        disk = Profile(
+            config.source.profile.disk_shape.half_light_radius,
+            config.source.profile.disk_shape.minor_major_axis_ratio,
+            config.source.profile.disk_shape.position_angle, sersic_index=1)
+        bulge = Profile(
+            config.source.profile.bulge_shape.half_light_radius,
+            config.source.profile.bulge_shape.minor_major_axis_ratio,
+            config.source.profile.bulge_shape.position_angle, sersic_index=4)
+    else:
+        fraction, disk, bulge = 0, None, None
     # Create a new Source object.
     source = Source(
         config.source.name, config.source.type, config.wavelength,

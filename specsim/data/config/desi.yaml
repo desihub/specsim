@@ -251,6 +251,18 @@ source:
                 index: 1
                 # Note the factor of 1e-17 in the units!
                 unit: 1e-17 erg / (Angstrom cm2 s)
+    # Transverse profile of the source on the sky, used to calculate the
+    # fiberloss fraction.
+    profile:
+        disk_fraction: 0.5
+        disk_shape:
+            half_light_radius: 0.8 arcsec
+            position_angle: 45 deg
+            minor_major_axis_ratio: 0.5
+        bulge_shape:
+            half_light_radius: 1.2 arcsec
+            position_angle: 60 deg
+            minor_major_axis_ratio: 0.8
     # Location of the source on the sky. A source will not be visible if
     # it lies out the observation field of view.
     location:

@@ -62,6 +62,10 @@ repeating the initialization step, for example::
 .. automodapi:: specsim.observation
     :no-inheritance-diagram:
 
+.. fiberloss-api:
+.. automodapi:: specsim.fiberloss
+    :no-inheritance-diagram:
+
 .. _simulator-api:
 .. automodapi:: specsim.simulator
     :no-inheritance-diagram:

@@ -7,7 +7,8 @@ illuminating a fiber and the on-sky aperture of the fiber.
 from __future__ import print_function, division
 
 
-def calculate_fiberloss_fraction():
+def calculate_fiber_acceptance_fraction(source, atmosphere, instrument,
+                                        observation):
     """
     """
-    pass
+    return instrument.get_fiber_acceptance(source)

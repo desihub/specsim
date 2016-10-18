@@ -28,12 +28,15 @@ import specsim.config
 import specsim.atmosphere
 import specsim.instrument
 import specsim.source
+import specsim.fiberloss
 import specsim.observation
+
 
 try:
     basestring          #- exists in py2
 except NameError:
     basestring = str    #- for py3
+
 
 class Simulator(object):
     """Manage the simulation of a source, atmosphere and instrument.
@@ -200,11 +203,16 @@ class Simulator(object):
         # Get the source flux incident on the atmosphere.
         source_flux[:] = self.source.flux_out.to(source_flux.unit)
 
+        # Calculate fraction of source illumination entering the fiber.
+        fiber_acceptance_fraction =\
+            specsim.fiberloss.calculate_fiber_acceptance_fraction(
+                self.source, self.atmosphere, self.instrument, self.observation)
+
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (
             source_flux *
             self.atmosphere.extinction *
-            self.instrument.get_fiber_acceptance(self.source)
+            fiber_acceptance_fraction
             ).to(source_fiber_flux.unit)
 
         # Calculate the sky flux entering a fiber.
@@ -235,7 +243,7 @@ class Simulator(object):
         # each camera.
         source_flux_to_photons = (
             self.atmosphere.extinction *
-            self.instrument.get_fiber_acceptance(self.source) *
+            fiber_acceptance_fraction *
             self.instrument.photons_per_bin *
             self.observation.exposure_time).to(source_flux.unit ** -1).value
 

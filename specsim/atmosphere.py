@@ -48,6 +48,8 @@ import astropy.units as u
 
 import speclite.filters
 
+import specsim.config
+
 
 class Atmosphere(object):
     """Model atmospheric surface brightness and extinction.
@@ -69,8 +71,11 @@ class Atmosphere(object):
         Array of extinction coefficients tabulated on ``wavelength``.
     extinct_emission : bool
         If set, atmospheric extinction is applied to sky emission.
-    condition : sky emission condition to use, which must be one of the keys
+    condition : str
+        Sky emission condition to use, which must be one of the keys
         of ``surface_brightness_dict``.
+    seeing : dict or None
+        Dictionary of seeing PSF parameters to use.
     airmass : float
         Airmass of the observation.
     moon : :class:`Moon` or None
@@ -78,7 +83,7 @@ class Atmosphere(object):
     """
     def __init__(self, wavelength, surface_brightness_dict,
                  extinction_coefficient, extinct_emission, condition, airmass,
-                 moon):
+                 seeing, moon):
         self._wavelength = wavelength
         self._surface_brightness_dict = surface_brightness_dict
         self._extinction_coefficient = extinction_coefficient
@@ -87,6 +92,7 @@ class Atmosphere(object):
         self._moon = moon
         self.condition = condition
         self.airmass = airmass
+        self.seeing = seeing
 
 
     @property
@@ -625,6 +631,16 @@ def initialize(config):
     extinction_coefficient = config.load_table(
         atm_config.extinction, 'extinction_coefficient')
 
+    # Initialize an optional atmospheric seeing PSF.
+    psf_config = getattr(atm_config, 'seeing', None)
+    if psf_config:
+        seeing = dict(
+            fwhm_ref=specsim.config.parse_quantity(psf_config.fwhm_ref),
+            wlen_ref=specsim.config.parse_quantity(psf_config.wlen_ref),
+            moffat_beta=float(psf_config.moffat_beta))
+    else:
+        seeing = None
+
     # Initialize an optional lunar scattering model.
     moon_config = getattr(atm_config, 'moon', None)
     if moon_config:
@@ -641,12 +657,16 @@ def initialize(config):
     atmosphere = Atmosphere(
         config.wavelength, surface_brightness_dict, extinction_coefficient,
         atm_config.extinct_emission, atm_config.sky.condition,
-        atm_config.airmass, moon)
+        atm_config.airmass, seeing, moon)
 
     if config.verbose:
         print(
             "Atmosphere initialized with condition '{0}' from {1}."
             .format(atmosphere.condition, atmosphere.condition_names))
+        if seeing:
+            print('Seeing is {0} at {1} with Moffat beta {2}.'
+                  .format(seeing['fwhm_ref'], seeing['wlen_ref'],
+                          seeing['moffat_beta']))
         if moon:
             print(
                 'Lunar V-band extinction coefficient is {0:.5f}.'

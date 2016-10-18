@@ -49,6 +49,14 @@ atmosphere:
                 bright: spectra/spec-sky-bright.dat
         # Specify the current condition.
         condition: dark
+    # Atmospheric seeing.
+    seeing:
+        # The seeing is assumed to scale with wavelength as
+        # fwhm(wlen) = fwhm_ref * (wlen / wlen_ref) ** -0.2
+        fwhm_ref: 1.1 arcsec
+        wlen_ref: 6355 Angstrom
+        # The seeing PSF is modeled as a Moffat profile.
+        moffat_beta: 3.5
     # Surface brightness of scattered moonlight.
     moon:
         # Un-normalized spectrum of scattered moonlight.

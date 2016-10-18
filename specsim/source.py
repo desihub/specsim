@@ -21,6 +21,8 @@ import astropy.units as u
 
 import speclite.filters
 
+import specsim.config
+
 
 class Source(object):
     """Source model used for simulation.
@@ -279,14 +281,38 @@ class Source(object):
 
 
 class Profile(object):
+    """Transverse profile of a single Sersic component of a galaxy.
 
+    If any parameters are strings, they will be converted and validated.
+
+    Parameters
+    ----------
+    half_light_radius : str or astropy.units.Quantity
+        Half-light radius of this component with angular units.
+    minor_major_axis_ratio : float
+        Ratio of the minor to major ellipse axes q = a/b, which must
+        be 0 < q <= 1.
+    position_angle : str or astropy.units.Quantity
+        Position angle of this component's major axis with angular units.
+        Angles are measured counter-clockwise from the +x axis of the focal
+        plane coordinate system.
+    sersic_index : float
+        Sersic index of this component, which must be > 0.
+    """
     def __init__(self, half_light_radius, minor_major_axis_ratio,
                  position_angle, sersic_index):
-
-        self.half_light_radius = half_light_radius
-        self.minor_major_axis_ratio = minor_major_axis_ratio
-        self.position_angle = position_angle
-        self.sersic_index = sersic_index
+        """Validate and save Sersic component parameters.
+        """
+        self.half_light_radius = specsim.config.parse_quantity(
+            half_light_radius, u.arcsec)
+        self.minor_major_axis_ratio = float(minor_major_axis_ratio)
+        if self.minor_major_axis_ratio <= 0 or self.minor_major_axis_ratio > 1:
+            raise ValueError('Expected minor/major axis ratio in (0,1].')
+        self.position_angle = specsim.config.parse_quantity(
+            position_angle, u.deg)
+        self.sersic_index = float(sersic_index)
+        if self.sersic_index <= 0:
+            raise ValueError('Expected Sersic index > 0.')
 
 
 def initialize(config):

@@ -52,7 +52,7 @@ _float_pattern = re.compile(
     '\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
 
 
-def parse_quantity(string, dimensions=None):
+def parse_quantity(quantity, dimensions=None):
     """Parse a string containing a numeric value with optional units.
 
     The result is a :class:`Quantity <astropy.units.Quantity` object even
@@ -68,8 +68,9 @@ def parse_quantity(string, dimensions=None):
 
     Parameters
     ----------
-    string : str
-        String to parse.
+    quantity : str or astropy.units.Quantity
+        String to parse.  If a quantity is provided, it is checked against
+        the expected dimensions and passed through.
     dimensions : str or astropy.units.Unit or None
         The units of the input quantity are expected to have the same
         dimensions as these units, if not None.  Raises a ValueError if
@@ -86,13 +87,14 @@ def parse_quantity(string, dimensions=None):
     ValueError
         Unable to parse quantity.
     """
-    # Look for a valid number starting the string.
-    found_number = _float_pattern.match(string)
-    if not found_number:
-        raise ValueError('Unable to parse quantity.')
-    value = float(found_number.group(1))
-    unit = string[found_number.end():]
-    quantity = astropy.units.Quantity(value, unit)
+    if not isinstance(quantity, astropy.units.Quantity):
+        # Look for a valid number starting the string.
+        found_number = _float_pattern.match(quantity)
+        if not found_number:
+            raise ValueError('Unable to parse quantity.')
+        value = float(found_number.group(1))
+        unit = quantity[found_number.end():]
+        quantity = astropy.units.Quantity(value, unit)
     if dimensions is not None:
         try:
             if not isinstance(dimensions, astropy.units.Unit):

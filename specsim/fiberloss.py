@@ -13,7 +13,15 @@ def calculate_fiber_acceptance_fraction(source, atmosphere, instrument,
                                         observation):
     """
     """
+    # Use tabulated when available.
+    if instrument.fiber_acceptance_dict:
+        return instrument.fiber_acceptance_dict[source.type_name]
+
+    # Galsim is required to calculate fiberloss fractions on the fly.
     import galsim
+
+    print('Will tabulate fiberloss at {0} wavelengths...'.format(
+        instrument.fiberloss_ngrid))
 
     # Create the source model, which we assume to be achromatic.
     source_components = []
@@ -38,4 +46,4 @@ def calculate_fiber_acceptance_fraction(source, atmosphere, instrument,
     else:
         source_model = disk_model + bulge_model
 
-    return instrument.get_fiber_acceptance(source)
+    return instrument.fiber_acceptance_dict[source.type_name]

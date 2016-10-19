@@ -74,6 +74,9 @@ instrument:
         constants:
             value: 70.4 um / arcsec
     fiberloss:
+        # Method for calculating fiberloss fractions.
+        # Either galsim or table.
+        method: table
         table:
             format: ascii
             paths:

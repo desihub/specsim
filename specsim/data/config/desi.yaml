@@ -119,6 +119,12 @@ instrument:
                 radial_scale: { index: 6, unit: um/arcsec }
                 azimuthal_scale: { index: 7, unit: um/arcsec }
     fiberloss:
+        # Method for calculating fiberloss fractions.
+        # Either galsim or table.
+        method: galsim
+        # Number of wavelengths where fiberloss should be calculated
+        # and interpolated.
+        ngrid: 11
         table:
             format: ascii
             paths:

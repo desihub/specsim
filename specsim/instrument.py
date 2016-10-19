@@ -44,9 +44,12 @@ class Instrument(object):
     wavelength : nastropy.units.Quantity
         Array of wavelength bin centers where the instrument response is
         calculated, with units.
-    fiber_acceptance_dict : dict
+    fiber_acceptance_dict : dict or None
         Dictionary of fiber acceptance fractions tabulated for different
         source models, with keys corresponding to source model names.
+    fiberloss_ngrid : int
+        Number of wavelengths where the fiberloss fraction should be tabulated
+        for interpolation.  Will be zero when fiber_acceptance_dict is set.
     cameras : list
         List of :class:`specsim.camera.Camera` instances representing the
         camera(s) of this instrument.
@@ -72,12 +75,14 @@ class Instrument(object):
         (sagittal) direction (with appropriate units) as a function of
         focal-plane distance (with length units) from the boresight.
     """
-    def __init__(self, name, wavelength, fiber_acceptance_dict, cameras,
-                 primary_mirror_diameter, obscuration_diameter, support_width,
-                 fiber_diameter, field_radius, radial_scale, azimuthal_scale):
+    def __init__(self, name, wavelength, fiber_acceptance_dict, fiberloss_ngrid,
+                 cameras, primary_mirror_diameter, obscuration_diameter,
+                 support_width, fiber_diameter, field_radius, radial_scale,
+                 azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
+        self.fiberloss_ngrid = fiberloss_ngrid
         self.cameras = cameras
         self.primary_mirror_diameter = primary_mirror_diameter
         self.obscuration_diameter = obscuration_diameter
@@ -86,8 +91,6 @@ class Instrument(object):
         self.field_radius = field_radius
         self.radial_scale = radial_scale
         self.azimuthal_scale = azimuthal_scale
-
-        self.source_types = self.fiber_acceptance_dict.keys()
 
         # Calculate the effective area of the primary mirror.
         D = self.primary_mirror_diameter
@@ -283,27 +286,6 @@ class Instrument(object):
             left=0.10, right=0.98, bottom=0.07, top=0.97, hspace=0.05)
 
 
-    def get_fiber_acceptance(self, source):
-        """Get the tabulated fiber acceptance function for the specified source.
-
-        Parameters
-        ----------
-        source : specsim.source.Source
-            The source whose fiber acceptance should be returned.
-
-        Returns
-        -------
-        numpy.ndarray
-            Array of fiber acceptance values in the range 0-1, tabulated at
-            at each :attr:`wavelength`.
-        """
-        if source.type_name not in self.source_types:
-            raise ValueError(
-                "Invalid source type '{0}'. Pick one of {1}."
-                .format(source.type_name, self.source_types))
-        return self.fiber_acceptance_dict[source.type_name]
-
-
     def plot(self, flux=1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom),
              exposure_time=1000 * u.s, cmap='nipy_spectral'):
         """Plot a summary of this instrument's model.
@@ -334,9 +316,10 @@ class Instrument(object):
         wave_unit = self._wavelength.unit
         dwave = np.gradient(wave)
 
-        for source_type in self.source_types:
-            # Plot fiber acceptance fractions without labels.
-            ax1.plot(wave, self.fiber_acceptance_dict[source_type], 'k--')
+        if self.fiber_acceptance_dict:
+            for source_type in self.fiber_acceptance_dict:
+                # Plot fiber acceptance fractions without labels.
+                ax1.plot(wave, self.fiber_acceptance_dict[source_type], 'k--')
         for camera in self.cameras:
             cwave = camera._wavelength
 
@@ -471,9 +454,15 @@ def initialize(config):
 
     fiber_acceptance_dict = config.load_table(
         config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
+    if config.instrument.fiberloss.method == 'table':
+        fiberloss_ngrid = 0
+    else:
+        #fiber_acceptance_dict = None
+        fiberloss_ngrid = config.instrument.fiberloss.ngrid
 
     instrument = Instrument(
-        name, config.wavelength, fiber_acceptance_dict, initialized_cameras,
+        name, config.wavelength, fiber_acceptance_dict, fiberloss_ngrid,
+        initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['field_radius'], radial_scale, azimuthal_scale)

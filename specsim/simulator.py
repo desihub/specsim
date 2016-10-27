@@ -206,7 +206,8 @@ class Simulator(object):
         # Calculate fraction of source illumination entering the fiber.
         fiber_acceptance_fraction =\
             specsim.fiberloss.calculate_fiber_acceptance_fraction(
-                self.source, self.atmosphere, self.instrument, self.observation)
+                wavelength, self.source, self.atmosphere, self.instrument,
+                self.observation)
 
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (

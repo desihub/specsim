@@ -177,6 +177,27 @@ class Atmosphere(object):
             self.moon.airmass = airmass
 
 
+    def get_seeing_fwhm(self, wavelength):
+        """Calculate the seeing FWHM at the specified wavelength.
+
+        Assumes that seeing scales with wavelength with a power -1/5, as
+        predicted by Kolmogorov turbulence theory.
+
+        Parameters
+        ----------
+        wavelength : astropy.units.Quantity
+            Wavelength in units convertible to Angstroms.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            Full-width half maximum of seeing distribution at the specified
+            wavelength, in on-sky angular units.
+        """
+        wlen_ratio = np.float((wavelength / wavelength_ref).si)
+        return self.seeing['fwhm_ref'] * wlen_ratio ** (-0.2)
+
+
     def plot(self):
         """Plot a summary of this atmosphere model.
 

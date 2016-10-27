@@ -9,8 +9,8 @@ from __future__ import print_function, division
 import astropy.units as u
 
 
-def calculate_fiber_acceptance_fraction(source, atmosphere, instrument,
-                                        observation):
+def calculate_fiber_acceptance_fraction(wavelength, source, atmosphere,
+                                        instrument, observation):
     """
     """
     # Use tabulated when available.
@@ -22,6 +22,15 @@ def calculate_fiber_acceptance_fraction(source, atmosphere, instrument,
 
     print('Will tabulate fiberloss at {0} wavelengths...'.format(
         instrument.fiberloss_ngrid))
+    wlen_grid = np.linspace(wavelength[0], wavelength[-1],
+                       instrument.fiberloss_ngrid)
+
+    # Create the atmospheric seeing model at each wavelength.
+    seeing_psf = []
+    for wlen in wlen_grid:
+        seeing_psf.append(galsim.Moffat(
+            fwhm=atmosphere.get_seeing_fwhm(wlen).to(u.arcsec).value,
+            beta=atmosphere.seeing['moffat_beta']))
 
     # Create the source model, which we assume to be achromatic.
     source_components = []

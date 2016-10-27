@@ -211,6 +211,25 @@ class Instrument(object):
             angle.to(self._angle_unit)) * self._radius_unit
 
 
+    def get_blur_rms(self, wavelength, angle):
+        """Calculate the instrument PSF blur at the specified field angle.
+
+        Parameters
+        ----------
+        wavelength : astropy.units.Quantity
+            Wavelength where the blur should be calculated.
+        angle : astropy.units.Quantity
+            Angular separation from the field center.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            RMS blur of the instrument at this wavelength and field radius
+            in angular units.
+        """
+        return 1. * u.micron
+
+
     def plot_field_distortion(self):
         """Plot focal plane distortions over the field of view.
 

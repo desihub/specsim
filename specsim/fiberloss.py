@@ -9,8 +9,8 @@ from __future__ import print_function, division
 import astropy.units as u
 
 
-def calculate_fiber_acceptance_fraction(wavelength, source, atmosphere,
-                                        instrument, observation):
+def calculate_fiber_acceptance_fraction(focal_x, focal_y, wavelength,
+                                        source, atmosphere, instrument):
     """
     """
     # Use tabulated when available.
@@ -24,6 +24,17 @@ def calculate_fiber_acceptance_fraction(wavelength, source, atmosphere,
         instrument.fiberloss_ngrid))
     wlen_grid = np.linspace(wavelength[0], wavelength[-1],
                        instrument.fiberloss_ngrid)
+
+    # Calculate the field angle from the focal-plane (x,y).
+    focal_r = np.sqrt(x ** 2 + y ** 2)
+    angle = instrument.field_radius_to_angle(focal_r)
+
+    # Create the instrument blur PSF at each wavelength for this focal-plane
+    # position.
+    blur_psf = []
+    for wlen in wlen_grid:
+        blur_psf.append(galsim.Gaussian(
+            sigma=instrument.get_blur_rms(wlen, angle)))
 
     # Create the atmospheric seeing model at each wavelength.
     seeing_psf = []

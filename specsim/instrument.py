@@ -474,6 +474,8 @@ def initialize(config):
         print('Field of view diameter: {0:.1f} = {1:.2f}.'
               .format(2 * instrument.field_radius.to(u.mm),
                       2 * instrument.field_angle.to(u.deg)))
-        print('Source types: {0}.'.format(instrument.source_types))
+        if instrument.fiber_acceptance_dict:
+            print('Source types: {0}.'
+                  .format(instrument.fiber_acceptance_dict.keys()))
 
     return instrument

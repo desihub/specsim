@@ -6,6 +6,8 @@ illuminating a fiber and the on-sky aperture of the fiber.
 """
 from __future__ import print_function, division
 
+import numpy as np
+
 import astropy.units as u
 
 
@@ -13,8 +15,8 @@ def calculate_fiber_acceptance_fraction(focal_x, focal_y, wavelength,
                                         source, atmosphere, instrument):
     """
     """
-    # Use tabulated when available.
-    if instrument.fiber_acceptance_dict:
+    # Use pre-tabulated fiberloss vs wavelength when available.
+    if instrument.fiberloss_ngrid == 0:
         return instrument.fiber_acceptance_dict[source.type_name]
 
     # Galsim is required to calculate fiberloss fractions on the fly.
@@ -22,19 +24,23 @@ def calculate_fiber_acceptance_fraction(focal_x, focal_y, wavelength,
 
     print('Will tabulate fiberloss at {0} wavelengths...'.format(
         instrument.fiberloss_ngrid))
-    wlen_grid = np.linspace(wavelength[0], wavelength[-1],
-                       instrument.fiberloss_ngrid)
+    wlen_unit = wavelength.unit
+    wlen_grid = np.linspace(wavelength.data[0], wavelength.data[-1],
+                            instrument.fiberloss_ngrid) * wlen_unit
 
     # Calculate the field angle from the focal-plane (x,y).
-    focal_r = np.sqrt(x ** 2 + y ** 2)
+    focal_r = np.sqrt(focal_x ** 2 + focal_y ** 2)
     angle = instrument.field_radius_to_angle(focal_r)
 
     # Create the instrument blur PSF at each wavelength for this focal-plane
     # position.
     blur_psf = []
     for wlen in wlen_grid:
-        blur_psf.append(galsim.Gaussian(
-            sigma=instrument.get_blur_rms(wlen, angle)))
+        blur_rms = instrument.get_blur_rms(wlen, angle)
+        # Convert to an angular size on the sky ignoring any asymmetry that
+        # might be introduced by different radial and azimuthal plate scales.
+        blur_rms /= instrument.radial_scale(focal_r)
+        blur_psf.append(galsim.Gaussian(sigma=blur_rms.to(u.arcsec).value))
 
     # Create the atmospheric seeing model at each wavelength.
     seeing_psf = []

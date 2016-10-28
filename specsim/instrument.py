@@ -50,6 +50,9 @@ class Instrument(object):
     fiberloss_ngrid : int
         Number of wavelengths where the fiberloss fraction should be tabulated
         for interpolation.  Will be zero when fiber_acceptance_dict is set.
+    blur_interpolator : callable
+        Function of field angle and wavelength that returns the corresponding
+        RMS blur in length units (e.g., microns).
     cameras : list
         List of :class:`specsim.camera.Camera` instances representing the
         camera(s) of this instrument.
@@ -76,13 +79,14 @@ class Instrument(object):
         focal-plane distance (with length units) from the boresight.
     """
     def __init__(self, name, wavelength, fiber_acceptance_dict, fiberloss_ngrid,
-                 cameras, primary_mirror_diameter, obscuration_diameter,
-                 support_width, fiber_diameter, field_radius, radial_scale,
-                 azimuthal_scale):
+                 blur_interpolator, cameras, primary_mirror_diameter,
+                 obscuration_diameter, support_width, fiber_diameter,
+                 field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
         self.fiberloss_ngrid = fiberloss_ngrid
+        self._blur_interpolator = blur_interpolator
         self.cameras = cameras
         self.primary_mirror_diameter = primary_mirror_diameter
         self.obscuration_diameter = obscuration_diameter
@@ -227,7 +231,7 @@ class Instrument(object):
             RMS blur of the instrument at this wavelength and field radius
             in angular units.
         """
-        return 1. * u.micron
+        return self._blur_interpolator(angle, wavelength)
 
 
     def plot_field_distortion(self):
@@ -481,11 +485,10 @@ def initialize(config):
 
     blur_interpolator = config.load_table2d(
         config.instrument.blur, 'wavelength', 'r=')
-    print('blur test', blur_interpolator(0.45 * u.deg, 5000 * u.Angstrom))
 
     instrument = Instrument(
         name, config.wavelength, fiber_acceptance_dict, fiberloss_ngrid,
-        initialized_cameras,
+        blur_interpolator, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['field_radius'], radial_scale, azimuthal_scale)

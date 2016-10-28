@@ -508,7 +508,6 @@ class Configuration(Node):
         path = os.path.join(self.abs_base_path, node.path)
         fmt = getattr(node, 'format', None)
         table = astropy.table.Table.read(path, format=fmt)
-        print(table)
         ny = len(table)
         y_col = table[y_column_name]
         y_value = np.array(y_col.data)
@@ -559,7 +558,7 @@ class Configuration(Node):
             get_y = lambda y: y.to(y_unit).value
         else:
             get_y = lambda y: np.asarray(y)
-        return lambda x, y: interpolator(get_x(x), get_y(y)) * data_unit
+        return lambda x, y: interpolator.ev(get_x(x), get_y(y)) * data_unit
 
 
 def load_config(name, config_type=Configuration):

@@ -138,6 +138,13 @@ instrument:
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
+    blur:
+        # Read RMS blur values tabulated as a function of field angle and
+        # wavelength, and derived from ray tracing simulations.  For details,
+        # see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
+        path: throughput/DESI-0347_blur.ecsv
+        # The ECSV format is not auto-detected so we specify it explicitly.
+        format: ascii.ecsv
     cameras:
         b:
             constants:

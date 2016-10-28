@@ -483,6 +483,85 @@ class Configuration(Node):
             return tables
 
 
+    def load_table2d(self, node, y_column_name, x_column_prefix):
+        """Read values for some quantity tabulated along 2 axes.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to read using :meth:`astropy.table.Table.read`.
+        y_column_name : str
+            Name of the column containing y coordinate values.
+        x_column_prefix : str
+            Prefix for column names at different values of the x coordinate. The
+            remainder of the column name must be interpretable by
+            :meth:`specsim.config.parse_quantity` as the x coordinate value.
+            Values in each column correspond to ``data[:, x]``.
+        format : str
+            A table format supported by :meth:`astropy.table.Table.read`.
+
+        Returns
+        -------
+        :class:`scipy.interpolate.RectBivariateSpline`
+            A 2D linear interpolator in (x,y) that handles units correctly.
+        """
+        path = os.path.join(self.abs_base_path, node.path)
+        fmt = getattr(node, 'format', None)
+        table = astropy.table.Table.read(path, format=fmt)
+        print(table)
+        ny = len(table)
+        y_col = table[y_column_name]
+        y_value = np.array(y_col.data)
+        if y_col.unit is not None:
+            y_unit = y_col.unit
+        else:
+            y_unit = 1
+
+        # Look for columns whose name has the specified prefix.
+        x_value, x_index = [], []
+        x_unit, data_unit = 1, 1
+        for i, colname in enumerate(table.colnames):
+            if colname.startswith(x_column_prefix):
+                # Parse the column name as a value.
+                x = parse_quantity(colname[len(x_column_prefix):])
+                if x_unit == 1:
+                    x_unit = x.unit
+                elif x_unit != x.unit:
+                    raise RuntimeError('Column unit mismatch: {0} != {1}.'
+                                       .format(x_unit, x.unit))
+                if data_unit == 1:
+                    data_unit = table[colname].unit
+                elif data_unit != table[colname].unit:
+                    raise RuntimeError('Data unit mismatch: {0} != {1}.'
+                                       .format(data_unit, table[colname].unit))
+                x_value.append(x.value)
+                x_index.append(i)
+
+        # Extract values for each x,y pair.
+        nx = len(x_value)
+        data = np.empty((nx, ny))
+        for j, i in enumerate(x_index):
+            data[j] = table.columns[i].data
+
+        if self.verbose:
+            print('Loaded {0} x {1} values from {2}.'.format(nx, ny, path))
+
+        # Build a 2D linear interpolator.
+        interpolator = scipy.interpolate.RectBivariateSpline(
+            x_value, y_value, data, kx=1, ky=1, s=0)
+
+        # Return a wrapper that handles units.
+        if x_unit != 1:
+            get_x = lambda x: x.to(x_unit).value
+        else:
+            get_x = lambda x: np.asarray(x)
+        if y_unit != 1:
+            get_y = lambda y: y.to(y_unit).value
+        else:
+            get_y = lambda y: np.asarray(y)
+        return lambda x, y: interpolator(get_x(x), get_y(y)) * data_unit
+
+
 def load_config(name, config_type=Configuration):
     """Load configuration data from a YAML file.
 

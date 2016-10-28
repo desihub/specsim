@@ -479,6 +479,10 @@ def initialize(config):
         #fiber_acceptance_dict = None
         fiberloss_ngrid = config.instrument.fiberloss.ngrid
 
+    blur_interpolator = config.load_table2d(
+        config.instrument.blur, 'wavelength', 'r=')
+    print('blur test', blur_interpolator(0.45 * u.deg, 5000 * u.Angstrom))
+
     instrument = Instrument(
         name, config.wavelength, fiber_acceptance_dict, fiberloss_ngrid,
         initialized_cameras,

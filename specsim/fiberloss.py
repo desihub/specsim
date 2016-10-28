@@ -9,6 +9,8 @@ from __future__ import print_function, division
 import numpy as np
 
 import astropy.units as u
+import astropy.io.fits
+import astropy.wcs
 
 
 def calculate_fiber_acceptance_fraction(
@@ -98,14 +100,38 @@ def calculate_fiber_acceptance_fraction(
         (2 * dr / radial_size) ** 2 +
         (2 * dphi[:, np.newaxis] / azimuthal_size) ** 2 <= 1.0)
 
+    # Prepare to write a FITS file of images, if requested.
+    if save:
+        hdu_list = astropy.io.fits.HDUList()
+        header = astropy.io.fits.Header()
+        header['COMMENT'] = 'Fiberloss calculation images.'
+        hdu_list.append(astropy.io.fits.PrimaryHDU(header=header))
+        # All subsequent HDUs contain images with the same WCS.
+        w = astropy.wcs.WCS(naxis=2)
+        w.wcs.ctype = ['x', 'y']
+        w.wcs.crpix = [npix_r / 2. + 0.5, npix_phi / 2. + 0.5]
+        w.wcs.cdelt = [scale, scale]
+        w.wcs.crval = [0., 0.]
+        header = w.to_header()
+
     # Build the convolved models and integrate.
     gsparams = galsim.GSParams(maximum_fft_size=32767)
     for i, wlen in enumerate(wlen_grid):
         convolved = galsim.Convolve([
             blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams)
+        # TODO: test if method='no_pixel' is faster and accurate enough.
         convolved.drawImage(image=image, method='auto',
                             offset=(offsets[i], 0.))
         fraction = np.sum(image.array[inside])
         print('fiberloss:', wlen, offsets[i], fraction)
+        if save:
+            header['COMMENT'] = '{0:.1f} Convolved model'.format(wlen)
+            header['WLEN'] = wlen.to(u.Angstrom).value
+            header['FRAC'] = fraction
+            hdu_list.append(astropy.io.fits.ImageHDU(
+                data=image.array.copy(), header=header))
+
+    if save:
+        hdu_list.writeto(save, clobber=True)
 
     return instrument.fiber_acceptance_dict[source.type_name]

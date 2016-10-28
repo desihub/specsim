@@ -11,8 +11,8 @@ import numpy as np
 import astropy.units as u
 
 
-def calculate_fiber_acceptance_fraction(focal_x, focal_y, wavelength,
-                                        source, atmosphere, instrument):
+def calculate_fiber_acceptance_fraction(
+    focal_x, focal_y, wavelength, source, atmosphere, instrument, save=None):
     """
     """
     # Use pre-tabulated fiberloss vs wavelength when available.
@@ -22,8 +22,6 @@ def calculate_fiber_acceptance_fraction(focal_x, focal_y, wavelength,
     # Galsim is required to calculate fiberloss fractions on the fly.
     import galsim
 
-    print('Will tabulate fiberloss at {0} wavelengths...'.format(
-        instrument.fiberloss_ngrid))
     wlen_unit = wavelength.unit
     wlen_grid = np.linspace(wavelength.data[0], wavelength.data[-1],
                             instrument.fiberloss_ngrid) * wlen_unit
@@ -77,5 +75,18 @@ def calculate_fiber_acceptance_fraction(focal_x, focal_y, wavelength,
         source_model = disk_model
     else:
         source_model = disk_model + bulge_model
+
+    # Calculate the on-sky fiber aperture.
+    radial_size = (0.5 * instrument.fiber_diameter /
+                   instrument.radial_scale(focal_r)).to(u.arcsec).value
+    azimuthal_size = (0.5 * instrument.fiber_diameter /
+                      instrument.azimuthal_scale(focal_r)).to(u.arcsec).value
+
+    # Build the convolved model.
+    gsparams = galsim.GSParams(maximum_fft_size=32767)
+    convolved = []
+    for i, wlen in enumerate(wlen_grid):
+        convolved.append(galsim.Convolve([
+            blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams))
 
     return instrument.fiber_acceptance_dict[source.type_name]

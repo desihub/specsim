@@ -77,16 +77,35 @@ def calculate_fiber_acceptance_fraction(
         source_model = disk_model + bulge_model
 
     # Calculate the on-sky fiber aperture.
-    radial_size = (0.5 * instrument.fiber_diameter /
+    radial_size = (instrument.fiber_diameter /
                    instrument.radial_scale(focal_r)).to(u.arcsec).value
-    azimuthal_size = (0.5 * instrument.fiber_diameter /
+    azimuthal_size = (instrument.fiber_diameter /
                       instrument.azimuthal_scale(focal_r)).to(u.arcsec).value
 
-    # Build the convolved model.
+    # Prepare an image of the fiber aperture for numerical integration.
+    scale = instrument.fiberloss_pixel_size.to(u.arcsec).value
+    npix_r = np.ceil(radial_size / scale)
+    npix_phi = np.ceil(azimuthal_size / scale)
+    image = galsim.Image(npix_r, npix_phi, scale=scale)
+
+    # Calculate the coordinates at center of each image pixel relative to
+    # the fiber center.
+    dr = (np.arange(npix_r) - 0.5 * npix_r) * scale
+    dphi = (np.arange(npix_phi) - 0.5 * npix_phi) * scale
+
+    # Select pixels whose center is within the fiber aperture.
+    inside = (
+        (2 * dr / radial_size) ** 2 +
+        (2 * dphi[:, np.newaxis] / azimuthal_size) ** 2 <= 1.0)
+
+    # Build the convolved models and integrate.
     gsparams = galsim.GSParams(maximum_fft_size=32767)
-    convolved = []
     for i, wlen in enumerate(wlen_grid):
-        convolved.append(galsim.Convolve([
-            blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams))
+        convolved = galsim.Convolve([
+            blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams)
+        convolved.drawImage(image=image, method='auto',
+                            offset=(offsets[i], 0.))
+        fraction = np.sum(image.array[inside])
+        print('fiberloss:', wlen, offsets[i], fraction)
 
     return instrument.fiber_acceptance_dict[source.type_name]

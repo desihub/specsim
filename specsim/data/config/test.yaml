@@ -77,9 +77,12 @@ instrument:
         # Method for calculating fiberloss fractions.
         # Either galsim or table.
         method: table
+        # Table of pre-tabulated fiberloss fractions vs wavelength for
+        # different source types.  Ignored unless method is table.
         table:
             format: ascii
             paths:
+                # Each path corresponds to a different source type.
                 qso: test/test_fiberloss.ecsv
             columns:
                 wavelength: { name: wavelength }

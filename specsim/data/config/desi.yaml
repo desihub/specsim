@@ -145,6 +145,13 @@ instrument:
         path: throughput/DESI-0347_blur.ecsv
         # The ECSV format is not auto-detected so we specify it explicitly.
         format: ascii.ecsv
+    offset:
+        # Read radial centroid offsets tabulated as a function of field angle
+        # and wavelength, and derived from ray tracing simulations.  For
+        # details, see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
+        path: throughput/DESI-0347_offset.ecsv
+        # The ECSV format is not auto-detected so we specify it explicitly.
+        format: ascii.ecsv
     cameras:
         b:
             constants:

@@ -53,6 +53,9 @@ class Instrument(object):
     blur_function : callable
         Function of field angle and wavelength that returns the corresponding
         RMS blur in length units (e.g., microns).
+    offset_function : callable
+        Function of field angle and wavelength that returns the corresponding
+        radial centroid offset in length units (e.g., microns).
     cameras : list
         List of :class:`specsim.camera.Camera` instances representing the
         camera(s) of this instrument.
@@ -79,14 +82,15 @@ class Instrument(object):
         focal-plane distance (with length units) from the boresight.
     """
     def __init__(self, name, wavelength, fiber_acceptance_dict, fiberloss_ngrid,
-                 blur_function, cameras, primary_mirror_diameter,
-                 obscuration_diameter, support_width, fiber_diameter,
-                 field_radius, radial_scale, azimuthal_scale):
+                 blur_function, offset_function, cameras,
+                 primary_mirror_diameter, obscuration_diameter, support_width,
+                 fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
         self.fiberloss_ngrid = fiberloss_ngrid
         self._blur_function = blur_function
+        self._offset_function = offset_function
         self.cameras = cameras
         self.primary_mirror_diameter = primary_mirror_diameter
         self.obscuration_diameter = obscuration_diameter
@@ -216,7 +220,7 @@ class Instrument(object):
 
 
     def get_blur_rms(self, wavelength, angle):
-        """Calculate the instrument PSF blur at the specified field angle.
+        """Get the instrument PSF blur at the specified field angle.
 
         Parameters
         ----------
@@ -229,9 +233,30 @@ class Instrument(object):
         -------
         astropy.units.Quantity
             RMS blur of the instrument at this wavelength and field radius
-            in angular units.
+            in length units.
         """
         return self._blur_function(angle, wavelength)
+
+
+    def get_centroid_offset(self, wavelength, angle):
+        """Get the instrument centroid offset at the specified field angle.
+
+        The offset is assumed to be purely radial.
+
+        Parameters
+        ----------
+        wavelength : astropy.units.Quantity
+            Wavelength where the blur should be calculated.
+        angle : astropy.units.Quantity
+            Angular separation from the field center.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            Radial centroid offset of the instrument at this wavelength and
+            field radius in length units.
+        """
+        return self._offset_function(angle, wavelength)
 
 
     def plot_field_distortion(self):
@@ -486,14 +511,22 @@ def initialize(config):
     blur_value = getattr(config.instrument.blur, 'value', None)
     if blur_value:
         blur_value = specsim.config.parse_quantity(blur_value, u.micron)
-        blur_function = lambda x, y: blur_value
+        blur_function = lambda angle, wlen: blur_value
     else:
         blur_function = config.load_table2d(
             config.instrument.blur, 'wavelength', 'r=')
 
+    offset_value = getattr(config.instrument.offset, 'value', None)
+    if offset_value:
+        offset_value = specsim.config.parse_quantity(offset_value, u.micron)
+        offset_function = lambda angle, wlen: offset_value
+    else:
+        offset_function = config.load_table2d(
+            config.instrument.offset, 'wavelength', 'r=')
+
     instrument = Instrument(
         name, config.wavelength, fiber_acceptance_dict, fiberloss_ngrid,
-        blur_function, initialized_cameras,
+        blur_function, offset_function, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['field_radius'], radial_scale, azimuthal_scale)

@@ -85,7 +85,13 @@ instrument:
                 wavelength: { name: wavelength }
                 fiber_acceptance: { name: fiberloss }
     blur:
+        # RMS blur of the instrument optics.  Use the path keyword instead
+        # to read values tabulated in wavelength and field angle.
         value: 10 micron
+    offset:
+        # Radial centroid offset of the instrument optics. Use the path keyword
+        # instead to read values tabulated in wavelength and field angle.
+        value: 0 micron
     cameras:
         r:
             constants:

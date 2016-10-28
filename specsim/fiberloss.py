@@ -32,15 +32,21 @@ def calculate_fiber_acceptance_fraction(focal_x, focal_y, wavelength,
     focal_r = np.sqrt(focal_x ** 2 + focal_y ** 2)
     angle = instrument.field_radius_to_angle(focal_r)
 
-    # Create the instrument blur PSF at each wavelength for this focal-plane
-    # position.
+    # Create the instrument blur PSF and lookup the centroid offset at each
+    # wavelength for this focal-plane position.
     blur_psf = []
+    offsets = []
     for wlen in wlen_grid:
         blur_rms = instrument.get_blur_rms(wlen, angle)
         # Convert to an angular size on the sky ignoring any asymmetry that
         # might be introduced by different radial and azimuthal plate scales.
-        blur_rms /= instrument.radial_scale(focal_r)
+        rscale = instrument.radial_scale(focal_r)
+        blur_rms /= rscale
         blur_psf.append(galsim.Gaussian(sigma=blur_rms.to(u.arcsec).value))
+        offset = instrument.get_centroid_offset(wlen, angle)
+        # Convert to an angular offset on the sky.
+        offset /= rscale
+        offsets.append(offset.to(u.arcsec).value)
 
     # Create the atmospheric seeing model at each wavelength.
     seeing_psf = []

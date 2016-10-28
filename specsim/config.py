@@ -102,7 +102,7 @@ def parse_quantity(quantity, dimensions=None):
             quantity = quantity.to(dimensions)
         except (ValueError, astropy.units.UnitConversionError):
             raise ValueError('Quantity "{0}" is not convertible to {1}.'
-                             .format(string, dimensions))
+                             .format(quantity, dimensions))
     return quantity
 
 

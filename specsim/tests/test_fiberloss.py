@@ -11,4 +11,5 @@ from ..fiberloss import *
 def test_fiberloss():
     sim = specsim.simulator.Simulator('test')
     fa = calculate_fiber_acceptance_fraction(
-        sim.source, sim.atmosphere, sim.instrument, sim.observation)
+        0. * u.mm, 0. * u.mm, 6000 * u.Angstrom,
+        sim.source, sim.atmosphere, sim.instrument)

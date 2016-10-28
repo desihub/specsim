@@ -50,7 +50,7 @@ class Instrument(object):
     fiberloss_ngrid : int
         Number of wavelengths where the fiberloss fraction should be tabulated
         for interpolation.  Will be zero when fiber_acceptance_dict is set.
-    blur_interpolator : callable
+    blur_function : callable
         Function of field angle and wavelength that returns the corresponding
         RMS blur in length units (e.g., microns).
     cameras : list
@@ -79,14 +79,14 @@ class Instrument(object):
         focal-plane distance (with length units) from the boresight.
     """
     def __init__(self, name, wavelength, fiber_acceptance_dict, fiberloss_ngrid,
-                 blur_interpolator, cameras, primary_mirror_diameter,
+                 blur_function, cameras, primary_mirror_diameter,
                  obscuration_diameter, support_width, fiber_diameter,
                  field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
         self.fiberloss_ngrid = fiberloss_ngrid
-        self._blur_interpolator = blur_interpolator
+        self._blur_function = blur_function
         self.cameras = cameras
         self.primary_mirror_diameter = primary_mirror_diameter
         self.obscuration_diameter = obscuration_diameter
@@ -231,7 +231,7 @@ class Instrument(object):
             RMS blur of the instrument at this wavelength and field radius
             in angular units.
         """
-        return self._blur_interpolator(angle, wavelength)
+        return self._blur_function(angle, wavelength)
 
 
     def plot_field_distortion(self):
@@ -483,12 +483,17 @@ def initialize(config):
         #fiber_acceptance_dict = None
         fiberloss_ngrid = config.instrument.fiberloss.ngrid
 
-    blur_interpolator = config.load_table2d(
-        config.instrument.blur, 'wavelength', 'r=')
+    blur_value = getattr(config.instrument.blur, 'value', None)
+    if blur_value:
+        blur_value = specsim.config.parse_quantity(blur_value, u.micron)
+        blur_function = lambda x, y: blur_value
+    else:
+        blur_function = config.load_table2d(
+            config.instrument.blur, 'wavelength', 'r=')
 
     instrument = Instrument(
         name, config.wavelength, fiber_acceptance_dict, fiberloss_ngrid,
-        blur_interpolator, initialized_cameras,
+        blur_function, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['field_radius'], radial_scale, azimuthal_scale)

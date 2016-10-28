@@ -84,6 +84,8 @@ instrument:
             columns:
                 wavelength: { name: wavelength }
                 fiber_acceptance: { name: fiberloss }
+    blur:
+        value: 10 micron
     cameras:
         r:
             constants:

@@ -90,15 +90,16 @@ def calculate_fiber_acceptance_fraction(
     npix_phi = np.ceil(azimuthal_size / scale)
     image = galsim.Image(npix_r, npix_phi, scale=scale)
 
-    # Calculate the coordinates at center of each image pixel relative to
+    # Calculate the coordinates at the center of each image pixel relative to
     # the fiber center.
-    dr = (np.arange(npix_r) - 0.5 * npix_r) * scale
-    dphi = (np.arange(npix_phi) - 0.5 * npix_phi) * scale
+    dr = (np.arange(npix_r) - 0.5 * npix_r - 0.5) * scale
+    dphi = (np.arange(npix_phi) - 0.5 * npix_phi - 0.5) * scale
 
-    # Select pixels whose center is within the fiber aperture.
-    inside = (
-        (2 * dr / radial_size) ** 2 +
-        (2 * dphi[:, np.newaxis] / azimuthal_size) ** 2 <= 1.0)
+    # Select pixels whose center is within the fiber aperture. Use a
+    # sigmoid activation function to anti-alias the boundary.
+    rsq = ((2 * dr / radial_size) ** 2 +
+           (2 * dphi[:, np.newaxis] / azimuthal_size) ** 2)
+    inside = (rsq < 1)
 
     # Prepare to write a FITS file of images, if requested.
     if save:
@@ -114,24 +115,44 @@ def calculate_fiber_acceptance_fraction(
         w.wcs.crval = [0., 0.]
         header = w.to_header()
 
-    # Build the convolved models and integrate.
+    # Build the convolved models and integrate. Save individual component
+    # models if requested.
     gsparams = galsim.GSParams(maximum_fft_size=32767)
     for i, wlen in enumerate(wlen_grid):
         convolved = galsim.Convolve([
             blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams)
-        # TODO: test if method='no_pixel' is faster and accurate enough.
-        convolved.drawImage(image=image, method='auto',
-                            offset=(offsets[i], 0.))
-        fraction = np.sum(image.array[inside])
+        # TODO: compare method='no_pixel' and 'auto' for accuracy and speed.
+        draw_args = dict(
+            image=image, method='no_pixel', offset=(offsets[i], 0.))
+        convolved.drawImage(**draw_args)
+        fraction = np.sum(image.array * inside)
         print('fiberloss:', wlen, offsets[i], fraction)
         if save:
-            header['COMMENT'] = '{0:.1f} Convolved model'.format(wlen)
             header['WLEN'] = wlen.to(u.Angstrom).value
             header['FRAC'] = fraction
+            header['COMMENT'] = 'Convolved model'
+            hdu_list.append(astropy.io.fits.ImageHDU(
+                data=image.array.copy(), header=header))
+            # The component models are only rendered individually if we
+            # need to save them.
+            blur_psf[i].drawImage(**draw_args)
+            header['COMMENT'] = 'Instrument blur model'
+            hdu_list.append(astropy.io.fits.ImageHDU(
+                data=image.array.copy(), header=header))
+            seeing_psf[i].drawImage(**draw_args)
+            header['COMMENT'] = 'Atmospheric seeing model'
             hdu_list.append(astropy.io.fits.ImageHDU(
                 data=image.array.copy(), header=header))
 
     if save:
+        source_model.drawImage(**draw_args)
+        header['COMMENT'] = 'Source model'
+        hdu_list.append(astropy.io.fits.ImageHDU(
+            data=image.array.copy(), header=header))
+        image.array[:] = inside
+        header['COMMENT'] = 'Fiber aperture'
+        hdu_list.append(astropy.io.fits.ImageHDU(
+            data=image.array.copy(), header=header))
         hdu_list.writeto(save, clobber=True)
 
     return instrument.fiber_acceptance_dict[source.type_name]

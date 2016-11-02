@@ -56,8 +56,12 @@ class Source(object):
         Array of increasing input wavelengths with units.
     flux_in : astropy.units.Quantity
         Array of input flux values tabulated at wavelength_in.
+    pointlike_fraction : float
+        Fraction of flux in a pointlike component. Must be between 0 and 1,
+        and sum of pointlike_fraction and disk_fraction must be <= 1.
     disk_fraction : float
-        Fraction of flux in disk component.  Must be between 0 and 1.
+        Fraction of flux in disk component.  Must be between 0 and 1,
+        and sum of pointlike_fraction and disk_fraction must be <= 1.
     disk_shape : Profile
         Transverse profile of disk component with Sersic n=1. Ignored when
         disk_fraction is 0.
@@ -90,7 +94,7 @@ class Source(object):
         redshift transform is applied before normalizing.
     """
     def __init__(self, name, type_name, wavelength_out, wavelength_in, flux_in,
-                 disk_fraction, disk_shape, bulge_shape,
+                 pointlike_fraction, disk_fraction, disk_shape, bulge_shape,
                  focal_xy, sky_position, z_in=None, z_out=None,
                  filter_name=None, ab_magnitude_out=None):
 
@@ -106,8 +110,14 @@ class Source(object):
         self.update_in(name, type_name, wavelength_in, flux_in, z_in)
         self.update_out(z_out, filter_name, ab_magnitude_out)
 
+        if pointlike_fraction < 0 or pointlike_fraction > 1:
+            raise ValueError('Expected pointlike_fraction in the range 0-1.')
         if disk_fraction < 0 or disk_fraction > 1:
             raise ValueError('Expected disk_fraction in the range 0-1.')
+        if pointlike_fraction + disk_fraction > 1:
+            raise ValueError(
+                'Expected pointlike_fraction + disk_fraction <= 1.')
+        self.pointlike_fraction = pointlike_fraction
         self.disk_fraction = disk_fraction
         self.disk_shape = disk_shape
         self.bulge_shape = bulge_shape
@@ -343,6 +353,7 @@ def initialize(config):
         sky_position = config.get_sky(config.source.location)
     # Get the source profile on the sky.
     if hasattr(config.source, 'profile'):
+        pointlike_fraction = config.source.profile.pointlike_fraction
         disk_fraction = config.source.profile.disk_fraction
         disk_shape = Profile(
             config.source.profile.disk_shape.half_light_radius,
@@ -353,11 +364,12 @@ def initialize(config):
             config.source.profile.bulge_shape.minor_major_axis_ratio,
             config.source.profile.bulge_shape.position_angle, sersic_index=4)
     else:
-        disk_fraction, disk_shape, bulge_shape = 0, None, None
+        pointlike_fraction, disk_fraction = 0, 0
+        disk_shape, bulge_shape = None, None
     # Create a new Source object.
     source = Source(
         config.source.name, config.source.type, config.wavelength,
-        table['wavelength'], table['flux'],
+        table['wavelength'], table['flux'], pointlike_fraction,
         disk_fraction, disk_shape, bulge_shape, focal_xy, sky_position,
         config.source.z_in, config.source.z_out, config.source.filter_name,
         config.source.ab_magnitude_out)

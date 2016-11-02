@@ -24,6 +24,8 @@ def calculate_fiber_acceptance_fraction(
     # Galsim is required to calculate fiberloss fractions on the fly.
     import galsim
 
+    # Initialize the grid of wavelengths where the fiberloss will be
+    # calculated.
     wlen_unit = wavelength.unit
     wlen_grid = np.linspace(wavelength.data[0], wavelength.data[-1],
                             instrument.fiberloss_ngrid) * wlen_unit
@@ -31,6 +33,18 @@ def calculate_fiber_acceptance_fraction(
     # Calculate the field angle from the focal-plane (x,y).
     focal_r = np.sqrt(focal_x ** 2 + focal_y ** 2)
     angle = instrument.field_radius_to_angle(focal_r)
+
+    # Calculate the on-sky fiber aperture.
+    radial_size = (instrument.fiber_diameter /
+                   instrument.radial_scale(focal_r)).to(u.arcsec).value
+    azimuthal_size = (instrument.fiber_diameter /
+                      instrument.azimuthal_scale(focal_r)).to(u.arcsec).value
+
+    # Prepare an image of the fiber aperture for numerical integration.
+    scale = instrument.fiberloss_pixel_size.to(u.arcsec).value
+    npix_r = np.ceil(radial_size / scale)
+    npix_phi = np.ceil(azimuthal_size / scale)
+    image = galsim.Image(npix_r, npix_phi, scale=scale)
 
     # Create the instrument blur PSF and lookup the centroid offset at each
     # wavelength for this focal-plane position.
@@ -57,38 +71,25 @@ def calculate_fiber_acceptance_fraction(
 
     # Create the source model, which we assume to be achromatic.
     source_components = []
+    if source.pointlike_fraction > 0:
+        source_components.append(galsim.Gaussian(
+            flux=source.pointlike_fraction, sigma=1e-3 * scale))
     if source.disk_fraction > 0:
         hlr = source.disk_shape.half_light_radius.to(u.arcsec).value
         q = source.disk_shape.minor_major_axis_ratio
         beta = source.disk_shape.position_angle.to(u.deg).value
-        disk_model = galsim.Exponential(
+        source_components.append(galsim.Exponential(
             flux=source.disk_fraction, half_light_radius=hlr).shear(
-                q=q, beta=beta * galsim.degrees)
-    if source.disk_fraction < 1:
+                q=q, beta=beta * galsim.degrees))
+    bulge_fraction = 1 - (source.pointlike_fraction + source.disk_fraction)
+    if bulge_fraction > 1:
         hlr = source.bulge_shape.half_light_radius.to(u.arcsec).value
         q = source.bulge_shape.minor_major_axis_ratio
         beta = source.bulge_shape.position_angle.to(u.deg).value
-        bulge_model = galsim.DeVaucouleurs(
-            flux=source.disk_fraction, half_light_radius=hlr).shear(
-                q=q, beta=beta * galsim.degrees)
-    if source.disk_fraction == 0:
-        source_model = bulge_model
-    elif source.disk_fraction == 1:
-        source_model = disk_model
-    else:
-        source_model = disk_model + bulge_model
-
-    # Calculate the on-sky fiber aperture.
-    radial_size = (instrument.fiber_diameter /
-                   instrument.radial_scale(focal_r)).to(u.arcsec).value
-    azimuthal_size = (instrument.fiber_diameter /
-                      instrument.azimuthal_scale(focal_r)).to(u.arcsec).value
-
-    # Prepare an image of the fiber aperture for numerical integration.
-    scale = instrument.fiberloss_pixel_size.to(u.arcsec).value
-    npix_r = np.ceil(radial_size / scale)
-    npix_phi = np.ceil(azimuthal_size / scale)
-    image = galsim.Image(npix_r, npix_phi, scale=scale)
+        source_components.append(galsim.DeVaucouleurs(
+            flux=bulge_fraction, half_light_radius=hlr).shear(
+                q=q, beta=beta * galsim.degrees))
+    source_model = galsim.Add(source_components)
 
     # Calculate the coordinates at the center of each image pixel relative to
     # the fiber center.

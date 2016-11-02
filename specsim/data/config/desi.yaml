@@ -285,8 +285,11 @@ source:
                 # Note the factor of 1e-17 in the units!
                 unit: 1e-17 erg / (Angstrom cm2 s)
     # Transverse profile of the source on the sky, used to calculate the
-    # fiberloss fraction.
+    # fiberloss fraction when instrument.fiberloss.method = galsim (but
+    # ignored otherwise).
     profile:
+        # If the pointlike_fraction is 1, all other parameters are ignored.
+        pointlike_fraction: 0.0
         disk_fraction: 0.5
         disk_shape:
             half_light_radius: 0.8 arcsec

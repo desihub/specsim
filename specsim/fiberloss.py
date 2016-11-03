@@ -34,16 +34,18 @@ def calculate_fiber_acceptance_fraction(
     focal_r = np.sqrt(focal_x ** 2 + focal_y ** 2)
     angle = instrument.field_radius_to_angle(focal_r)
 
-    # Calculate the on-sky fiber aperture.
-    radial_size = (instrument.fiber_diameter /
-                   instrument.radial_scale(focal_r)).to(u.arcsec).value
-    azimuthal_size = (instrument.fiber_diameter /
-                      instrument.azimuthal_scale(focal_r)).to(u.arcsec).value
+    # Calculate the plate scales in um/arcsec at this location.
+    radial_scale = instrument.radial_scale(focal_r).to(u.um / u.arcsec).value
+    azimuthal_scale = (instrument.azimuthal_scale(focal_r)
+                       .to(u.um / u.arcsec).value)
 
     # Prepare an image of the fiber aperture for numerical integration.
-    scale = instrument.fiberloss_pixel_size.to(u.arcsec).value
-    npix_r = np.ceil(radial_size / scale)
-    npix_phi = np.ceil(azimuthal_size / scale)
+    # Images are formed in the physical x-y space of the plate rather than
+    # on sky angles.
+    fiber_diameter = instrument.fiber_diameter.to(u.um).value
+    scale = 1.05 * fiber_diameter / 100
+    npix_r = 100
+    npix_phi = 100
     image = galsim.Image(npix_r, npix_phi, scale=scale)
 
     # Create the instrument blur PSF and lookup the centroid offset at each
@@ -51,23 +53,24 @@ def calculate_fiber_acceptance_fraction(
     blur_psf = []
     offsets = []
     for wlen in wlen_grid:
-        blur_rms = instrument.get_blur_rms(wlen, angle)
-        # Convert to an angular size on the sky ignoring any asymmetry that
-        # might be introduced by different radial and azimuthal plate scales.
-        rscale = instrument.radial_scale(focal_r)
-        blur_rms /= rscale
-        blur_psf.append(galsim.Gaussian(sigma=blur_rms.to(u.arcsec).value))
-        offset = instrument.get_centroid_offset(wlen, angle)
-        # Convert to an angular offset on the sky.
-        offset /= rscale
-        offsets.append(offset.to(u.arcsec).value)
+        # Lookup the RMS blur in focal-plane microns.
+        blur_rms = instrument.get_blur_rms(wlen, angle).to(u.um).value
+        # Use a Gaussian PSF to model blur.
+        blur_psf.append(galsim.Gaussian(sigma=blur_rms))
+        # Lookup the radial centroid offset in focal-plane microns.
+        offsets.append(
+            instrument.get_centroid_offset(wlen, angle).to(u.um).value)
 
     # Create the atmospheric seeing model at each wavelength.
     seeing_psf = []
     for wlen in wlen_grid:
+        # Lookup the seeing FWHM in arcsecs.
+        seeing_fwhm = atmosphere.get_seeing_fwhm(wlen).to(u.arcsec).value
+        # Use a Moffat profile to model the seeing in arcsec, then transform
+        # to focal-plane microns.
         seeing_psf.append(galsim.Moffat(
-            fwhm=atmosphere.get_seeing_fwhm(wlen).to(u.arcsec).value,
-            beta=atmosphere.seeing['moffat_beta']))
+            fwhm=seeing_fwhm, beta=atmosphere.seeing['moffat_beta']
+            ).transform(radial_scale, 0, 0, azimuthal_scale).withFlux(1))
 
     # Create the source model, which we assume to be achromatic.
     source_components = []
@@ -89,18 +92,19 @@ def calculate_fiber_acceptance_fraction(
         source_components.append(galsim.DeVaucouleurs(
             flux=bulge_fraction, half_light_radius=hlr).shear(
                 q=q, beta=beta * galsim.degrees))
-    source_model = galsim.Add(source_components)
+    # Combine the components and transform to focal-plane microns.
+    gsparams = galsim.GSParams(maximum_fft_size=32767)
+    source_model = galsim.Add(source_components, gsparams=gsparams).transform(
+        radial_scale, 0, 0, azimuthal_scale).withFlux(1)
 
     # Calculate the coordinates at the center of each image pixel relative to
     # the fiber center.
     dr = (np.arange(npix_r) - 0.5 * npix_r - 0.5) * scale
     dphi = (np.arange(npix_phi) - 0.5 * npix_phi - 0.5) * scale
 
-    # Select pixels whose center is within the fiber aperture. Use a
-    # sigmoid activation function to anti-alias the boundary.
-    rsq = ((2 * dr / radial_size) ** 2 +
-           (2 * dphi[:, np.newaxis] / azimuthal_size) ** 2)
-    inside = (rsq < 1)
+    # Select pixels whose center is within the fiber aperture.
+    rsq = dr ** 2 + dphi[:, np.newaxis] ** 2
+    inside = (rsq < (fiber_diameter / 2) ** 2)
 
     # Prepare to write a FITS file of images, if requested.
     if save:
@@ -124,7 +128,7 @@ def calculate_fiber_acceptance_fraction(
             blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams)
         # TODO: compare method='no_pixel' and 'auto' for accuracy and speed.
         draw_args = dict(
-            image=image, method='no_pixel', offset=(offsets[i], 0.))
+            image=image, method='auto', offset=(offsets[i], 0.))
         convolved.drawImage(**draw_args)
         fraction = np.sum(image.array * inside)
         print('fiberloss:', wlen, offsets[i], fraction)
@@ -146,6 +150,7 @@ def calculate_fiber_acceptance_fraction(
                 data=image.array.copy(), header=header))
 
     if save:
+        del draw_args['offset']
         source_model.drawImage(**draw_args)
         header['COMMENT'] = 'Source model'
         hdu_list.append(astropy.io.fits.ImageHDU(

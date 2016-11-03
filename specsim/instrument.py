@@ -47,7 +47,7 @@ class Instrument(object):
     fiber_acceptance_dict : dict or None
         Dictionary of fiber acceptance fractions tabulated for different
         source models, with keys corresponding to source model names.
-    fiberloss_ngrid : int
+    fiberloss_num_wlen : int
         Number of wavelengths where the fiberloss fraction should be tabulated
         for interpolation.  Will be zero when fiber_acceptance_dict is set.
     fiberloss_pixel_size : astropy.units.Quantity
@@ -85,14 +85,14 @@ class Instrument(object):
         (sagittal) direction (with appropriate units) as a function of
         focal-plane distance (with length units) from the boresight.
     """
-    def __init__(self, name, wavelength, fiber_acceptance_dict, fiberloss_ngrid,
+    def __init__(self, name, wavelength, fiber_acceptance_dict, fiberloss_num_wlen,
                  fiberloss_pixel_size, blur_function, offset_function, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
                  fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
-        self.fiberloss_ngrid = fiberloss_ngrid
+        self.fiberloss_num_wlen = fiberloss_num_wlen
         self.fiberloss_pixel_size = fiberloss_pixel_size
         self._blur_function = blur_function
         self._offset_function = offset_function
@@ -508,11 +508,11 @@ def initialize(config):
     fiber_acceptance_dict = config.load_table(
         config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
     if config.instrument.fiberloss.method == 'table':
-        fiberloss_ngrid = 0
+        fiberloss_num_wlen = 0
         fiberloss_pixel_size = 0 * u.arcsec
     else:
         #fiber_acceptance_dict = None
-        fiberloss_ngrid = config.instrument.fiberloss.ngrid
+        fiberloss_num_wlen = config.instrument.fiberloss.num_wlen
         fiberloss_pixel_size = specsim.config.parse_quantity(
             config.instrument.fiberloss.pixel_size)
 
@@ -533,7 +533,7 @@ def initialize(config):
             config.instrument.offset, 'wavelength', 'r=')
 
     instrument = Instrument(
-        name, config.wavelength, fiber_acceptance_dict, fiberloss_ngrid,
+        name, config.wavelength, fiber_acceptance_dict, fiberloss_num_wlen,
         fiberloss_pixel_size, blur_function, offset_function,
         initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],

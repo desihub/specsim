@@ -18,7 +18,7 @@ def calculate_fiber_acceptance_fraction(
     """
     """
     # Use pre-tabulated fiberloss vs wavelength when available.
-    if instrument.fiberloss_ngrid == 0:
+    if instrument.fiberloss_num_wlen == 0:
         return instrument.fiber_acceptance_dict[source.type_name]
 
     # Galsim is required to calculate fiberloss fractions on the fly.
@@ -28,7 +28,7 @@ def calculate_fiber_acceptance_fraction(
     # calculated.
     wlen_unit = wavelength.unit
     wlen_grid = np.linspace(wavelength.data[0], wavelength.data[-1],
-                            instrument.fiberloss_ngrid) * wlen_unit
+                            instrument.fiberloss_num_wlen) * wlen_unit
 
     # Calculate the field angle from the focal-plane (x,y).
     focal_r = np.sqrt(focal_x ** 2 + focal_y ** 2)

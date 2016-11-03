@@ -124,7 +124,7 @@ instrument:
         method: galsim
         # Number of wavelengths where fiberloss should be calculated
         # and interpolated. Ignored unless method is galsim.
-        ngrid: 11
+        num_wlen: 11
         # Pixel size for numerically integrating flux into the fiber.
         # Ignored unless method is galsim.
         pixel_size: 0.05 arcsec

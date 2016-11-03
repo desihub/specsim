@@ -7,6 +7,7 @@ illuminating a fiber and the on-sky aperture of the fiber.
 from __future__ import print_function, division
 
 import numpy as np
+import numpy.lib.stride_tricks
 
 import astropy.units as u
 import astropy.io.fits
@@ -14,7 +15,8 @@ import astropy.wcs
 
 
 def calculate_fiber_acceptance_fraction(
-    focal_x, focal_y, wavelength, source, atmosphere, instrument, save=None):
+    focal_x, focal_y, wavelength, source, atmosphere, instrument,
+    oversampling = 16, save=None):
     """
     """
     # Use pre-tabulated fiberloss vs wavelength when available.
@@ -96,13 +98,16 @@ def calculate_fiber_acceptance_fraction(
     source_model = galsim.Add(source_components, gsparams=gsparams).transform(
         radial_scale, 0, 0, azimuthal_scale).withFlux(1)
 
-    # Calculate the coordinates at the center of each image pixel relative to
-    # the fiber center.
-    dxy = (np.arange(num_pixels) - 0.5 * num_pixels - 0.5) * scale
-
-    # Select pixels whose center is within the fiber aperture.
+    # Prepare an anti-aliased image of the fiber aperture.
+    nos = num_pixels * oversampling
+    dxy = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos)
     rsq = dxy ** 2 + dxy[:, np.newaxis] ** 2
-    inside = (rsq < (fiber_diameter / 2) ** 2)
+    inside = (rsq <= 1).astype(float)
+    s0, s1 = inside.strides
+    blocks = numpy.lib.stride_tricks.as_strided(
+        inside, shape=(num_pixels, num_pixels, oversampling, oversampling),
+        strides=(oversampling * s0, oversampling * s1, s0, s1))
+    aperture = blocks.sum(axis=(2, 3)) / oversampling ** 2
 
     # Prepare to write a FITS file of images, if requested.
     if save:
@@ -128,7 +133,7 @@ def calculate_fiber_acceptance_fraction(
         draw_args = dict(
             image=image, method='auto', offset=(offsets[i] / scale, 0.))
         convolved.drawImage(**draw_args)
-        fraction = np.sum(image.array * inside)
+        fraction = np.sum(image.array * aperture)
         print('fiberloss:', wlen, offsets[i], fraction)
         if save:
             header['WLEN'] = wlen.to(u.Angstrom).value
@@ -153,10 +158,9 @@ def calculate_fiber_acceptance_fraction(
         header['COMMENT'] = 'Source model'
         hdu_list.append(astropy.io.fits.ImageHDU(
             data=image.array.copy(), header=header))
-        image.array[:] = inside
         header['COMMENT'] = 'Fiber aperture'
         hdu_list.append(astropy.io.fits.ImageHDU(
-            data=image.array.copy(), header=header))
+            data=aperture, header=header))
         hdu_list.writeto(save, clobber=True)
 
     return instrument.fiber_acceptance_dict[source.type_name]

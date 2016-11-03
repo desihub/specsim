@@ -50,10 +50,9 @@ class Instrument(object):
     fiberloss_num_wlen : int
         Number of wavelengths where the fiberloss fraction should be tabulated
         for interpolation.  Will be zero when fiber_acceptance_dict is set.
-    fiberloss_pixel_size : astropy.units.Quantity
-        Size of pixels to use for numerically integrating flux entering the
-        fiber to calculate fiberloss fractions as a function of wavelength.
-        Must have on-sky angular units.
+    fiberloss_num_pixels : int
+        Number of pixels used to subdivide the fiber diameter for
+        numerical convolution and integration calculations.
     blur_function : callable
         Function of field angle and wavelength that returns the corresponding
         RMS blur in length units (e.g., microns).
@@ -85,15 +84,16 @@ class Instrument(object):
         (sagittal) direction (with appropriate units) as a function of
         focal-plane distance (with length units) from the boresight.
     """
-    def __init__(self, name, wavelength, fiber_acceptance_dict, fiberloss_num_wlen,
-                 fiberloss_pixel_size, blur_function, offset_function, cameras,
+    def __init__(self, name, wavelength, fiber_acceptance_dict,
+                 fiberloss_num_wlen, fiberloss_num_pixels,
+                 blur_function, offset_function, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
                  fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
         self.fiberloss_num_wlen = fiberloss_num_wlen
-        self.fiberloss_pixel_size = fiberloss_pixel_size
+        self.fiberloss_num_pixels = fiberloss_num_pixels
         self._blur_function = blur_function
         self._offset_function = offset_function
         self.cameras = cameras
@@ -509,12 +509,11 @@ def initialize(config):
         config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
     if config.instrument.fiberloss.method == 'table':
         fiberloss_num_wlen = 0
-        fiberloss_pixel_size = 0 * u.arcsec
+        fiberloss_num_pixels = 0
     else:
         #fiber_acceptance_dict = None
         fiberloss_num_wlen = config.instrument.fiberloss.num_wlen
-        fiberloss_pixel_size = specsim.config.parse_quantity(
-            config.instrument.fiberloss.pixel_size)
+        fiberloss_num_pixels = config.instrument.fiberloss.num_pixels
 
     blur_value = getattr(config.instrument.blur, 'value', None)
     if blur_value:
@@ -534,7 +533,7 @@ def initialize(config):
 
     instrument = Instrument(
         name, config.wavelength, fiber_acceptance_dict, fiberloss_num_wlen,
-        fiberloss_pixel_size, blur_function, offset_function,
+        fiberloss_num_pixels, blur_function, offset_function,
         initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],

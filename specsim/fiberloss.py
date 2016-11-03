@@ -43,10 +43,9 @@ def calculate_fiber_acceptance_fraction(
     # Images are formed in the physical x-y space of the plate rather than
     # on sky angles.
     fiber_diameter = instrument.fiber_diameter.to(u.um).value
-    scale = 1.05 * fiber_diameter / 100
-    npix_r = 100
-    npix_phi = 100
-    image = galsim.Image(npix_r, npix_phi, scale=scale)
+    num_pixels = instrument.fiberloss_num_pixels
+    scale = fiber_diameter / num_pixels
+    image = galsim.Image(num_pixels, num_pixels, scale=scale)
 
     # Create the instrument blur PSF and lookup the centroid offset at each
     # wavelength for this focal-plane position.
@@ -99,11 +98,10 @@ def calculate_fiber_acceptance_fraction(
 
     # Calculate the coordinates at the center of each image pixel relative to
     # the fiber center.
-    dr = (np.arange(npix_r) - 0.5 * npix_r - 0.5) * scale
-    dphi = (np.arange(npix_phi) - 0.5 * npix_phi - 0.5) * scale
+    dxy = (np.arange(num_pixels) - 0.5 * num_pixels - 0.5) * scale
 
     # Select pixels whose center is within the fiber aperture.
-    rsq = dr ** 2 + dphi[:, np.newaxis] ** 2
+    rsq = dxy ** 2 + dxy[:, np.newaxis] ** 2
     inside = (rsq < (fiber_diameter / 2) ** 2)
 
     # Prepare to write a FITS file of images, if requested.
@@ -115,7 +113,7 @@ def calculate_fiber_acceptance_fraction(
         # All subsequent HDUs contain images with the same WCS.
         w = astropy.wcs.WCS(naxis=2)
         w.wcs.ctype = ['x', 'y']
-        w.wcs.crpix = [npix_r / 2. + 0.5, npix_phi / 2. + 0.5]
+        w.wcs.crpix = [num_pixels / 2. + 0.5, num_pixels / 2. + 0.5]
         w.wcs.cdelt = [scale, scale]
         w.wcs.crval = [0., 0.]
         header = w.to_header()
@@ -128,7 +126,7 @@ def calculate_fiber_acceptance_fraction(
             blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams)
         # TODO: compare method='no_pixel' and 'auto' for accuracy and speed.
         draw_args = dict(
-            image=image, method='auto', offset=(offsets[i], 0.))
+            image=image, method='auto', offset=(offsets[i] / scale, 0.))
         convolved.drawImage(**draw_args)
         fraction = np.sum(image.array * inside)
         print('fiberloss:', wlen, offsets[i], fraction)

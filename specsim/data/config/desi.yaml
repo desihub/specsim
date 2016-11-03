@@ -125,9 +125,9 @@ instrument:
         # Number of wavelengths where fiberloss should be calculated
         # and interpolated. Ignored unless method is galsim.
         num_wlen: 11
-        # Pixel size for numerically integrating flux into the fiber.
-        # Ignored unless method is galsim.
-        pixel_size: 0.05 arcsec
+        # Number of pixels used to subdivide the fiber diameter for
+        # numerical convolution and integration calculations with galsim.
+        num_pixels: 25
         # Table of pre-tabulated fiberloss fractions vs wavelength for
         # different source types.  Ignored unless method is table.
         table:

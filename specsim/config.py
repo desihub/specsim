@@ -40,6 +40,7 @@ import astropy.table
 import astropy.utils.data
 import astropy.coordinates
 import astropy.time
+import astropy.io.fits
 
 try:
     basestring          #- exists in py2
@@ -332,6 +333,13 @@ class Configuration(Node):
                 raise RuntimeError('Invalid value for {0}.{1}: {2}'
                                    .format(node, name, value))
         return constants
+
+
+    def load_fits(self, filename, **kwargs):
+        """Load the specified FITS file.
+        """
+        path = os.path.join(self.abs_base_path, filename)
+        return astropy.io.fits.open(path, **kwargs)
 
 
     def load_table(self, parent, column_names, interpolate=True, as_dict=False):

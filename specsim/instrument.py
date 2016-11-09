@@ -531,14 +531,9 @@ def initialize(config):
         offset_function = config.load_table2d(
             config.instrument.offset, 'wavelength', 'r=')
         if hasattr(config.instrument.offset, 'random'):
-            if config.verbose:
-                print('Reading random centroid offsets from',
-                      config.instrument.offset.random)
-            hdus = config.load_fits(
-                config.instrument.offset.random, memmap=False)
-            random_dx = hdus['XOFFSET'].data
-            random_dy = hdus['YOFFSET'].data
-            hdus.close()
+            random_interpolators = config.load_fits2d(
+                config.instrument.offset.random,
+                random_x='XOFFSET', random_y='YOFFSET')
 
     instrument = Instrument(
         name, config.wavelength, fiber_acceptance_dict, fiberloss_num_wlen,

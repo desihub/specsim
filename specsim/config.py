@@ -335,13 +335,6 @@ class Configuration(Node):
         return constants
 
 
-    def load_fits(self, filename, **kwargs):
-        """Load the specified FITS file.
-        """
-        path = os.path.join(self.abs_base_path, filename)
-        return astropy.io.fits.open(path, **kwargs)
-
-
     def load_table(self, parent, column_names, interpolate=True, as_dict=False):
         """Load and interpolate tabular data from one or more files.
 
@@ -567,6 +560,22 @@ class Configuration(Node):
         else:
             get_y = lambda y: np.asarray(y)
         return lambda x, y: interpolator.ev(get_x(x), get_y(y)) * data_unit
+
+
+    def load_fits2d(self, filename, **hdus):
+        """Load the specified FITS file.
+        """
+        path = os.path.join(self.abs_base_path, filename)
+        fits = astropy.io.fits.open(path, memmap=False)
+        interpolators = {}
+        for name in hdus:
+            #x = ...
+            #y = ...
+            data = fits[hdus[name]].data
+            #interpolators[hdu] = scipy.interpolate.RectBivariateSpline(
+            #    x, y, data, kx=1, ky=1, s=0)
+        fits.close()
+        return interpolators
 
 
 def load_config(name, config_type=Configuration):

@@ -1,7 +1,9 @@
 0.7 (unreleased)
 ----------------
 
-No changes yet.
+- Add fiberloss module with support for more realistic fiberloss calculations.
+- Add optional dependency on galsim (only required for on-the-fly fiberloss
+  calculations).
 
 0.6 (2016-11-09)
 ----------------

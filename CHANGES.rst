@@ -1,6 +1,7 @@
-0.6 (unreleased)
+0.6 (2016-11-09)
 ----------------
 
+- Fix github issues #43, #49.
 - Create DOI for v0.5 https://doi.org/10.5281/zenodo.154130.
 - Re-implement Camera.get_output_resolution_matrix to return a sparse
   matrix, which uses significantly less memory and runs 4-5x faster.

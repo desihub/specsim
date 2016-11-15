@@ -137,9 +137,9 @@ def calculate_fiber_acceptance_fraction(
             blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams)
         # TODO: compare method='no_pixel' and 'auto' for accuracy and speed.
         dx, dy = offsets[i]
-        draw_args = dict(
-            image=image, method='auto', offset=(dx / scale, dy / scale))
-        convolved.drawImage(**draw_args)
+        offset = (dx / scale, dy / scale)
+        draw_args = dict(image=image, method='auto')
+        convolved.drawImage(offset=offset, **draw_args)
         fraction = np.sum(image.array * aperture)
         print('fiberloss:', wlen, dx, dy, fraction)
         if save:
@@ -150,17 +150,18 @@ def calculate_fiber_acceptance_fraction(
                 data=image.array.copy(), header=header))
             # The component models are only rendered individually if we
             # need to save them.
-            blur_psf[i].drawImage(**draw_args)
+            blur_psf[i].drawImage(offset=offset, **draw_args)
             header['COMMENT'] = 'Instrument blur model'
             hdu_list.append(astropy.io.fits.ImageHDU(
                 data=image.array.copy(), header=header))
+            # Render the seeing without the instrumental offset.
             seeing_psf[i].drawImage(**draw_args)
             header['COMMENT'] = 'Atmospheric seeing model'
             hdu_list.append(astropy.io.fits.ImageHDU(
                 data=image.array.copy(), header=header))
 
     if save:
-        del draw_args['offset']
+        # Render the source model without the instrumental offset.
         source_model.drawImage(**draw_args)
         header['COMMENT'] = 'Source model'
         hdu_list.append(astropy.io.fits.ImageHDU(

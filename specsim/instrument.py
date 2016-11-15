@@ -244,26 +244,31 @@ class Instrument(object):
         return self._blur_function(angle, wavelength)
 
 
-    def get_centroid_offset(self, wavelength, angle_x, angle_y):
+    def get_centroid_offset(self, angle_x, angle_y, wavelength):
         """Get the instrument centroid offset at the specified field angles.
 
         This method does not make any assumptions about how the x and y
         axes are defined, as long as (0, 0) is the field center.
 
+        Note that the focal-plane position is input as angles relative to
+        the field center, while the offsets are returned as lengths relative
+        to the nominal fiber center.
+
         Parameters
         ----------
-        wavelength : astropy.units.Quantity
-            Wavelength where the blur should be calculated.
         angle_x : astropy.units.Quantity
             Angular separation from the field center along x.
         angle_y : astropy.units.Quantity
             Angular separation from the field center along y.
+        wavelength : astropy.units.Quantity
+            Wavelength where the blur should be calculated.
 
         Returns
         -------
-        astropy.units.Quantity
-            Radial centroid offset of the instrument at this wavelength and
-            field radius in length units.
+        tuple
+            Tuple (dx, dy) of astropy quantities giving the spot centroid
+            offset components at this wavelength and position in the focal
+            plane.  Offsets are given in length units, e.g., microns.
         """
         return self._offset_function(angle_x, angle_y, wavelength)
 
@@ -535,10 +540,18 @@ def initialize(config):
         # Build an interpolator in (r, wlen).
         radial_offset_function = config.load_table2d(
             config.instrument.offset, 'wavelength', 'r=')
-        # Repackage as a function of (x, y, wlen).
-        offset_function = (
-            lambda angle_x, angle_y, wlen:
-            radial_offset_function(np.sqrt(angle_x ** 2 + angle_y ** 2), wlen))
+        # Repackage as a function of (x, y, wlen) that returns (dx, dy).
+        def offset_function(angle_x, angle_y, wlen):
+            angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
+            dr = radial_offset_function(angle_r, wlen)
+            # Special handling of the origin.
+            not_at_origin = (angle_r > 0.)
+            ux = np.ones(shape=dr.shape, dtype=float)
+            uy = np.ones(shape=dr.shape, dtype=float)
+            ux[not_at_origin] = angle_x / angle_r
+            uy[not_at_origin] = angle_y / angle_r
+            print(angle_x, angle_y, angle_r, ux, uy)
+            return dr * ux, dr * uy
         if hasattr(config.instrument.offset, 'random'):
             random_interpolators = config.load_fits2d(
                 config.instrument.offset.random, xy_unit=u.deg,

@@ -33,8 +33,10 @@ def calculate_fiber_acceptance_fraction(
                             instrument.fiberloss_num_wlen) * wlen_unit
 
     # Convert x, y offsets in length units to field angles.
-    angle_x = instrument.field_radius_to_angle(focal_x)
-    angle_y = instrument.field_radius_to_angle(focal_y)
+    angle_x = (
+        np.sign(focal_x) * instrument.field_radius_to_angle(np.abs(focal_x)))
+    angle_y = (
+        np.sign(focal_y) * instrument.field_radius_to_angle(np.abs(focal_y)))
 
     # Calculate radial offsets from the field center.
     focal_r = np.sqrt(focal_x ** 2 + focal_y ** 2)
@@ -63,9 +65,8 @@ def calculate_fiber_acceptance_fraction(
         # Use a Gaussian PSF to model blur.
         blur_psf.append(galsim.Gaussian(sigma=blur_rms))
         # Lookup the radial centroid offset in focal-plane microns.
-        offsets.append(
-            instrument.get_centroid_offset(wlen, angle_x, angle_y)
-            .to(u.um).value)
+        dx, dy = instrument.get_centroid_offset(angle_x, angle_y, wlen)
+        offsets.append((dx.to(u.um).value, dy.to(u.um).value))
 
     # Create the atmospheric seeing model at each wavelength.
     seeing_psf = []
@@ -135,11 +136,12 @@ def calculate_fiber_acceptance_fraction(
         convolved = galsim.Convolve([
             blur_psf[i], seeing_psf[i], source_model], gsparams=gsparams)
         # TODO: compare method='no_pixel' and 'auto' for accuracy and speed.
+        dx, dy = offsets[i]
         draw_args = dict(
-            image=image, method='auto', offset=(offsets[i] / scale, 0.))
+            image=image, method='auto', offset=(dx / scale, dy / scale))
         convolved.drawImage(**draw_args)
         fraction = np.sum(image.array * aperture)
-        print('fiberloss:', wlen, offsets[i], fraction)
+        print('fiberloss:', wlen, dx, dy, fraction)
         if save:
             header['WLEN'] = wlen.to(u.Angstrom).value
             header['FRAC'] = fraction

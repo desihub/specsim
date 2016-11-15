@@ -314,8 +314,8 @@ source:
         constants:
             # Comment out these lines to have (x,y) and the airmass
             # calculated automatically for this source and observation.
-            focal_x: 0 mm
-            focal_y: 100 mm
+            focal_x: -70.7 mm
+            focal_y: +70.7 mm
         # Sky coordinates are optional (and ignored) when focal-plane (x,y)
         # are specified.
         sky: { coordinates: 0h 0d, frame: icrs }

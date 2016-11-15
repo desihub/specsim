@@ -613,9 +613,15 @@ class Configuration(Node):
                                  .format(bunit, hdus[name]))
             dimensionless_interpolator = scipy.interpolate.RectBivariateSpline(
                 x, y, hdu.data, kx=1, ky=1, s=0)
-            interpolators[hdu] = (
-                lambda x, y: dimensionless_interpolator(
-                    x.to(xy_unit).value, y.to(xy_unit).value) * bunit)
+            # Note that the default arg values are used to capture the
+            # current values of dimensionless_interpolator and data_unit
+            # in the closure of this inner function.
+            def interpolator(x, y, f=dimensionless_interpolator, u=data_unit):
+                return f.ev(x.to(xy_unit).value, y.to(xy_unit).value) * u
+            interpolators[name] = interpolator
+            if self.verbose:
+                print('Loaded {0} from HDU[{1}] of {2}.'
+                      .format(name, hdus[name], path))
         hdu_list.close()
         return interpolators
 

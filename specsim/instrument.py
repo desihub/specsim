@@ -537,10 +537,23 @@ def initialize(config):
         offset_value = specsim.config.parse_quantity(offset_value, u.micron)
         offset_function = lambda angle_x, angle_y, wlen: offset_value
     else:
-        # Build an interpolator in (r, wlen).
+        # Build an interpolator in (r, wlen) of radial chromatic offsets.
         radial_offset_function = config.load_table2d(
             config.instrument.offset, 'wavelength', 'r=')
-        # Repackage as a function of (x, y, wlen) that returns (dx, dy).
+        # Look for an optional file of random achromatic offsets.
+        if hasattr(config.instrument.offset, 'random'):
+            # Build an interpolator in (x, y).
+            random_interpolators = config.load_fits2d(
+                config.instrument.offset.random, xy_unit=u.deg,
+                random_dx='XOFFSET', random_dy='YOFFSET')
+            print('dx',random_interpolators['random_dx'](0*u.deg, 0*u.deg),
+                  'dy',random_interpolators['random_dy'](0*u.deg, 0*u.deg))
+        else:
+            random_interpolators = dict(
+                random_dx=lambda angle_x, angle_y: 0 * u.um,
+                random_dy=lambda angle_x, angle_y: 0 * u.um)
+        # Combine the interpolators into a function of (x, y, wlen) that
+        # returns (dx, dy).
         def offset_function(angle_x, angle_y, wlen):
             angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
             dr = radial_offset_function(angle_r, wlen)
@@ -550,12 +563,10 @@ def initialize(config):
             uy = np.ones(shape=dr.shape, dtype=float)
             ux[not_at_origin] = angle_x / angle_r
             uy[not_at_origin] = angle_y / angle_r
-            print(angle_x, angle_y, angle_r, ux, uy)
-            return dr * ux, dr * uy
-        if hasattr(config.instrument.offset, 'random'):
-            random_interpolators = config.load_fits2d(
-                config.instrument.offset.random, xy_unit=u.deg,
-                random_x='XOFFSET', random_y='YOFFSET')
+            random_dx = random_interpolators['random_dx'](angle_x, angle_y)
+            random_dy = random_interpolators['random_dy'](angle_x, angle_y)
+            print('random', angle_x, angle_y, random_dx, random_dy)
+            return dr * ux + random_dx, dr * uy + random_dy
 
     instrument = Instrument(
         name, config.wavelength, fiber_acceptance_dict, fiberloss_num_wlen,

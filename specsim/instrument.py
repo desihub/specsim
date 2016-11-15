@@ -553,19 +553,23 @@ def initialize(config):
                 random_dx=lambda angle_x, angle_y: 0 * u.um,
                 random_dy=lambda angle_x, angle_y: 0 * u.um)
         # Combine the interpolators into a function of (x, y, wlen) that
-        # returns (dx, dy).
-        def offset_function(angle_x, angle_y, wlen):
+        # returns (dx, dy).  Use default parameter values to capture the
+        # necessary state in the inner function's closure.
+        def offset_function(angle_x, angle_y, wlen,
+                            fr=radial_offset_function,
+                            fx=random_interpolators['random_dx'],
+                            fy=random_interpolators['random_dy']):
             angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
-            dr = radial_offset_function(angle_r, wlen)
+            dr = fr(angle_r, wlen)
             # Special handling of the origin.
             not_at_origin = (angle_r > 0.)
             ux = np.ones(shape=dr.shape, dtype=float)
             uy = np.ones(shape=dr.shape, dtype=float)
             ux[not_at_origin] = angle_x / angle_r
             uy[not_at_origin] = angle_y / angle_r
-            random_dx = random_interpolators['random_dx'](angle_x, angle_y)
-            random_dy = random_interpolators['random_dy'](angle_x, angle_y)
-            print('random', angle_x, angle_y, random_dx, random_dy)
+            # Add any random offsets.
+            random_dx = fx(angle_x, angle_y)
+            random_dy = fy(angle_x, angle_y)
             return dr * ux + random_dx, dr * uy + random_dy
 
     instrument = Instrument(

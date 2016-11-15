@@ -551,16 +551,20 @@ class Configuration(Node):
         interpolator = scipy.interpolate.RectBivariateSpline(
             x_value, y_value, data, kx=1, ky=1, s=0)
 
-        # Return a wrapper that handles units.
+        # Return a wrapper that handles units.  Note that default parameters
+        # are used below to capture values (rather than references) in the
+        # lambda closures.
         if x_unit != 1:
-            get_x = lambda x: x.to(x_unit).value
+            get_x = lambda x, u=x_unit: x.to(u).value
         else:
             get_x = lambda x: np.asarray(x)
         if y_unit != 1:
-            get_y = lambda y: y.to(y_unit).value
+            get_y = lambda y, u=y_unit: y.to(u).value
         else:
             get_y = lambda y: np.asarray(y)
-        return lambda x, y: interpolator.ev(get_x(x), get_y(y)) * data_unit
+        return (
+            lambda x, y, f=interpolator, u=data_unit:
+            f.ev(get_x(x), get_y(y)) * u)
 
 
     def load_fits2d(self, filename, xy_unit, **hdus):

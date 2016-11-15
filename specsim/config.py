@@ -563,19 +563,25 @@ class Configuration(Node):
         return lambda x, y: interpolator.ev(get_x(x), get_y(y)) * data_unit
 
 
-    def load_fits2d(self, filename, **hdus):
+    def load_fits2d(self, filename, xy_unit, **hdus):
         """Load the specified FITS file.
 
         The data in each image HDU is interpreted with x mapped to columns
         (NAXIS1) and y mapped to rows (NAXIS2).  The x, y coordinates are
         inferred from each image HDUs basic WCS parameters.
 
-        There is no explicit handling of x, y or data units.
+        The returned interpolators expect parameter with units and return
+        interpolated values with units.  Units for x, y are specified via
+        a parameter and assumed to be the same for all HDUs.  Units for
+        the interpolated data are taken from the BUNIT header keyword, and
+        must be interpretable by astropy.
 
         Parameters
         ----------
         filename : str
             Name of the file to read using :meth:`astropy.table.Table.read`.
+        xy_unit : astropy.units.Unit
+            Unit of x, y coordinates.
         hdus : dict
             Dictionary of name, hdu mappings where each hdu is specified by
             its integer offset or its name.
@@ -596,8 +602,20 @@ class Configuration(Node):
             wcs = astropy.wcs.WCS(hdu.header)
             x, _ = wcs.wcs_pix2world(np.arange(nx), [0], 0)
             _, y = wcs.wcs_pix2world([0], np.arange(ny), 0)
-            interpolators[hdu] = scipy.interpolate.RectBivariateSpline(
+            try:
+                bunit = hdu.header['BUNIT']
+                data_unit = astropy.units.Unit(bunit)
+            except KeyError:
+                raise KeyError('Missing BUNIT header keyword for HDU {0}.'
+                               .format(hdus[name]))
+            except ValueError:
+                raise ValueError('Invalid BUNIT "{0}" for HDU {1}.'
+                                 .format(bunit, hdus[name]))
+            dimensionless_interpolator = scipy.interpolate.RectBivariateSpline(
                 x, y, hdu.data, kx=1, ky=1, s=0)
+            interpolators[hdu] = (
+                lambda x, y: dimensionless_interpolator(
+                    x.to(xy_unit).value, y.to(xy_unit).value) * bunit)
         hdu_list.close()
         return interpolators
 

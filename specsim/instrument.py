@@ -532,7 +532,7 @@ def initialize(config):
             config.instrument.offset, 'wavelength', 'r=')
         if hasattr(config.instrument.offset, 'random'):
             random_interpolators = config.load_fits2d(
-                config.instrument.offset.random,
+                config.instrument.offset.random, xy_unit=u.deg,
                 random_x='XOFFSET', random_y='YOFFSET')
 
     instrument = Instrument(

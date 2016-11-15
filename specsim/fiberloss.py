@@ -32,9 +32,13 @@ def calculate_fiber_acceptance_fraction(
     wlen_grid = np.linspace(wavelength.data[0], wavelength.data[-1],
                             instrument.fiberloss_num_wlen) * wlen_unit
 
-    # Calculate the field angle from the focal-plane (x,y).
+    # Convert x, y offsets in length units to field angles.
+    angle_x = instrument.field_radius_to_angle(focal_x)
+    angle_y = instrument.field_radius_to_angle(focal_y)
+
+    # Calculate radial offsets from the field center.
     focal_r = np.sqrt(focal_x ** 2 + focal_y ** 2)
-    angle = instrument.field_radius_to_angle(focal_r)
+    angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
 
     # Calculate the plate scales in um/arcsec at this location.
     radial_scale = instrument.radial_scale(focal_r).to(u.um / u.arcsec).value
@@ -55,12 +59,13 @@ def calculate_fiber_acceptance_fraction(
     offsets = []
     for wlen in wlen_grid:
         # Lookup the RMS blur in focal-plane microns.
-        blur_rms = instrument.get_blur_rms(wlen, angle).to(u.um).value
+        blur_rms = instrument.get_blur_rms(wlen, angle_r).to(u.um).value
         # Use a Gaussian PSF to model blur.
         blur_psf.append(galsim.Gaussian(sigma=blur_rms))
         # Lookup the radial centroid offset in focal-plane microns.
         offsets.append(
-            instrument.get_centroid_offset(wlen, angle).to(u.um).value)
+            instrument.get_centroid_offset(wlen, angle_x, angle_y)
+            .to(u.um).value)
 
     # Create the atmospheric seeing model at each wavelength.
     seeing_psf = []

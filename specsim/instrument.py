@@ -57,8 +57,9 @@ class Instrument(object):
         Function of field angle and wavelength that returns the corresponding
         RMS blur in length units (e.g., microns).
     offset_function : callable
-        Function of field angle and wavelength that returns the corresponding
-        radial centroid offset in length units (e.g., microns).
+        Function of focal-plane position (x,y) in angular units and wavelength
+        that returns the corresponding radial centroid offset in length
+        units (e.g., microns).
     cameras : list
         List of :class:`specsim.camera.Camera` instances representing the
         camera(s) of this instrument.
@@ -243,17 +244,20 @@ class Instrument(object):
         return self._blur_function(angle, wavelength)
 
 
-    def get_centroid_offset(self, wavelength, angle):
-        """Get the instrument centroid offset at the specified field angle.
+    def get_centroid_offset(self, wavelength, angle_x, angle_y):
+        """Get the instrument centroid offset at the specified field angles.
 
-        The offset is assumed to be purely radial.
+        This method does not make any assumptions about how the x and y
+        axes are defined, as long as (0, 0) is the field center.
 
         Parameters
         ----------
         wavelength : astropy.units.Quantity
             Wavelength where the blur should be calculated.
-        angle : astropy.units.Quantity
-            Angular separation from the field center.
+        angle_x : astropy.units.Quantity
+            Angular separation from the field center along x.
+        angle_y : astropy.units.Quantity
+            Angular separation from the field center along y.
 
         Returns
         -------
@@ -261,7 +265,7 @@ class Instrument(object):
             Radial centroid offset of the instrument at this wavelength and
             field radius in length units.
         """
-        return self._offset_function(angle, wavelength)
+        return self._offset_function(angle_x, angle_y, wavelength)
 
 
     def plot_field_distortion(self):
@@ -526,10 +530,15 @@ def initialize(config):
     offset_value = getattr(config.instrument.offset, 'value', None)
     if offset_value:
         offset_value = specsim.config.parse_quantity(offset_value, u.micron)
-        offset_function = lambda angle, wlen: offset_value
+        offset_function = lambda angle_x, angle_y, wlen: offset_value
     else:
-        offset_function = config.load_table2d(
+        # Build an interpolator in (r, wlen).
+        radial_offset_function = config.load_table2d(
             config.instrument.offset, 'wavelength', 'r=')
+        # Repackage as a function of (x, y, wlen).
+        offset_function = (
+            lambda angle_x, angle_y, wlen:
+            radial_offset_function(np.sqrt(angle_x ** 2 + angle_y ** 2), wlen))
         if hasattr(config.instrument.offset, 'random'):
             random_interpolators = config.load_fits2d(
                 config.instrument.offset.random, xy_unit=u.deg,

@@ -41,6 +41,7 @@ import astropy.utils.data
 import astropy.coordinates
 import astropy.time
 import astropy.io.fits
+import astropy.wcs
 
 try:
     basestring          #- exists in py2
@@ -564,17 +565,40 @@ class Configuration(Node):
 
     def load_fits2d(self, filename, **hdus):
         """Load the specified FITS file.
+
+        The data in each image HDU is interpreted with x mapped to columns
+        (NAXIS1) and y mapped to rows (NAXIS2).  The x, y coordinates are
+        inferred from each image HDUs basic WCS parameters.
+
+        There is no explicit handling of x, y or data units.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to read using :meth:`astropy.table.Table.read`.
+        hdus : dict
+            Dictionary of name, hdu mappings where each hdu is specified by
+            its integer offset or its name.
+
+        Returns
+        -------
+        dict
+            Dictionary of 2D linear interpolators corresponding to each hdu,
+            with the same keys that appear in the hdus input parameter.
         """
         path = os.path.join(self.abs_base_path, filename)
-        fits = astropy.io.fits.open(path, memmap=False)
+        hdu_list = astropy.io.fits.open(path, memmap=False)
         interpolators = {}
         for name in hdus:
-            #x = ...
-            #y = ...
-            data = fits[hdus[name]].data
-            #interpolators[hdu] = scipy.interpolate.RectBivariateSpline(
-            #    x, y, data, kx=1, ky=1, s=0)
-        fits.close()
+            hdu = hdu_list[hdus[name]]
+            ny, nx = hdu.data.shape
+            # Use the header WCS to reconstruct the x,y grids.
+            wcs = astropy.wcs.WCS(hdu.header)
+            x, _ = wcs.wcs_pix2world(np.arange(nx), [0], 0)
+            _, y = wcs.wcs_pix2world([0], np.arange(ny), 0)
+            interpolators[hdu] = scipy.interpolate.RectBivariateSpline(
+                x, y, hdu.data, kx=1, ky=1, s=0)
+        hdu_list.close()
         return interpolators
 
 

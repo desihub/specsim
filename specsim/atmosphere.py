@@ -291,6 +291,7 @@ class Moon(object):
         if not self.visible:
             self._surface_brightness = (
                 np.zeros_like(self._moon_spectrum) / (u.arcsec ** 2))
+            self._scattered_V = None
             return
 
         # Calculate the V-band surface brightness of scattered moonlight.
@@ -321,7 +322,8 @@ class Moon(object):
 
         This is a read-only attribute whose value depends
         on the current values of :attr:`airmass`, :attr:`moon_zenith`,
-        :attr:`moon_phase` and :attr:`separation_angle`.
+        :attr:`moon_phase` and :attr:`separation_angle`.  Returns None if
+        the moon is below the horizon.
         """
         if self._update_required:
             self._update()

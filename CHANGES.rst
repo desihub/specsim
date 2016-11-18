@@ -1,7 +1,7 @@
 0.7 (unreleased)
 ----------------
 
-No changes yet.
+- Add scattered moon surface brightness attribute to Moon model.
 
 0.6 (2016-11-09)
 ----------------

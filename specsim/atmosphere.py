@@ -294,7 +294,7 @@ class Moon(object):
             return
 
         # Calculate the V-band surface brightness of scattered moonlight.
-        moon_V = krisciunas_schaefer(
+        self._scattered_V = krisciunas_schaefer(
             self.obs_zenith, self.moon_zenith, self.separation_angle,
             self.moon_phase, self.vband_extinction)
 
@@ -312,7 +312,20 @@ class Moon(object):
             self._surface_brightness, self._wavelength) * u.mag
         area = 1 * u.arcsec ** 2
         self._surface_brightness *= 10 ** (
-            -(moon_V * area - raw_V) / (2.5 * u.mag)) / area
+            -(self._scattered_V * area - raw_V) / (2.5 * u.mag)) / area
+
+
+    @property
+    def scattered_V(self):
+        """V-band surface brightness of scattered moonlight.
+
+        This is a read-only attribute whose value depends
+        on the current values of :attr:`airmass`, :attr:`moon_zenith`,
+        :attr:`moon_phase` and :attr:`separation_angle`.
+        """
+        if self._update_required:
+            self._update()
+        return self._scattered_V
 
 
     @property

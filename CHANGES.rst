@@ -1,7 +1,8 @@
-0.7 (unreleased)
+0.7 (2016-12-02)
 ----------------
 
 - Add scattered moon surface brightness attribute to Moon model.
+- This is a minor release with a change required for DESI survey simulations.
 
 0.6 (2016-11-09)
 ----------------

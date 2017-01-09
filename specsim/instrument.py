@@ -546,8 +546,6 @@ def initialize(config):
             random_interpolators = config.load_fits2d(
                 config.instrument.offset.random, xy_unit=u.deg,
                 random_dx='XOFFSET', random_dy='YOFFSET')
-            print('dx',random_interpolators['random_dx'](0*u.deg, 0*u.deg),
-                  'dy',random_interpolators['random_dy'](0*u.deg, 0*u.deg))
         else:
             random_interpolators = dict(
                 random_dx=lambda angle_x, angle_y: 0 * u.um,

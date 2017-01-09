@@ -16,7 +16,7 @@ import astropy.wcs
 
 def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
-    oversampling = 16, save=None):
+    oversampling = 16, save_images=None, save_table=None):
     """
     """
     # Use pre-tabulated fiberloss vs wavelength when available.
@@ -116,7 +116,7 @@ def calculate_fiber_acceptance_fraction(
     aperture = blocks.sum(axis=(2, 3)) / oversampling ** 2
 
     # Prepare to write a FITS file of images, if requested.
-    if save:
+    if save_images:
         hdu_list = astropy.io.fits.HDUList()
         header = astropy.io.fits.Header()
         header['COMMENT'] = 'Fiberloss calculation images.'
@@ -130,7 +130,7 @@ def calculate_fiber_acceptance_fraction(
         header = w.to_header()
 
     # Build the convolved models and integrate. Save individual component
-    # models if requested.
+    # model images if requested.
     gsparams = galsim.GSParams(maximum_fft_size=32767)
     for i, wlen in enumerate(wlen_grid):
         convolved = galsim.Convolve([
@@ -142,7 +142,7 @@ def calculate_fiber_acceptance_fraction(
         convolved.drawImage(offset=offset, **draw_args)
         fraction = np.sum(image.array * aperture)
         print('fiberloss:', wlen, dx, dy, fraction)
-        if save:
+        if save_images:
             header['WLEN'] = wlen.to(u.Angstrom).value
             header['FRAC'] = fraction
             header['COMMENT'] = 'Convolved model'
@@ -160,7 +160,7 @@ def calculate_fiber_acceptance_fraction(
             hdu_list.append(astropy.io.fits.ImageHDU(
                 data=image.array.copy(), header=header))
 
-    if save:
+    if save_images:
         # Render the source model without the instrumental offset.
         source_model.drawImage(**draw_args)
         header['COMMENT'] = 'Source model'
@@ -169,6 +169,9 @@ def calculate_fiber_acceptance_fraction(
         header['COMMENT'] = 'Fiber aperture'
         hdu_list.append(astropy.io.fits.ImageHDU(
             data=aperture, header=header))
-        hdu_list.writeto(save, clobber=True)
+        hdu_list.writeto(save_images, clobber=True)
+
+    if save_table:
+        raise NotImplementedError
 
     return instrument.fiber_acceptance_dict[source.type_name]

@@ -1,9 +1,15 @@
-0.7 (unreleased)
+0.8 (unreleased)
 ----------------
 
 - Add fiberloss module with support for more realistic fiberloss calculations.
 - Add optional dependency on galsim (only required for on-the-fly fiberloss
   calculations).
+
+0.7 (2016-12-02)
+----------------
+
+- Add scattered moon surface brightness attribute to Moon model.
+- This is a minor release with a change required for DESI survey simulations.
 
 0.6 (2016-11-09)
 ----------------

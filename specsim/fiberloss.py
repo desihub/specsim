@@ -18,7 +18,49 @@ import astropy.table
 def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
     oversampling = 16, save_images=None, save_table=None):
-    """
+    """Calculate the fiber acceptance fraction.
+
+    The behavior of this function is customized by the instrument.fiberloss
+    configuration parameters. When instrument.fiberloss.method == 'table',
+    pre-tabulated values are returned using source.type as the key and
+    all other parameters to this function are ignored.
+
+    When instrument.fiberloss.method == 'galsim', fiberloss is calculated
+    on the fly using the GalSim package to model the PSF components and
+    source profile and perform the convolutions.
+
+    Parameters
+    ----------
+    focal_x : :class:`astropy.units.Quantity`
+        X coordinate of the fiber center in the focal plane with length units.
+    focal_y : :class:`astropy.units.Quantity`
+        Y coordinate of the fiber center in the focal plane with length units.
+    wavelength : :class:`astropy.table.Column`
+        Array of simulation wavelengths where the fiber acceptance fraction
+        should be tabulated.
+    source : :class:`specsim.source.Source`
+        Source model to use for the calculation.
+    atmosphere : :class:`specsim.atmosphere.Atmosphere`
+        Atmosphere model to use for the calculation.
+    instrument : :class:`specsim.instrument.Instrument`
+        Instrument model to use for the calculation.
+    oversampling : int
+        Oversampling factor to use for anti-aliasing the fiber aperture.
+    save_images : str or None
+        Write a multi-extension FITS file with this name containing images of
+        the atmospheric and instrument PSFs as a function of wavelength, as
+        well as the source profile.
+    save_table : str or None
+        Write a table of calculated values to a file with this name.  The
+        extension determines the file format, and .ecsv is recommended.
+        The saved file can then be used as a pre-tabulated input with
+        instrument.fiberloss.method = 'table'.
+
+    Returns
+    -------
+    numpy array
+        Array of fiber acceptance fractions (dimensionless) at each of the
+        input wavelengths.
     """
     # Use pre-tabulated fiberloss vs wavelength when available.
     if instrument.fiberloss_num_wlen == 0:

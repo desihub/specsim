@@ -121,7 +121,7 @@ instrument:
     fiberloss:
         # Method for calculating fiberloss fractions.
         # Either galsim or table.
-        method: galsim
+        method: table
         # Number of wavelengths where fiberloss should be calculated
         # and interpolated. Ignored unless method is galsim.
         num_wlen: 11
@@ -280,6 +280,7 @@ instrument:
 # specsim.source module.
 source:
     name: 22nd AB magnitude reference
+    # The type is only used when instrument.fiberloss.method is 'table'.
     type: qso
     table:
         format: ascii
@@ -295,8 +296,8 @@ source:
     # ignored otherwise).
     profile:
         # If the pointlike_fraction is 1, all other parameters are ignored.
-        pointlike_fraction: 0.0
-        disk_fraction: 0.5
+        pointlike_fraction: 1.0
+        disk_fraction: 0.0
         disk_shape:
             half_light_radius: 0.8 arcsec
             position_angle: 45 deg

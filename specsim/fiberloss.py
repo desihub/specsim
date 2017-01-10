@@ -12,6 +12,7 @@ import numpy.lib.stride_tricks
 import astropy.units as u
 import astropy.io.fits
 import astropy.wcs
+import astropy.table
 
 
 def calculate_fiber_acceptance_fraction(
@@ -182,11 +183,12 @@ def calculate_fiber_acceptance_fraction(
             name='Wavelength', data=wlen_grid.value, unit=wlen_grid.unit,
             description='Observed wavelength'))
         table.add_column(astropy.table.Column(
-            name='Fiberloss', data=fiberloss_grid,
+            name='FiberAcceptance', data=fiberloss_grid,
             description='Fiber acceptance fraction'))
         args = {}
         if save_table.endswith('.ecsv'):
             args['format'] = 'ascii.ecsv'
         table.write(save_table, **args)
 
-    return instrument.fiber_acceptance_dict[source.type_name]
+    # Interpolate (linearly) to the simulation wavelength grid.
+    return np.interp(wavelength.data, wlen_grid.value, fiberloss_grid)

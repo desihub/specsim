@@ -208,7 +208,7 @@ class Simulator(object):
             specsim.fiberloss.calculate_fiber_acceptance_fraction(
                 self.focal_x, self.focal_y, wavelength, self.source,
                 self.atmosphere, self.instrument,
-                save_images='fiberloss.fits')
+                save_images='fiberloss.fits', save_table='fiberloss.ecsv')
 
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (

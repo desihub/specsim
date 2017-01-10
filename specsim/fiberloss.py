@@ -131,6 +131,7 @@ def calculate_fiber_acceptance_fraction(
 
     # Build the convolved models and integrate. Save individual component
     # model images if requested.
+    fiberloss_grid = np.empty(instrument.fiberloss_num_wlen)
     gsparams = galsim.GSParams(maximum_fft_size=32767)
     for i, wlen in enumerate(wlen_grid):
         convolved = galsim.Convolve([
@@ -140,11 +141,10 @@ def calculate_fiber_acceptance_fraction(
         offset = (dx / scale, dy / scale)
         draw_args = dict(image=image, method='auto')
         convolved.drawImage(offset=offset, **draw_args)
-        fraction = np.sum(image.array * aperture)
-        print('fiberloss:', wlen, dx, dy, fraction)
+        fiberloss_grid[i] = np.sum(image.array * aperture)
         if save_images:
             header['WLEN'] = wlen.to(u.Angstrom).value
-            header['FRAC'] = fraction
+            header['FRAC'] = fiberloss_grid[i]
             header['COMMENT'] = 'Convolved model'
             hdu_list.append(astropy.io.fits.ImageHDU(
                 data=image.array.copy(), header=header))
@@ -172,6 +172,21 @@ def calculate_fiber_acceptance_fraction(
         hdu_list.writeto(save_images, clobber=True)
 
     if save_table:
-        raise NotImplementedError
+        meta = dict(
+            description='Fiberloss fraction for source "{0}"'
+            .format(source.name) +
+            ' at focal (x,y) = ({0:.3f},{1:.3f})'
+            .format(focal_x, focal_y))
+        table = astropy.table.Table(meta=meta)
+        table.add_column(astropy.table.Column(
+            name='Wavelength', data=wlen_grid.value, unit=wlen_grid.unit,
+            description='Observed wavelength'))
+        table.add_column(astropy.table.Column(
+            name='Fiberloss', data=fiberloss_grid,
+            description='Fiber acceptance fraction'))
+        args = {}
+        if save_table.endswith('.ecsv'):
+            args['format'] = 'ascii.ecsv'
+        table.write(save_table, **args)
 
     return instrument.fiber_acceptance_dict[source.type_name]

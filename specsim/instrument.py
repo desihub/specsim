@@ -41,12 +41,25 @@ class Instrument(object):
     ----------
     name : str
         Descriptive name of this instrument.
-    wavelength : nastropy.units.Quantity
+    wavelength : astropy.units.Quantity
         Array of wavelength bin centers where the instrument response is
         calculated, with units.
-    fiber_acceptance_dict : dict
+    fiber_acceptance_dict : dict or None
         Dictionary of fiber acceptance fractions tabulated for different
         source models, with keys corresponding to source model names.
+    fiberloss_num_wlen : int
+        Number of wavelengths where the fiberloss fraction should be tabulated
+        for interpolation.  Will be zero when fiber_acceptance_dict is set.
+    fiberloss_num_pixels : int
+        Number of pixels used to subdivide the fiber diameter for
+        numerical convolution and integration calculations.
+    blur_function : callable
+        Function of field angle and wavelength that returns the corresponding
+        RMS blur in length units (e.g., microns).
+    offset_function : callable
+        Function of focal-plane position (x,y) in angular units and wavelength
+        that returns the corresponding radial centroid offset in length
+        units (e.g., microns).
     cameras : list
         List of :class:`specsim.camera.Camera` instances representing the
         camera(s) of this instrument.
@@ -72,12 +85,18 @@ class Instrument(object):
         (sagittal) direction (with appropriate units) as a function of
         focal-plane distance (with length units) from the boresight.
     """
-    def __init__(self, name, wavelength, fiber_acceptance_dict, cameras,
+    def __init__(self, name, wavelength, fiber_acceptance_dict,
+                 fiberloss_num_wlen, fiberloss_num_pixels,
+                 blur_function, offset_function, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
                  fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
+        self.fiberloss_num_wlen = fiberloss_num_wlen
+        self.fiberloss_num_pixels = fiberloss_num_pixels
+        self._blur_function = blur_function
+        self._offset_function = offset_function
         self.cameras = cameras
         self.primary_mirror_diameter = primary_mirror_diameter
         self.obscuration_diameter = obscuration_diameter
@@ -86,8 +105,6 @@ class Instrument(object):
         self.field_radius = field_radius
         self.radial_scale = radial_scale
         self.azimuthal_scale = azimuthal_scale
-
-        self.source_types = self.fiber_acceptance_dict.keys()
 
         # Calculate the effective area of the primary mirror.
         D = self.primary_mirror_diameter
@@ -208,6 +225,54 @@ class Instrument(object):
             angle.to(self._angle_unit)) * self._radius_unit
 
 
+    def get_blur_rms(self, wavelength, angle):
+        """Get the instrument PSF blur at the specified field angle.
+
+        Parameters
+        ----------
+        wavelength : astropy.units.Quantity
+            Wavelength where the blur should be calculated.
+        angle : astropy.units.Quantity
+            Angular separation from the field center.
+
+        Returns
+        -------
+        astropy.units.Quantity
+            RMS blur of the instrument at this wavelength and field radius
+            in length units.
+        """
+        return self._blur_function(angle, wavelength)
+
+
+    def get_centroid_offset(self, angle_x, angle_y, wavelength):
+        """Get the instrument centroid offset at the specified field angles.
+
+        This method does not make any assumptions about how the x and y
+        axes are defined, as long as (0, 0) is the field center.
+
+        Note that the focal-plane position is input as angles relative to
+        the field center, while the offsets are returned as lengths relative
+        to the nominal fiber center.
+
+        Parameters
+        ----------
+        angle_x : astropy.units.Quantity
+            Angular separation from the field center along x.
+        angle_y : astropy.units.Quantity
+            Angular separation from the field center along y.
+        wavelength : astropy.units.Quantity
+            Wavelength where the blur should be calculated.
+
+        Returns
+        -------
+        tuple
+            Tuple (dx, dy) of astropy quantities giving the spot centroid
+            offset components at this wavelength and position in the focal
+            plane.  Offsets are given in length units, e.g., microns.
+        """
+        return self._offset_function(angle_x, angle_y, wavelength)
+
+
     def plot_field_distortion(self):
         """Plot focal plane distortions over the field of view.
 
@@ -283,27 +348,6 @@ class Instrument(object):
             left=0.10, right=0.98, bottom=0.07, top=0.97, hspace=0.05)
 
 
-    def get_fiber_acceptance(self, source):
-        """Get the tabulated fiber acceptance function for the specified source.
-
-        Parameters
-        ----------
-        source : specsim.source.Source
-            The source whose fiber acceptance should be returned.
-
-        Returns
-        -------
-        numpy.ndarray
-            Array of fiber acceptance values in the range 0-1, tabulated at
-            at each :attr:`wavelength`.
-        """
-        if source.type_name not in self.source_types:
-            raise ValueError(
-                "Invalid source type '{0}'. Pick one of {1}."
-                .format(source.type_name, self.source_types))
-        return self.fiber_acceptance_dict[source.type_name]
-
-
     def plot(self, flux=1e-17 * u.erg / (u.cm**2 * u.s * u.Angstrom),
              exposure_time=1000 * u.s, cmap='nipy_spectral'):
         """Plot a summary of this instrument's model.
@@ -334,9 +378,10 @@ class Instrument(object):
         wave_unit = self._wavelength.unit
         dwave = np.gradient(wave)
 
-        for source_type in self.source_types:
-            # Plot fiber acceptance fractions without labels.
-            ax1.plot(wave, self.fiber_acceptance_dict[source_type], 'k--')
+        if self.fiber_acceptance_dict:
+            for source_type in self.fiber_acceptance_dict:
+                # Plot fiber acceptance fractions without labels.
+                ax1.plot(wave, self.fiber_acceptance_dict[source_type], 'k--')
         for camera in self.cameras:
             cwave = camera._wavelength
 
@@ -471,9 +516,64 @@ def initialize(config):
 
     fiber_acceptance_dict = config.load_table(
         config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
+    if config.instrument.fiberloss.method == 'table':
+        fiberloss_num_wlen = 0
+        fiberloss_num_pixels = 0
+    else:
+        #fiber_acceptance_dict = None
+        fiberloss_num_wlen = config.instrument.fiberloss.num_wlen
+        fiberloss_num_pixels = config.instrument.fiberloss.num_pixels
+
+    blur_value = getattr(config.instrument.blur, 'value', None)
+    if blur_value:
+        blur_value = specsim.config.parse_quantity(blur_value, u.micron)
+        blur_function = lambda angle, wlen: blur_value
+    else:
+        blur_function = config.load_table2d(
+            config.instrument.blur, 'wavelength', 'r=')
+
+    offset_value = getattr(config.instrument.offset, 'value', None)
+    if offset_value:
+        offset_value = specsim.config.parse_quantity(offset_value, u.micron)
+        offset_function = lambda angle_x, angle_y, wlen: offset_value
+    else:
+        # Build an interpolator in (r, wlen) of radial chromatic offsets.
+        radial_offset_function = config.load_table2d(
+            config.instrument.offset, 'wavelength', 'r=')
+        # Look for an optional file of random achromatic offsets.
+        if hasattr(config.instrument.offset, 'random'):
+            # Build an interpolator in (x, y).
+            random_interpolators = config.load_fits2d(
+                config.instrument.offset.random, xy_unit=u.deg,
+                random_dx='XOFFSET', random_dy='YOFFSET')
+        else:
+            random_interpolators = dict(
+                random_dx=lambda angle_x, angle_y: 0 * u.um,
+                random_dy=lambda angle_x, angle_y: 0 * u.um)
+        # Combine the interpolators into a function of (x, y, wlen) that
+        # returns (dx, dy).  Use default parameter values to capture the
+        # necessary state in the inner function's closure.
+        def offset_function(angle_x, angle_y, wlen,
+                            fr=radial_offset_function,
+                            fx=random_interpolators['random_dx'],
+                            fy=random_interpolators['random_dy']):
+            angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
+            dr = fr(angle_r, wlen)
+            # Special handling of the origin.
+            not_at_origin = (angle_r > 0.)
+            ux = np.ones(shape=dr.shape, dtype=float)
+            uy = np.ones(shape=dr.shape, dtype=float)
+            ux[not_at_origin] = angle_x / angle_r
+            uy[not_at_origin] = angle_y / angle_r
+            # Add any random offsets.
+            random_dx = fx(angle_x, angle_y)
+            random_dy = fy(angle_x, angle_y)
+            return dr * ux + random_dx, dr * uy + random_dy
 
     instrument = Instrument(
-        name, config.wavelength, fiber_acceptance_dict, initialized_cameras,
+        name, config.wavelength, fiber_acceptance_dict, fiberloss_num_wlen,
+        fiberloss_num_pixels, blur_function, offset_function,
+        initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['field_radius'], radial_scale, azimuthal_scale)
@@ -485,6 +585,8 @@ def initialize(config):
         print('Field of view diameter: {0:.1f} = {1:.2f}.'
               .format(2 * instrument.field_radius.to(u.mm),
                       2 * instrument.field_angle.to(u.deg)))
-        print('Source types: {0}.'.format(instrument.source_types))
+        if instrument.fiber_acceptance_dict:
+            print('Source types: {0}.'
+                  .format(instrument.fiber_acceptance_dict.keys()))
 
     return instrument

@@ -74,13 +74,27 @@ instrument:
         constants:
             value: 70.4 um / arcsec
     fiberloss:
+        # Method for calculating fiberloss fractions.
+        # Either galsim or table.
+        method: table
+        # Table of pre-tabulated fiberloss fractions vs wavelength for
+        # different source types.  Ignored unless method is table.
         table:
             format: ascii
             paths:
+                # Each path corresponds to a different source type.
                 qso: test/test_fiberloss.ecsv
             columns:
                 wavelength: { name: wavelength }
                 fiber_acceptance: { name: fiberloss }
+    blur:
+        # RMS blur of the instrument optics.  Use the path keyword instead
+        # to read values tabulated in wavelength and field angle.
+        value: 10 micron
+    offset:
+        # Radial centroid offset of the instrument optics. Use the path keyword
+        # instead to read values tabulated in wavelength and field angle.
+        value: 0 micron
     cameras:
         r:
             constants:

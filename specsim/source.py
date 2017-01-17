@@ -21,6 +21,8 @@ import astropy.units as u
 
 import speclite.filters
 
+import specsim.config
+
 
 class Source(object):
     """Source model used for simulation.
@@ -54,6 +56,18 @@ class Source(object):
         Array of increasing input wavelengths with units.
     flux_in : astropy.units.Quantity
         Array of input flux values tabulated at wavelength_in.
+    pointlike_fraction : float
+        Fraction of flux in a pointlike component. Must be between 0 and 1,
+        and sum of pointlike_fraction and disk_fraction must be <= 1.
+    disk_fraction : float
+        Fraction of flux in disk component.  Must be between 0 and 1,
+        and sum of pointlike_fraction and disk_fraction must be <= 1.
+    disk_shape : Profile
+        Transverse profile of disk component with Sersic n=1. Ignored when
+        disk_fraction is 0.
+    bulge_shape : Profile
+        Transverse profile of bulge component with Sersic n=4. Ignored when
+        disk_fraction is 1.
     focal_xy : tuple or None
         Tuple of astropy.units.Quantity objects giving the focal plane
         coordinates where this source is observed.  When None, the focal
@@ -80,6 +94,7 @@ class Source(object):
         redshift transform is applied before normalizing.
     """
     def __init__(self, name, type_name, wavelength_out, wavelength_in, flux_in,
+                 pointlike_fraction, disk_fraction, disk_shape, bulge_shape,
                  focal_xy, sky_position, z_in=None, z_out=None,
                  filter_name=None, ab_magnitude_out=None):
 
@@ -94,6 +109,18 @@ class Source(object):
 
         self.update_in(name, type_name, wavelength_in, flux_in, z_in)
         self.update_out(z_out, filter_name, ab_magnitude_out)
+
+        if pointlike_fraction < 0 or pointlike_fraction > 1:
+            raise ValueError('Expected pointlike_fraction in the range 0-1.')
+        if disk_fraction < 0 or disk_fraction > 1:
+            raise ValueError('Expected disk_fraction in the range 0-1.')
+        if pointlike_fraction + disk_fraction > 1:
+            raise ValueError(
+                'Expected pointlike_fraction + disk_fraction <= 1.')
+        self.pointlike_fraction = pointlike_fraction
+        self.disk_fraction = disk_fraction
+        self.disk_shape = disk_shape
+        self.bulge_shape = bulge_shape
 
         if focal_xy is None and sky_position is None:
             raise ValueError(
@@ -263,6 +290,41 @@ class Source(object):
         return self._flux_out
 
 
+class Profile(object):
+    """Transverse profile of a single Sersic component of a galaxy.
+
+    If any parameters are strings, they will be converted and validated.
+
+    Parameters
+    ----------
+    half_light_radius : str or astropy.units.Quantity
+        Half-light radius of this component with angular units.
+    minor_major_axis_ratio : float
+        Ratio of the minor to major ellipse axes q = a/b, which must
+        be 0 < q <= 1.
+    position_angle : str or astropy.units.Quantity
+        Position angle of this component's major axis with angular units.
+        Angles are measured counter-clockwise from the +x axis of the focal
+        plane coordinate system.
+    sersic_index : float
+        Sersic index of this component, which must be > 0.
+    """
+    def __init__(self, half_light_radius, minor_major_axis_ratio,
+                 position_angle, sersic_index):
+        """Validate and save Sersic component parameters.
+        """
+        self.half_light_radius = specsim.config.parse_quantity(
+            half_light_radius, u.arcsec)
+        self.minor_major_axis_ratio = float(minor_major_axis_ratio)
+        if self.minor_major_axis_ratio <= 0 or self.minor_major_axis_ratio > 1:
+            raise ValueError('Expected minor/major axis ratio in (0,1].')
+        self.position_angle = specsim.config.parse_quantity(
+            position_angle, u.deg)
+        self.sersic_index = float(sersic_index)
+        if self.sersic_index <= 0:
+            raise ValueError('Expected Sersic index > 0.')
+
+
 def initialize(config):
     """Initialize the source model from configuration parameters.
 
@@ -289,10 +351,26 @@ def initialize(config):
     # Sky position is optional (and ignored) when x,y are specified.
     if hasattr(config.source.location, 'sky'):
         sky_position = config.get_sky(config.source.location)
+    # Get the source profile on the sky.
+    if hasattr(config.source, 'profile'):
+        pointlike_fraction = config.source.profile.pointlike_fraction
+        disk_fraction = config.source.profile.disk_fraction
+        disk_shape = Profile(
+            config.source.profile.disk_shape.half_light_radius,
+            config.source.profile.disk_shape.minor_major_axis_ratio,
+            config.source.profile.disk_shape.position_angle, sersic_index=1)
+        bulge_shape = Profile(
+            config.source.profile.bulge_shape.half_light_radius,
+            config.source.profile.bulge_shape.minor_major_axis_ratio,
+            config.source.profile.bulge_shape.position_angle, sersic_index=4)
+    else:
+        pointlike_fraction, disk_fraction = 0, 0
+        disk_shape, bulge_shape = None, None
     # Create a new Source object.
     source = Source(
         config.source.name, config.source.type, config.wavelength,
-        table['wavelength'], table['flux'], focal_xy, sky_position,
+        table['wavelength'], table['flux'], pointlike_fraction,
+        disk_fraction, disk_shape, bulge_shape, focal_xy, sky_position,
         config.source.z_in, config.source.z_out, config.source.filter_name,
         config.source.ab_magnitude_out)
     if config.verbose:

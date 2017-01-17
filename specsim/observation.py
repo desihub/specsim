@@ -6,9 +6,8 @@ a simulator and then accessible via its ``observation`` attribute, for example:
 
     >>> import specsim.simulator
     >>> simulator = specsim.simulator.Simulator('test')
-    >>> print(simulator.observation.pointing)
-    <SkyCoord (ICRS): (ra, dec) in deg
-        (0.0, 0.0)>
+    >>> print(simulator.observation.exposure_time)
+    1000.0 s
 
 After initialization, all aspects of an observation can be modified at runtime.
 """

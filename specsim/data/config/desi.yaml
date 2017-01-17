@@ -49,6 +49,14 @@ atmosphere:
                 bright: spectra/spec-sky-bright.dat
         # Specify the current condition.
         condition: dark
+    # Atmospheric seeing.
+    seeing:
+        # The seeing is assumed to scale with wavelength as
+        # fwhm(wlen) = fwhm_ref * (wlen / wlen_ref) ** -0.2
+        fwhm_ref: 1.1 arcsec
+        wlen_ref: 6355 Angstrom
+        # The seeing PSF is modeled as a Moffat profile.
+        moffat_beta: 3.5
     # Surface brightness of scattered moonlight.
     moon:
         # Un-normalized spectrum of scattered moonlight.
@@ -111,6 +119,17 @@ instrument:
                 radial_scale: { index: 6, unit: um/arcsec }
                 azimuthal_scale: { index: 7, unit: um/arcsec }
     fiberloss:
+        # Method for calculating fiberloss fractions.
+        # Either galsim or table.
+        method: table
+        # Number of wavelengths where fiberloss should be calculated
+        # and interpolated. Ignored unless method is galsim.
+        num_wlen: 11
+        # Number of pixels used to subdivide the fiber diameter for
+        # numerical convolution and integration calculations with galsim.
+        num_pixels: 32
+        # Table of pre-tabulated fiberloss fractions vs wavelength for
+        # different source types.  Ignored unless method is table.
         table:
             format: ascii
             paths:
@@ -124,6 +143,26 @@ instrument:
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
+    blur:
+        # Read RMS blur values tabulated as a function of field angle and
+        # wavelength, and derived from ray tracing simulations.  For details,
+        # see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
+        path: throughput/DESI-0347_blur.ecsv
+        # The ECSV format is not auto-detected so we specify it explicitly.
+        format: ascii.ecsv
+    offset:
+        # Read radial centroid offsets tabulated as a function of field angle
+        # and wavelength, and derived from ray tracing simulations.  For
+        # details, see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
+        path: throughput/DESI-0347_offset.ecsv
+        # The ECSV format is not auto-detected so we specify it explicitly.
+        format: ascii.ecsv
+        # Read random achromatic centroid offsets from a FITS file.
+        # Uncomment any one of these lines to select a different random set.
+        # No random offsets are applied if all lines are commented out.
+        random: throughput/DESI-0347_random_offset_1.fits
+        #random: throughput/DESI-0347_random_offset_2.fits
+        #random: throughput/DESI-0347_random_offset_3.fits
     cameras:
         b:
             constants:
@@ -241,6 +280,7 @@ instrument:
 # specsim.source module.
 source:
     name: 22nd AB magnitude reference
+    # The type is only used when instrument.fiberloss.method is 'table'.
     type: qso
     table:
         format: ascii
@@ -251,6 +291,21 @@ source:
                 index: 1
                 # Note the factor of 1e-17 in the units!
                 unit: 1e-17 erg / (Angstrom cm2 s)
+    # Transverse profile of the source on the sky, used to calculate the
+    # fiberloss fraction when instrument.fiberloss.method = galsim (but
+    # ignored otherwise).
+    profile:
+        # If the pointlike_fraction is 1, all other parameters are ignored.
+        pointlike_fraction: 1.0
+        disk_fraction: 0.0
+        disk_shape:
+            half_light_radius: 0.8 arcsec
+            position_angle: 45 deg
+            minor_major_axis_ratio: 0.5
+        bulge_shape:
+            half_light_radius: 1.2 arcsec
+            position_angle: 60 deg
+            minor_major_axis_ratio: 0.8
     # Location of the source on the sky. A source will not be visible if
     # it lies out the observation field of view.
     location:
@@ -260,8 +315,8 @@ source:
         constants:
             # Comment out these lines to have (x,y) and the airmass
             # calculated automatically for this source and observation.
-            focal_x: 0 mm
-            focal_y: 100 mm
+            focal_x: -70.7 mm
+            focal_y: +70.7 mm
         # Sky coordinates are optional (and ignored) when focal-plane (x,y)
         # are specified.
         sky: { coordinates: 0h 0d, frame: icrs }

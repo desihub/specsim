@@ -40,6 +40,8 @@ import astropy.table
 import astropy.utils.data
 import astropy.coordinates
 import astropy.time
+import astropy.io.fits
+import astropy.wcs
 
 try:
     basestring          #- exists in py2
@@ -52,7 +54,7 @@ _float_pattern = re.compile(
     '\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
 
 
-def parse_quantity(string, dimensions=None):
+def parse_quantity(quantity, dimensions=None):
     """Parse a string containing a numeric value with optional units.
 
     The result is a :class:`Quantity <astropy.units.Quantity` object even
@@ -68,8 +70,9 @@ def parse_quantity(string, dimensions=None):
 
     Parameters
     ----------
-    string : str
-        String to parse.
+    quantity : str or astropy.units.Quantity
+        String to parse.  If a quantity is provided, it is checked against
+        the expected dimensions and passed through.
     dimensions : str or astropy.units.Unit or None
         The units of the input quantity are expected to have the same
         dimensions as these units, if not None.  Raises a ValueError if
@@ -86,13 +89,14 @@ def parse_quantity(string, dimensions=None):
     ValueError
         Unable to parse quantity.
     """
-    # Look for a valid number starting the string.
-    found_number = _float_pattern.match(string)
-    if not found_number:
-        raise ValueError('Unable to parse quantity.')
-    value = float(found_number.group(1))
-    unit = string[found_number.end():]
-    quantity = astropy.units.Quantity(value, unit)
+    if not isinstance(quantity, astropy.units.Quantity):
+        # Look for a valid number starting the string.
+        found_number = _float_pattern.match(quantity)
+        if not found_number:
+            raise ValueError('Unable to parse quantity.')
+        value = float(found_number.group(1))
+        unit = quantity[found_number.end():]
+        quantity = astropy.units.Quantity(value, unit)
     if dimensions is not None:
         try:
             if not isinstance(dimensions, astropy.units.Unit):
@@ -100,7 +104,7 @@ def parse_quantity(string, dimensions=None):
             quantity = quantity.to(dimensions)
         except (ValueError, astropy.units.UnitConversionError):
             raise ValueError('Quantity "{0}" is not convertible to {1}.'
-                             .format(string, dimensions))
+                             .format(quantity, dimensions))
     return quantity
 
 
@@ -479,6 +483,151 @@ class Configuration(Node):
             return tables['default']
         else:
             return tables
+
+
+    def load_table2d(self, node, y_column_name, x_column_prefix):
+        """Read values for some quantity tabulated along 2 axes.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to read using :meth:`astropy.table.Table.read`.
+        y_column_name : str
+            Name of the column containing y coordinate values.
+        x_column_prefix : str
+            Prefix for column names at different values of the x coordinate. The
+            remainder of the column name must be interpretable by
+            :meth:`specsim.config.parse_quantity` as the x coordinate value.
+            Values in each column correspond to ``data[:, x]``.
+        format : str
+            A table format supported by :meth:`astropy.table.Table.read`.
+
+        Returns
+        -------
+        :class:`scipy.interpolate.RectBivariateSpline`
+            A 2D linear interpolator in (x,y) that handles units correctly.
+        """
+        path = os.path.join(self.abs_base_path, node.path)
+        fmt = getattr(node, 'format', None)
+        table = astropy.table.Table.read(path, format=fmt)
+        ny = len(table)
+        y_col = table[y_column_name]
+        y_value = np.array(y_col.data)
+        if y_col.unit is not None:
+            y_unit = y_col.unit
+        else:
+            y_unit = 1
+
+        # Look for columns whose name has the specified prefix.
+        x_value, x_index = [], []
+        x_unit, data_unit = 1, 1
+        for i, colname in enumerate(table.colnames):
+            if colname.startswith(x_column_prefix):
+                # Parse the column name as a value.
+                x = parse_quantity(colname[len(x_column_prefix):])
+                if x_unit == 1:
+                    x_unit = x.unit
+                elif x_unit != x.unit:
+                    raise RuntimeError('Column unit mismatch: {0} != {1}.'
+                                       .format(x_unit, x.unit))
+                if data_unit == 1:
+                    data_unit = table[colname].unit
+                elif data_unit != table[colname].unit:
+                    raise RuntimeError('Data unit mismatch: {0} != {1}.'
+                                       .format(data_unit, table[colname].unit))
+                x_value.append(x.value)
+                x_index.append(i)
+
+        # Extract values for each x,y pair.
+        nx = len(x_value)
+        data = np.empty((nx, ny))
+        for j, i in enumerate(x_index):
+            data[j] = table.columns[i].data
+
+        if self.verbose:
+            print('Loaded {0} x {1} values from {2}.'.format(nx, ny, path))
+
+        # Build a 2D linear interpolator.
+        interpolator = scipy.interpolate.RectBivariateSpline(
+            x_value, y_value, data, kx=1, ky=1, s=0)
+
+        # Return a wrapper that handles units.  Note that default parameters
+        # are used below to capture values (rather than references) in the
+        # lambda closures.
+        if x_unit != 1:
+            get_x = lambda x, u=x_unit: x.to(u).value
+        else:
+            get_x = lambda x: np.asarray(x)
+        if y_unit != 1:
+            get_y = lambda y, u=y_unit: y.to(u).value
+        else:
+            get_y = lambda y: np.asarray(y)
+        return (
+            lambda x, y, f=interpolator, u=data_unit:
+            f.ev(get_x(x), get_y(y)) * u)
+
+
+    def load_fits2d(self, filename, xy_unit, **hdus):
+        """Load the specified FITS file.
+
+        The data in each image HDU is interpreted with x mapped to columns
+        (NAXIS1) and y mapped to rows (NAXIS2).  The x, y coordinates are
+        inferred from each image HDUs basic WCS parameters.
+
+        The returned interpolators expect parameter with units and return
+        interpolated values with units.  Units for x, y are specified via
+        a parameter and assumed to be the same for all HDUs.  Units for
+        the interpolated data are taken from the BUNIT header keyword, and
+        must be interpretable by astropy.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file to read using :meth:`astropy.table.Table.read`.
+        xy_unit : astropy.units.Unit
+            Unit of x, y coordinates.
+        hdus : dict
+            Dictionary of name, hdu mappings where each hdu is specified by
+            its integer offset or its name.
+
+        Returns
+        -------
+        dict
+            Dictionary of 2D linear interpolators corresponding to each hdu,
+            with the same keys that appear in the hdus input parameter.
+        """
+        path = os.path.join(self.abs_base_path, filename)
+        hdu_list = astropy.io.fits.open(path, memmap=False)
+        interpolators = {}
+        for name in hdus:
+            hdu = hdu_list[hdus[name]]
+            ny, nx = hdu.data.shape
+            # Use the header WCS to reconstruct the x,y grids.
+            wcs = astropy.wcs.WCS(hdu.header)
+            x, _ = wcs.wcs_pix2world(np.arange(nx), [0], 0)
+            _, y = wcs.wcs_pix2world([0], np.arange(ny), 0)
+            try:
+                bunit = hdu.header['BUNIT']
+                data_unit = astropy.units.Unit(bunit)
+            except KeyError:
+                raise KeyError('Missing BUNIT header keyword for HDU {0}.'
+                               .format(hdus[name]))
+            except ValueError:
+                raise ValueError('Invalid BUNIT "{0}" for HDU {1}.'
+                                 .format(bunit, hdus[name]))
+            dimensionless_interpolator = scipy.interpolate.RectBivariateSpline(
+                x, y, hdu.data, kx=1, ky=1, s=0)
+            # Note that the default arg values are used to capture the
+            # current values of dimensionless_interpolator and data_unit
+            # in the closure of this inner function.
+            def interpolator(x, y, f=dimensionless_interpolator, u=data_unit):
+                return f.ev(x.to(xy_unit).value, y.to(xy_unit).value) * u
+            interpolators[name] = interpolator
+            if self.verbose:
+                print('Loaded {0} from HDU[{1}] of {2}.'
+                      .format(name, hdus[name], path))
+        hdu_list.close()
+        return interpolators
 
 
 def load_config(name, config_type=Configuration):

@@ -5,10 +5,10 @@ from __future__ import print_function, division
 
 import os.path
 import warnings
+import argparse
 
 import numpy as np
 
-from astropy.utils.compat import argparse
 import astropy.units as u
 import astropy.io.fits as fits
 

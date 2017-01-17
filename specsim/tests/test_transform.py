@@ -181,6 +181,9 @@ def test_alt_warn_pressure_array():
     with pytest.raises(UserWarning):
         altaz_to_sky(alt, 0*u.deg, obs_model)
     alt = np.array([alt0 - 1, alt0 + 1]) * u.deg
+    pressure = np.array([800., 0.]) * u.kPa
+    obs_model = create_observing_model(where=where, when=when, wavelength=wlen,
+                                       pressure=pressure[:, np.newaxis])
     with pytest.raises(UserWarning):
         print(altaz_to_sky(alt[:, np.newaxis], 0*u.deg, obs_model).shape)
 

@@ -31,10 +31,10 @@ def main(args=None):
         '--seeing', default=1.1, metavar='FWHM',
         help='seeing FWHM at 6355A in arcseconds')
     parser.add_argument(
-        '--num-wlen', default=11, metavar='N',
+        '--num-wlen', type=int, default=11, metavar='N',
         help='Number of wavelengths for interpolating fiberloss')
     parser.add_argument(
-        '--num-pixels', default=32, metavar='N',
+        '--num-pixels', type=int, default=32, metavar='N',
         help='number of pixels used to subdivide the fiber diameter')
     parser.add_argument(
         '-n', '--num-targets', type=int, default=5000, metavar='N',

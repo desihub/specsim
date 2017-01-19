@@ -15,6 +15,163 @@ import astropy.wcs
 import astropy.table
 
 
+class GalsimFiberlossCalculator(object):
+    """
+    Initialize a fiberloss calculator that uses GalSim.
+
+    Parameters
+    ----------
+    fiber_diameter : float
+        Fiber diameter in microns.
+    wlen_grid : array
+        Array of wavelengths in Angstroms where fiberloss will be calculated.
+    num_pixels : int
+        Number of pixels to cover the fiber aperture along each axis.
+    oversampling : int
+        Oversampling factor for anti-aliasing the circular fiber aperture.
+    moffat_beta : float
+        Beta parameter value for the atmospheric PSF Moffat profile.
+    maximum_fft_size : int
+        Maximum size of FFT allowed.
+    """
+    def __init__(self, fiber_diameter, wlen_grid, num_pixels=32,
+                 oversampling=16, moffat_beta=3.5, maximum_fft_size=32767):
+
+        self.wlen_grid = np.asarray(wlen_grid)
+        self.moffat_beta = moffat_beta
+
+        # Defer import to runtime.
+        import galsim
+
+        # Prepare an image of the fiber aperture for numerical integration.
+        # Images are formed in the physical x-y space of the focal plane
+        # rather than on-sky angles.
+        scale = fiber_diameter / num_pixels
+        self.image = galsim.Image(num_pixels, num_pixels, scale=scale)
+
+        self.gsparams = galsim.GSParams(maximum_fft_size=32767)
+
+        # Prepare an anti-aliased image of the fiber aperture.
+        nos = num_pixels * oversampling
+        dxy = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos)
+        rsq = dxy ** 2 + dxy[:, np.newaxis] ** 2
+        inside = (rsq <= 1).astype(float)
+        s0, s1 = inside.strides
+        blocks = numpy.lib.stride_tricks.as_strided(
+            inside, shape=(num_pixels, num_pixels, oversampling, oversampling),
+            strides=(oversampling * s0, oversampling * s1, s0, s1))
+        self.aperture = blocks.sum(axis=(2, 3)) / oversampling ** 2
+
+
+    def create_source(self, fractions, half_light_radius,
+                      minor_major_axis_ratio, position_angle):
+        """Create a model for the on-sky profile of a single source.
+
+        Size and shape parameter values for any component that is not
+        present (because its fraction is zero) are ignored.
+
+        Parameters
+        ----------
+        fractions : array
+            Array of length 2 giving the disk and bulge fractions, respectively,
+            which must be in the range [0,1] (but this is not checked). If
+            their sum is less than one, the remainder is modeled as a point-like
+            component.
+        half_light_radius : array
+            Array of length 2 giving the disk and bulge half-light radii in
+            arcseconds, respectively.
+        minor_major_axis_ratio : array
+            Array of length 2 giving the dimensionless on-sky ellipse
+            minor / major axis ratio for the disk and bulge components,
+            respectively.
+        position_angle : array
+            Array of length 2 giving the position angle in degrees of the on-sky
+            disk and bluge ellipses, respectively.  Angles are measured counter
+            clockwise relative to the +x axis.
+
+        Returns
+        -------
+        galsim.GSObject
+            A object representing the sum of all requested components with its
+            total flux normalized to one.
+        """
+        components = []
+        if fractions[0] > 0:
+            # Disk component
+            components.append(galsim.Exponential(
+                flux=fractions[0], half_light_radius=half_light_radius[0])
+                .shear(q=minor_major_axis_ratio[0],
+                       beta=position_angle[0] * galsim.degrees))
+        if fractions[1] > 0:
+            components.append(galsim.DeVaucouleurs(
+                flux=fractions[1], half_light_radius=half_light_radius[1])
+                .shear(q=minor_major_axis_ratio[1],
+                       beta=position_angle[1] * galsim.degrees))
+        star_fraction = fractions.sum()
+        if star_fraction > 0:
+            # Model a point-like source with a tiny (0.001 arcsec) Gaussian.
+            components.append(galsim.Gaussian(flux=star_fraction, sigma=0.001))
+        # Combine the components and transform to focal-plane microns.
+        return galsim.Add(source_components, gsparams=self.gsparams)
+
+
+    def calculate(self, seeing_fwhm, scale, offset, blur_rms,
+                  source_fraction, source_hlr, source_q, source_beta):
+        """
+        """
+        num_fibers, num_wlen = len(offset), len(self.wlen_grid)
+        assert seeing_fwhm.shape == num_wlen
+        assert scale.shape == num_fibers, 2
+        assert offset.shape == num_fibers, 2
+        assert blur_rms.shape == num_fibers, num_wlen
+        assert source_fraction.shape == num_fibers, 2
+        assert source_hlr.shape == num_fibers, 2
+        assert source_q.shape == num_fibers, 2
+        assert source_beta.shape == num_fibers, 2
+
+        assert np.all(source_fraction >= 0) and np.all(source_fraction <= 1)
+        star_fraction = 1 - source_fraction.sum(axis=1)
+        assert np.all(star_fraction >= 0) and np.all(star_fraction <= 1)
+
+        scaled_offset = offset / self.image.scale
+        fiberloss = np.empty((num_fibers, num_wlen))
+        source_models = []
+
+        for i, wlen in enumerate(self.wlen_grid):
+            # Create the atmospheric PSF for this wavelength.
+            seeing = galsim.Moffat(
+                fwhm=seeing_fwhm[i], beta=self.moffat_beta).transform(
+                    scale[j, 0], 0, 0, scale[j, 1]).withFlux(1)
+            # Loop over fibers.
+            for j, (dx, dy) in enumerate(offset):
+                # Create the instrument PSF for this fiber and wavelength.
+                blur = galsim.Gaussian(sigma=blur_rms[j, i])
+                if i == 0:
+                    # Create the source model for this fiber on the sky.
+                    source = self.create_source(
+                        source_fraction[j], source_hlr[j],
+                        source_q[j], source_beta[j])
+                    # Transform to focal-plane coordinates.
+                    source = source.transform(
+                        scale[0], 0, 0, scale[1]).withFlux(1)
+                    source_models.append(source)
+                else:
+                    # Lookup the source model for this fiber.
+                    source = source_models[j]
+            # Convolve the source + instrument + astmosphere.
+            convolved = galsim.Convolve(
+                [blur, seeing, source], gsparams=self.gsparams)
+                # TODO: compare method='no_pixel' and 'auto' for accuracy and speed.
+            # Render the convolved model with its offset.
+            offsets = (scaled_offset[j, 0], scaled_offset[j, 0])
+            draw_args = dict(image=image, method='auto')
+            convolved.drawImage(offset=offset, **draw_args)
+            # Calculate the fiberloss fraction for this fiber and wavelength.
+            fiberloss[j, i] = np.sum(self.image.array * self.aperture)
+
+        return fiberloss
+
+
 def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
     oversampling = 16, save_images=None, save_table=None):

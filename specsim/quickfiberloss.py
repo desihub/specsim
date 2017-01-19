@@ -37,7 +37,7 @@ def main(args=None):
         '--num-pixels', type=int, default=32, metavar='N',
         help='number of pixels used to subdivide the fiber diameter')
     parser.add_argument(
-        '-n', '--num-targets', type=int, default=5000, metavar='N',
+        '-n', '--num-targets', type=int, default=10, metavar='N',
         help='number of targets to simulate')
     args = parser.parse_args(args)
 

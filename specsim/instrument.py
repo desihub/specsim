@@ -535,7 +535,8 @@ def initialize(config):
     offset_value = getattr(config.instrument.offset, 'value', None)
     if offset_value:
         offset_value = specsim.config.parse_quantity(offset_value, u.micron)
-        offset_function = lambda angle_x, angle_y, wlen: offset_value
+        offset_function = (
+            lambda angle_x, angle_y, wlen: (offset_value, 0 * u.um))
     else:
         # Build an interpolator in (r, wlen) of radial chromatic offsets.
         radial_offset_function = config.load_table2d(

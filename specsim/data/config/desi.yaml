@@ -49,7 +49,7 @@ atmosphere:
                 bright: spectra/spec-sky-bright.dat
         # Specify the current condition.
         condition: dark
-    # Atmospheric seeing.
+    # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
     seeing:
         # The seeing is assumed to scale with wavelength as
         # fwhm(wlen) = fwhm_ref * (wlen / wlen_ref) ** -0.2

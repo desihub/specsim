@@ -30,6 +30,14 @@ atmosphere:
                 surface_brightness: { name: flux }
             path: test/test_sky.ecsv
         condition: default
+    # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
+    seeing:
+        # The seeing is assumed to scale with wavelength as
+        # fwhm(wlen) = fwhm_ref * (wlen / wlen_ref) ** -0.2
+        fwhm_ref: 1.1 arcsec
+        wlen_ref: 6355 Angstrom
+        # The seeing PSF is modeled as a Moffat profile.
+        moffat_beta: 3.5
     # Surface brightness of scattered moonlight.
     moon:
         table:
@@ -133,6 +141,21 @@ source:
         columns:
             wavelength: { name: wavelength }
             flux: { name: flux }
+    # Transverse profile of the source on the sky, used to calculate the
+    # fiberloss fraction when instrument.fiberloss.method = galsim (but
+    # ignored otherwise).
+    profile:
+        # If the pointlike_fraction is 1, all other parameters are ignored.
+        pointlike_fraction: 1.0
+        disk_fraction: 0.0
+        disk_shape:
+            half_light_radius: 0.8 arcsec
+            position_angle: 45 deg
+            minor_major_axis_ratio: 0.5
+        bulge_shape:
+            half_light_radius: 1.2 arcsec
+            position_angle: 60 deg
+            minor_major_axis_ratio: 0.8
     # Location of the source on the sky. A source will not be visible if
     # it lies out the observation field of view.
     location:

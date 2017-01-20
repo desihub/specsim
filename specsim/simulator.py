@@ -182,14 +182,14 @@ class Simulator(object):
             obs_airmass = (1 - 0.96 * np.sin(obs_zenith) ** 2) ** -0.5
             self.atmosphere.airmass = obs_airmass
         else:
-            self.focal_x, self.focal_y = self.source.focal_xy
+            self.focal_x, self.focal_y = self.source.focal_xy.T
 
         # Check that the source is within the field of view.
         focal_r = np.sqrt(self.focal_x ** 2 + self.focal_y ** 2)
-        if focal_r > self.instrument.field_radius:
+        if np.any(focal_r > self.instrument.field_radius):
             raise RuntimeError(
-                'Source is located outside the field of view: r = {0:.1f}'
-                .format(focal_r))
+                'Source is located outside the field of view: r < {0:.1f}'
+                .format(self.instrument.field_radius))
 
         # Calculate the on-sky fiber area at this focal-plane location.
         radial_fiber_size = (

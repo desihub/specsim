@@ -68,11 +68,10 @@ class Source(object):
     bulge_shape : Profile
         Transverse profile of bulge component with Sersic n=4. Ignored when
         disk_fraction is 1.
-    focal_xy : tuple or None
-        Tuple of astropy.units.Quantity objects giving the focal plane
-        coordinates where this source is observed.  When None, the focal
-        plane position is calculated from the sky_position and observing
-        conditions.
+    focal_xy : astropy.units.Quantity or None
+        Astropy quantity of shape (nfiber, 2) giving the focal plane coordinates
+        where this source is observed.  When None, the focal plane position is
+        calculated from the sky_position and observing conditions.
     sky_position : astropy.coordinates.SkyCoord or None
         Location of this source in the sky. A source will not be visible
         unless its location is within the instrument field of view. Used to
@@ -345,7 +344,10 @@ def initialize(config):
     constants = config.get_constants(
         config.source.location, optional_names=['focal_x', 'focal_y'])
     if 'focal_x' in constants and 'focal_y' in constants:
-        focal_xy = constants['focal_x'], constants['focal_y']
+        focal_xy_unit = constants['focal_x'].unit
+        focal_xy = np.array([
+            constants['focal_x'].value,
+            constants['focal_y'].to(focal_xy_unit).value]) * focal_xy_unit
     else:
         focal_xy = None
     # Sky position is optional (and ignored) when x,y are specified.

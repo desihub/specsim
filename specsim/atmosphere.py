@@ -194,7 +194,8 @@ class Atmosphere(object):
             Full-width half maximum of seeing distribution at the specified
             wavelength, in on-sky angular units.
         """
-        wlen_ratio = np.float((wavelength / self.seeing['wlen_ref']).si)
+        wlen_ratio = (wavelength.to(u.Angstrom).value /
+                      self.seeing['wlen_ref'].to(u.Angstrom).value)
         return self.seeing['fwhm_ref'] * wlen_ratio ** (-0.2)
 
 

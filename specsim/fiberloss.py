@@ -270,7 +270,7 @@ class GalsimFiberlossCalculator(object):
 
 def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
-    oversampling = 16, saved_images_file=None, save_table=None):
+    oversampling = 16, saved_images_file=None, saved_table_file=None):
     """Calculate the fiber acceptance fraction.
 
     The behavior of this function is customized by the instrument.fiberloss
@@ -301,7 +301,7 @@ def calculate_fiber_acceptance_fraction(
         Oversampling factor to use for anti-aliasing the fiber aperture.
     saved_images_file : str or None
         See :meth:`GalsimFiberlossCalculator.calculate`.
-    save_table : str or None
+    saved_table_file : str or None
         Write a table of calculated values to a file with this name.  The
         extension determines the file format, and .ecsv is recommended.
         The saved file can then be used as a pre-tabulated input with
@@ -385,7 +385,7 @@ def calculate_fiber_acceptance_fraction(
         source_fraction, source_hlr, source_q, source_beta,
         saved_images_file)
 
-    if save_table:
+    if saved_table_file:
         meta = dict(
             description='Fiberloss fraction for source "{0}"'
             .format(source.name) +
@@ -396,12 +396,12 @@ def calculate_fiber_acceptance_fraction(
             name='Wavelength', data=wlen_grid.value, unit=wlen_grid.unit,
             description='Observed wavelength'))
         table.add_column(astropy.table.Column(
-            name='FiberAcceptance', data=fiberloss_grid,
+            name='FiberAcceptance', data=fiberloss_grid[0],
             description='Fiber acceptance fraction'))
         args = {}
-        if save_table.endswith('.ecsv'):
+        if saved_table_file.endswith('.ecsv'):
             args['format'] = 'ascii.ecsv'
-        table.write(save_table, **args)
+        table.write(saved_table_file, **args)
 
     # Interpolate (linearly) to the simulation wavelength grid.
     return np.interp(wavelength.data, wlen_grid.value, fiberloss_grid[0])

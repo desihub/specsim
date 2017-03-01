@@ -67,6 +67,8 @@ def main(args=None):
         fiberloss = specsim.fiberloss.calculate_fiber_acceptance_fraction(
             focal_x[i], focal_y[i], simulator.simulated['wavelength'],
             simulator.source, simulator.atmosphere, simulator.instrument)
+            #saved_images_file='fiberloss.fits',
+            #saved_table_file='fiberloss.ecsv')
     elapsed = time.time() - t_start
 
     print('Elapsed for {0} targets = {1:.3f} s, Rate = {2:.3f} ms/target'

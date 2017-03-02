@@ -154,6 +154,12 @@ class GalsimFiberlossCalculator(object):
             Write a multi-extension FITS file with this name containing images
             of the atmospheric and instrument PSFs as a function of wavelength,
             as well as the source profile and the anti-aliased fiber aperture.
+
+        Returns
+        -------
+        array
+            Array of fiberloss fractions in the range 0-1 with shape
+            (num_fibers, num_wlen).
         """
         # This is a no-op but still required to define the namespace.
         import galsim
@@ -271,7 +277,7 @@ class GalsimFiberlossCalculator(object):
 def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
     oversampling = 16, saved_images_file=None, saved_table_file=None):
-    """Calculate the fiber acceptance fraction.
+    """Calculate the acceptance fraction for a single fiber.
 
     The behavior of this function is customized by the instrument.fiberloss
     configuration parameters. When instrument.fiberloss.method == 'table',
@@ -279,8 +285,13 @@ def calculate_fiber_acceptance_fraction(
     all other parameters to this function are ignored.
 
     When instrument.fiberloss.method == 'galsim', fiberloss is calculated
-    on the fly using the GalSim package to model the PSF components and
-    source profile and perform the convolutions.
+    on the fly using the GalSim package via :class:`GalsimFiberlossCalculator`
+    to model the PSF components and source profile and perform the convolutions.
+
+    To efficiently calculate fiberloss fractions for multiple sources with
+    GalSim, use :class:`GalsimFiberlossCalculator` directly instead of
+    repeatedly calling this method.  See :mod:`specsim.quickfiberloss` for an
+    example of this approach.
 
     Parameters
     ----------

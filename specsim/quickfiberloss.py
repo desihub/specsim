@@ -46,7 +46,7 @@ def main(args=None):
         '--num-wlen', type=int, default=11, metavar='N',
         help='Number of wavelengths for interpolating fiberloss')
     parser.add_argument(
-        '--num-pixels', type=int, default=32, metavar='N',
+        '--num-pixels', type=int, default=16, metavar='N',
         help='number of pixels used to subdivide the fiber diameter')
     parser.add_argument(
         '--oversampling', type=int, default=32,

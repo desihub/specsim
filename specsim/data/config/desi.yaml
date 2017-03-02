@@ -127,7 +127,7 @@ instrument:
         num_wlen: 11
         # Number of pixels used to subdivide the fiber diameter for
         # numerical convolution and integration calculations with galsim.
-        num_pixels: 32
+        num_pixels: 16
         # Table of pre-tabulated fiberloss fractions vs wavelength for
         # different source types.  Ignored unless method is table.
         table:

@@ -32,7 +32,7 @@ class GalsimFiberlossCalculator(object):
     maximum_fft_size : int
         Maximum size of FFT allowed.
     """
-    def __init__(self, fiber_diameter, wlen_grid, num_pixels=32,
+    def __init__(self, fiber_diameter, wlen_grid, num_pixels=16,
                  oversampling=32, moffat_beta=3.5, maximum_fft_size=32767):
 
         self.wlen_grid = np.asarray(wlen_grid)

@@ -336,11 +336,8 @@ def calculate_fiber_acceptance_fraction(
     scale, blur, offset = instrument.get_focal_plane_optics(
         focal_x.reshape(1,), focal_y.reshape(1,), wlen_grid)
 
-    # Lookup the atmospheric seeing at each wavelength.
-    seeing_fwhm = np.empty(num_wlen)
-    for i, wlen in enumerate(wlen_grid):
-        # Lookup the seeing FWHM in arcsecs.
-        seeing_fwhm[i] = atmosphere.get_seeing_fwhm(wlen).to(u.arcsec).value
+    # Calculate the atmospheric seeing at each wavelength.
+    seeing_fwhm = atmosphere.get_seeing_fwhm(wlen_grid).to(u.arcsec).value
 
     # Lookup the source model parameters, which we assume to be achromatic.
     source_fraction = np.empty((1, 2))

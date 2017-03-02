@@ -49,7 +49,7 @@ def main(args=None):
         '--num-pixels', type=int, default=32, metavar='N',
         help='number of pixels used to subdivide the fiber diameter')
     parser.add_argument(
-        '--oversampling', type=int, default=16,
+        '--oversampling', type=int, default=32,
         help='Oversampling factor for anti-aliasing the fiber aperture')
     args = parser.parse_args(args)
 

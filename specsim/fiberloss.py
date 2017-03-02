@@ -33,7 +33,7 @@ class GalsimFiberlossCalculator(object):
         Maximum size of FFT allowed.
     """
     def __init__(self, fiber_diameter, wlen_grid, num_pixels=32,
-                 oversampling=16, moffat_beta=3.5, maximum_fft_size=32767):
+                 oversampling=32, moffat_beta=3.5, maximum_fft_size=32767):
 
         self.wlen_grid = np.asarray(wlen_grid)
         self.moffat_beta = moffat_beta
@@ -276,7 +276,7 @@ class GalsimFiberlossCalculator(object):
 
 def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
-    oversampling = 16, saved_images_file=None, saved_table_file=None):
+    oversampling=32, saved_images_file=None, saved_table_file=None):
     """Calculate the acceptance fraction for a single fiber.
 
     The behavior of this function is customized by the instrument.fiberloss

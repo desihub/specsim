@@ -332,32 +332,9 @@ def calculate_fiber_acceptance_fraction(
         oversampling,
         atmosphere.seeing['moffat_beta'])
 
-    # Convert x, y offsets in length units to field angles.
-    angle_x = (
-        np.sign(focal_x) * instrument.field_radius_to_angle(np.abs(focal_x)))
-    angle_y = (
-        np.sign(focal_y) * instrument.field_radius_to_angle(np.abs(focal_y)))
-
-    # Calculate radial offsets from the field center.
-    focal_r = np.sqrt(focal_x ** 2 + focal_y ** 2)
-    angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
-
-    # Calculate the plate scales in um/arcsec at this location.
-    scale = np.empty((1, 2))
-    scale[0, 0] = instrument.radial_scale(focal_r).to(u.um / u.arcsec).value
-    scale[0, 1] = (instrument.azimuthal_scale(focal_r)
-                   .to(u.um / u.arcsec).value)
-
-    # Lookup the instrument blur and centroid offset at each
-    # wavelength for this focal-plane position.
-    blur_rms = np.empty((1, num_wlen))
-    offset = np.empty((1, num_wlen, 2))
-    for i, wlen in enumerate(wlen_grid):
-        # Lookup the RMS blur in focal-plane microns.
-        blur_rms[0, i] = instrument.get_blur_rms(wlen, angle_r).to(u.um).value
-        # Lookup the radial centroid offset in focal-plane microns.
-        dx, dy = instrument.get_centroid_offset(angle_x, angle_y, wlen)
-        offset[0, i, :] = dx.to(u.um).value, dy.to(u.um).value
+    # Calculate the focal-plane optics at the fiber locations.
+    scale, blur, offset = instrument.get_focal_plane_optics(
+        focal_x.reshape(1,), focal_y.reshape(1,), wlen_grid)
 
     # Lookup the atmospheric seeing at each wavelength.
     seeing_fwhm = np.empty(num_wlen)
@@ -379,9 +356,12 @@ def calculate_fiber_acceptance_fraction(
     source_beta[0, 0] = source.disk_shape.position_angle.to(u.deg).value
     source_beta[0, 1] = source.bulge_shape.position_angle.to(u.deg).value
 
-    # Calculate fiberloss fractions.
+    # Calculate fiberloss fractions.  Note that the calculator expects arrays
+    # with implicit units.
     fiberloss_grid = calc.calculate(
-        seeing_fwhm, scale, offset, blur_rms,
+        seeing_fwhm,
+        scale.to(u.um / u.arcsec).value, offset.to(u.um).value,
+        blur.to(u.um).value,
         source_fraction, source_hlr, source_q, source_beta,
         saved_images_file)
 

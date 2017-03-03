@@ -608,13 +608,13 @@ def initialize(config):
         radial_scale = lambda r: value * np.ones_like(r.value)
         azimuthal_scale = lambda r: value * np.ones_like(r.value)
 
-    fiber_acceptance_dict = config.load_table(
-        config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
     if config.instrument.fiberloss.method == 'table':
+        fiber_acceptance_dict = config.load_table(
+            config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
         fiberloss_num_wlen = 0
         fiberloss_num_pixels = 0
     else:
-        #fiber_acceptance_dict = None
+        fiber_acceptance_dict = None
         fiberloss_num_wlen = config.instrument.fiberloss.num_wlen
         fiberloss_num_pixels = config.instrument.fiberloss.num_pixels
 

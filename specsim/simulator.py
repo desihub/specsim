@@ -156,12 +156,18 @@ class Simulator(object):
         return self._camera_output
 
 
-    def simulate(self):
+    def simulate(self, save_fiberloss=None):
         """Simulate a single exposure.
 
         Simulation results are written to internal tables that are overwritten
         each time this method is called.  Some metadata is also saved as
         attributes of this object: `focal_x`, `focal_y`, `fiber_area`.
+
+        Parameters
+        ----------
+        save_fiberloss : str or None
+            Basename for saving FITS images and tabulated fiberloss.
+            Ignored unless instrument.fiberloss.method is galsim.
         """
         # Get references to our results columns.
         wavelength = self.simulated['wavelength']
@@ -204,10 +210,17 @@ class Simulator(object):
         source_flux[:] = self.source.flux_out.to(source_flux.unit)
 
         # Calculate fraction of source illumination entering the fiber.
+        if save_fiberloss is not None:
+            saved_images_file = save_fiberloss + '.fits'
+            saved_table_file = save_fiberloss + '.ecsv'
+        else:
+            saved_images_file, saved_table_file = None, None
         fiber_acceptance_fraction =\
             specsim.fiberloss.calculate_fiber_acceptance_fraction(
                 self.focal_x, self.focal_y, wavelength, self.source,
-                self.atmosphere, self.instrument)
+                self.atmosphere, self.instrument,
+                saved_images_file=saved_images_file,
+                saved_table_file=saved_table_file)
 
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (

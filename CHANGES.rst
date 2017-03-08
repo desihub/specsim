@@ -1,6 +1,7 @@
 0.8 (unreleased)
 ----------------
 
+- Add support and travis testing for python 3.6.
 - Add fiberloss module with support for more realistic fiberloss calculations.
 - Add optional dependency on galsim (only required for on-the-fly fiberloss
   calculations).

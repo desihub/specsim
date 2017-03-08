@@ -7,18 +7,18 @@ calculation is either performed as:
 
 .. math::
 
-    f(\lambda) = 10^{-e(\lambda) X / 2.5} s(\lambda) + a b(\lambda)
+    f(\\lambda) = 10^{-e(\\lambda) X / 2.5} s(\\lambda) + a b(\\lambda)
 
 if ``extinct_emission`` is False, or else as:
 
 .. math::
 
-    f(\lambda) = 10^{-e(\lambda) X / 2.5} \left[
-    s(\lambda) + a b(\lambda)\\right]
+    f(\\lambda) = 10^{-e(\\lambda) X / 2.5} \\left[
+    s(\\lambda) + a b(\\lambda)\\right]
 
-where :math:`s(\lambda)` is the source flux entering the atmosphere,
-:math:`e(\lambda)` is the zenith extinction, :math:`X` is the airmass,
-:math:`a` is the fiber entrance face area, and :math:`b(\lambda)` is the
+where :math:`s(\\lambda)` is the source flux entering the atmosphere,
+:math:`e(\\lambda)` is the zenith extinction, :math:`X` is the airmass,
+:math:`a` is the fiber entrance face area, and :math:`b(\\lambda)` is the
 sky emission surface brightness.  The sky brightness can optionally include
 a scattered moonlight component.
 

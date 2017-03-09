@@ -233,8 +233,8 @@ class Atmosphere(object):
         ax1_rhs.set_yscale('log')
 
         ax1.set_ylabel(
-            'Surface Brightness [$10^{-17}\mathrm{erg}/(\mathrm{cm}^2' +
-            '\mathrm{s} \AA)/\mathrm{arcsec}^2$]')
+            'Surface Brightness [$10^{-17}\\mathrm{erg}/(\\mathrm{cm}^2' +
+            '\\mathrm{s} \AA)/\\mathrm{arcsec}^2$]')
         ax1.set_ylim(0.5 * sky_min, 1.5 * sky_max)
         ax1_rhs.set_ylabel('Zenith Extinction')
         ax1_rhs.set_ylim(0.5 * ext_min, 1.5 * ext_max)
@@ -432,7 +432,7 @@ class Moon(object):
 
         .. math::
 
-            X = (1 - 0.96 \sin^2 Z)^{-0.5}
+            X = (1 - 0.96 \\sin^2 Z)^{-0.5}
         """
         return self._obs_zenith
 

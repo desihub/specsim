@@ -32,12 +32,6 @@ import specsim.fiberloss
 import specsim.observation
 
 
-try:
-    basestring          #- exists in py2
-except NameError:
-    basestring = str    #- for py3
-
-
 class Simulator(object):
     """Manage the simulation of a source, atmosphere and instrument.
 
@@ -50,7 +44,7 @@ class Simulator(object):
     """
     def __init__(self, config):
 
-        if isinstance(config, basestring):
+        if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
 
         # Initalize our component models.

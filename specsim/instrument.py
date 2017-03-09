@@ -169,7 +169,7 @@ class Instrument(object):
 
         .. math::
 
-            \\theta(r) = \int_0^{r} \\frac{dr}{dr/d\\theta(r')}\, dr'
+            \\theta(r) = \\int_0^{r} \\frac{dr}{dr/d\\theta(r')}\\, dr'
 
         The input values must be within the field of view.
         Use :meth:`field_angle_to_radius` for the inverse transform.

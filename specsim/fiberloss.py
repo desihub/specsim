@@ -356,7 +356,7 @@ def calculate_fiber_acceptance_fraction(
     source_q = np.empty((1, 2))
     source_beta = np.empty((1, 2))
     source_fraction[0, 0] = source.disk_fraction
-    source_fraction[0, 1] = 1 - source.pointlike_fraction - source.disk_fraction
+    source_fraction[0, 1] = source.bulge_fraction
     source_hlr[0, 0] = source.disk_shape.half_light_radius.to(u.arcsec).value
     source_hlr[0, 1] = source.bulge_shape.half_light_radius.to(u.arcsec).value
     source_q[0, 0] = source.disk_shape.minor_major_axis_ratio

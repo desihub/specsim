@@ -145,9 +145,10 @@ source:
     # fiberloss fraction when instrument.fiberloss.method = galsim (but
     # ignored otherwise).
     profile:
-        # If the pointlike_fraction is 1, all other parameters are ignored.
-        pointlike_fraction: 1.0
+        # The sum of disk + bulge fractions must be <= 1. If it is < 1,
+        # the remainder is point-like, i.e., star or QSO.
         disk_fraction: 0.0
+        bulge_fraction: 0.0
         disk_shape:
             half_light_radius: 0.8 arcsec
             position_angle: 45 deg

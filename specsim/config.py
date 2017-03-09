@@ -74,7 +74,7 @@ def is_string(x):
 # Extract a number from a string with optional leading and
 # trailing whitespace.
 _float_pattern = re.compile(
-    '\\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\\s*')
+    r'\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
 
 
 def parse_quantity(quantity, dimensions=None):
@@ -692,7 +692,7 @@ def load_config(name, config_type=Configuration):
         raise ValueError('No such config file "{0}".'.format(file_name))
 
     # Validate that all mapping keys are valid python identifiers.
-    valid_key = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*\\Z')
+    valid_key = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*\Z')
     with open(file_name) as f:
         next_value_is_key = False
         for token in yaml.scan(f):

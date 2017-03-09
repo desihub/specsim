@@ -1,7 +1,12 @@
 Command-Line Program
 ====================
 
-This package includes a command-line program `quickspecsim` that simulates a
+.. _quickspecsim:
+
+QuickSpecSim
+------------
+
+This package includes a command-line program ``quickspecsim`` that simulates a
 single spectrum and saves the results as a FITS file and/or plot. To see the
 available command-line options use::
 
@@ -42,3 +47,27 @@ produces the following plot of a simulated 22nd AB magnitude reference source:
 A limited number of simulation parameters can be changed from the command line,
 such as the exposure time, airmass and source magnitude.  For more substantial
 changes to the simulation models, copy and edit an existing configuration file.
+
+.. _quickfiberloss:
+
+QuickFiberLoss
+--------------
+
+The ``quickfiberloss`` command-line program is primarily for performing
+speed benchmarks of fiber acceptance fraction calculations using GalSim,
+which are usually the rate-limiting step when these calculations are
+performed on the fly.  To see the available command-line options use::
+
+    quickfiberloss --help
+
+The ``--config`` option has the same meaning as above, but only the
+``instrument`` section of the configuration data will be used.  Normal usage
+is, for example::
+
+    quickfiberloss -n 100 --disk-fraction 0.5 --bulge-fraction 0.5
+    Elapsed for 100 targets = 58.286 s, Rate = 582.861 ms/target
+
+To measure the speed up for disk-only galaxies, try::
+
+    quickfiberloss -n 100 --disk-fraction 1.0 --bulge-fraction 0.0
+    Elapsed for 100 targets = 1.708 s, Rate = 17.084 ms/target

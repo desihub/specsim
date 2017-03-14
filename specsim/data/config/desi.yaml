@@ -49,7 +49,7 @@ atmosphere:
                 bright: spectra/spec-sky-bright.dat
         # Specify the current condition.
         condition: dark
-    # Atmospheric seeing.
+    # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
     seeing:
         # The seeing is assumed to scale with wavelength as
         # fwhm(wlen) = fwhm_ref * (wlen / wlen_ref) ** -0.2
@@ -127,7 +127,7 @@ instrument:
         num_wlen: 11
         # Number of pixels used to subdivide the fiber diameter for
         # numerical convolution and integration calculations with galsim.
-        num_pixels: 32
+        num_pixels: 16
         # Table of pre-tabulated fiberloss fractions vs wavelength for
         # different source types.  Ignored unless method is table.
         table:
@@ -295,9 +295,10 @@ source:
     # fiberloss fraction when instrument.fiberloss.method = galsim (but
     # ignored otherwise).
     profile:
-        # If the pointlike_fraction is 1, all other parameters are ignored.
-        pointlike_fraction: 1.0
+        # The sum of disk + bulge fractions must be <= 1. If it is < 1,
+        # the remainder is point-like, i.e., star or QSO.
         disk_fraction: 0.0
+        bulge_fraction: 0.0
         disk_shape:
             half_light_radius: 0.8 arcsec
             position_angle: 45 deg

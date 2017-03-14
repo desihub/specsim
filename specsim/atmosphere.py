@@ -7,18 +7,18 @@ calculation is either performed as:
 
 .. math::
 
-    f(\lambda) = 10^{-e(\lambda) X / 2.5} s(\lambda) + a b(\lambda)
+    f(\\lambda) = 10^{-e(\\lambda) X / 2.5} s(\\lambda) + a b(\\lambda)
 
 if ``extinct_emission`` is False, or else as:
 
 .. math::
 
-    f(\lambda) = 10^{-e(\lambda) X / 2.5} \left[
-    s(\lambda) + a b(\lambda)\\right]
+    f(\\lambda) = 10^{-e(\\lambda) X / 2.5} \\left[
+    s(\\lambda) + a b(\\lambda)\\right]
 
-where :math:`s(\lambda)` is the source flux entering the atmosphere,
-:math:`e(\lambda)` is the zenith extinction, :math:`X` is the airmass,
-:math:`a` is the fiber entrance face area, and :math:`b(\lambda)` is the
+where :math:`s(\\lambda)` is the source flux entering the atmosphere,
+:math:`e(\\lambda)` is the zenith extinction, :math:`X` is the airmass,
+:math:`a` is the fiber entrance face area, and :math:`b(\\lambda)` is the
 sky emission surface brightness.  The sky brightness can optionally include
 a scattered moonlight component.
 
@@ -194,7 +194,8 @@ class Atmosphere(object):
             Full-width half maximum of seeing distribution at the specified
             wavelength, in on-sky angular units.
         """
-        wlen_ratio = np.float((wavelength / self.seeing['wlen_ref']).si)
+        wlen_ratio = (wavelength.to(u.Angstrom).value /
+                      self.seeing['wlen_ref'].to(u.Angstrom).value)
         return self.seeing['fwhm_ref'] * wlen_ratio ** (-0.2)
 
 
@@ -232,13 +233,13 @@ class Atmosphere(object):
         ax1_rhs.set_yscale('log')
 
         ax1.set_ylabel(
-            'Surface Brightness [$10^{-17}\mathrm{erg}/(\mathrm{cm}^2' +
-            '\mathrm{s} \AA)/\mathrm{arcsec}^2$]')
+            'Surface Brightness [$10^{-17}\\mathrm{erg}/(\\mathrm{cm}^2' +
+            '\\mathrm{s} \\AA)/\\mathrm{arcsec}^2$]')
         ax1.set_ylim(0.5 * sky_min, 1.5 * sky_max)
         ax1_rhs.set_ylabel('Zenith Extinction')
         ax1_rhs.set_ylim(0.5 * ext_min, 1.5 * ext_max)
 
-        ax1.set_xlabel('Wavelength [$\AA$]')
+        ax1.set_xlabel('Wavelength [$\\AA$]')
         ax1.set_xlim(wave[0], wave[-1])
 
         ncol = 2
@@ -431,7 +432,7 @@ class Moon(object):
 
         .. math::
 
-            X = (1 - 0.96 \sin^2 Z)^{-0.5}
+            X = (1 - 0.96 \\sin^2 Z)^{-0.5}
         """
         return self._obs_zenith
 

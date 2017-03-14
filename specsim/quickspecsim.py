@@ -58,6 +58,8 @@ def main(args=None):
         help='optional output file name')
     parser.add_argument('--save-plot', type=str, default=None,
         help='save plot to the specified filename')
+    parser.add_argument('--save-fiberloss', type=str, default=None,
+        help='save fiberloss .fits and .ecsv files with this base filename')
     args = parser.parse_args(args)
 
     # Read the required configuration file.
@@ -114,7 +116,7 @@ def main(args=None):
         return -1
 
     # Perform the simulation.
-    simulator.simulate()
+    simulator.simulate(save_fiberloss=args.save_fiberloss)
 
     # Summarize the results.
     print('Source at focal plane (x, y) = ({0:.1f}, {1:.1f}).'

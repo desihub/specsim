@@ -169,7 +169,7 @@ class Instrument(object):
 
         .. math::
 
-            \\theta(r) = \int_0^{r} \\frac{dr}{dr/d\\theta(r')}\, dr'
+            \\theta(r) = \\int_0^{r} \\frac{dr}{dr/d\\theta(r')}\\, dr'
 
         The input values must be within the field of view.
         Use :meth:`field_angle_to_radius` for the inverse transform.
@@ -271,6 +271,100 @@ class Instrument(object):
             plane.  Offsets are given in length units, e.g., microns.
         """
         return self._offset_function(angle_x, angle_y, wavelength)
+
+
+    def get_focal_plane_optics(self, focal_x, focal_y, wlen_grid):
+        """Calculate the optical parameters at a set of focal-plane positions.
+
+        Uses :meth:`get_centroid_offset`, :meth:`get_blur_rms`, and
+        :meth:`field_radius_to_angle` to calculate the optics at each focal
+        plane location.
+
+        This method does not make any assumptions about how the x and y
+        axes are defined, as long as (0, 0) is the field center.  However
+        radial symmetry is broken by the (dx, dy) offsets calculated by
+        :meth:`get_centroid_offset`.
+
+        Note that units are required for the input arrays and included with
+        the returned arrays.
+
+        Parameters
+        ----------
+        focal_x : :class:`astropy.units.Quantity`
+            1D array of X coordinates in the focal plane relative to the
+            boresight, with length units.
+        focal_y : :class:`astropy.units.Quantity`
+            1D array of Y coordinates in the focal plane relative to the
+            boresight, with length units.
+        wlen_grid : :class:`astropy.units.Quantity`
+            1D array of wavelengths where parameters should be tabulated,
+            with length units.
+
+        Returns
+        -------
+        tuple
+            Tuple of arrays scale, blur, offset with shapes (N,2), (N,M) and
+            (N,M,2) where N is the size of the 1D input (x,y) arrays, M is
+            the size of the input wavelength grid, and axes of length 2
+            correspond to radial and azimuthal axes (not the input x,y!).
+            All output arrays have units.
+        """
+        # Check for valid units on the input arrays.
+        try:
+            focal_x_mm = focal_x.to(u.mm).value
+            focal_y_mm = focal_y.to(u.mm).value
+            wlen_grid_ang = wlen_grid.to(u.Angstrom).value
+        except astropy.units.UnitConversionError:
+            raise ValueError('Input arrays have invalid units.')
+        except AttributeError:
+            raise ValueError('Input arrays are missing required units.')
+
+        # Check for expected input array shapes.
+        if len(focal_x_mm.shape) != 1 or len(wlen_grid_ang.shape) != 1:
+            raise ValueError('Input arrays must be 1D.')
+        if focal_x_mm.shape != focal_y_mm.shape:
+            raise ValueError('Input (x,y) arrays have different shapes.')
+
+        # Allocate output arrays.
+        n_xy = len(focal_x_mm)
+        n_wlen = len(wlen_grid_ang)
+        scale = np.empty((n_xy, 2))
+        blur = np.empty((n_xy, n_wlen))
+        offset = np.empty((n_xy, n_wlen, 2))
+
+        # Convert x, y offsets in length units to field angles.
+        angle_x = (np.sign(focal_x_mm) *
+                   self.field_radius_to_angle(np.abs(focal_x)))
+        angle_y = (np.sign(focal_y_mm) *
+                   self.field_radius_to_angle(np.abs(focal_y)))
+
+        # Calculate radial offsets from the field center.
+        focal_r = np.sqrt(focal_x_mm ** 2 + focal_y_mm ** 2) * u.mm
+        angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
+
+        # Calculate the radial and azimuthal plate scales at each location.
+        scale[:, 0] = self.radial_scale(focal_r).to(u.um / u.arcsec).value
+        scale[:, 1] = self.azimuthal_scale(focal_r).to(u.um / u.arcsec).value
+
+        # Calculate the transformations between polar and Cartesian coordinates.
+        phi = np.arctan2(focal_y_mm, focal_x_mm)
+        cos_phi = np.cos(phi)
+        sin_phi = np.sin(phi)
+
+        # Lookup the instrument blur and centroid offset at each
+        # wavelength for this focal-plane position.
+        for i, wlen in enumerate(wlen_grid):
+            # Lookup the RMS blurs in focal-plane microns.
+            blur[:, i] = self.get_blur_rms(wlen, angle_r).to(u.um).value
+            # Lookup the radial centroid offsets in focal-plane microns.
+            dx, dy = self.get_centroid_offset(angle_x, angle_y, wlen)
+            dx_um = dx.to(u.um).value
+            dy_um = dy.to(u.um).value
+            # Rotate to polar coordinates.
+            offset[:, i, 0] =  cos_phi * dx_um + sin_phi * dy_um
+            offset[:, i, 1] =  -sin_phi * dx_um + cos_phi * dy_um
+
+        return scale * (u.um / u.arcsec), blur * u.um, offset * u.um
 
 
     def plot_field_distortion(self):
@@ -514,13 +608,13 @@ def initialize(config):
         radial_scale = lambda r: value * np.ones_like(r.value)
         azimuthal_scale = lambda r: value * np.ones_like(r.value)
 
-    fiber_acceptance_dict = config.load_table(
-        config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
     if config.instrument.fiberloss.method == 'table':
+        fiber_acceptance_dict = config.load_table(
+            config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
         fiberloss_num_wlen = 0
         fiberloss_num_pixels = 0
     else:
-        #fiber_acceptance_dict = None
+        fiber_acceptance_dict = None
         fiberloss_num_wlen = config.instrument.fiberloss.num_wlen
         fiberloss_num_pixels = config.instrument.fiberloss.num_pixels
 
@@ -535,7 +629,8 @@ def initialize(config):
     offset_value = getattr(config.instrument.offset, 'value', None)
     if offset_value:
         offset_value = specsim.config.parse_quantity(offset_value, u.micron)
-        offset_function = lambda angle_x, angle_y, wlen: offset_value
+        offset_function = (
+            lambda angle_x, angle_y, wlen: (offset_value, 0 * u.um))
     else:
         # Build an interpolator in (r, wlen) of radial chromatic offsets.
         radial_offset_function = config.load_table2d(

@@ -73,7 +73,3 @@ repeating the initialization step, for example::
 .. _transform-api:
 .. automodapi:: specsim.transform
     :no-inheritance-diagram:
-
-.. _driver-api:
-.. automodapi:: specsim.driver
-    :no-inheritance-diagram:

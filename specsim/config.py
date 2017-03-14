@@ -43,15 +43,38 @@ import astropy.time
 import astropy.io.fits
 import astropy.wcs
 
-try:
-    basestring          #- exists in py2
-except NameError:
-    basestring = str    #- for py3
+
+def is_string(x):
+    """Test if x is a string type.
+
+    This function is un-necessary when this package is installed
+    via setup.py (which uses 2to3). However, we include it here to
+    support using the package directly from a git clone.
+    Note that we avoid the usual trick of defining basestring at
+    module scope since this causes problems with sphinx.
+
+    Parameters
+    ----------
+    x : any
+        Variable to be tested.
+
+    Returns
+    -------
+    bool
+        Returns true if x is a string type.
+    """
+    try:
+        # python 2
+        return isinstance(x, basestring)
+    except NameError:
+        # python 3
+        return isinstance(x, str)
+
 
 # Extract a number from a string with optional leading and
 # trailing whitespace.
 _float_pattern = re.compile(
-    '\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
+    r'\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
 
 
 def parse_quantity(quantity, dimensions=None):
@@ -326,7 +349,7 @@ class Configuration(Node):
         for name in names:
             value = getattr(node, name)
             try:
-                if isinstance(value, basestring):
+                if is_string(value):
                     constants[name] = parse_quantity(value)
                 else:
                     constants[name] = astropy.units.Quantity(float(value))
@@ -347,7 +370,7 @@ class Configuration(Node):
         node = parent.table
 
         # Check that the required column names are present.
-        if isinstance(column_names, basestring):
+        if is_string(column_names):
             return_scalar = True
             column_names = [column_names]
         else:
@@ -669,7 +692,7 @@ def load_config(name, config_type=Configuration):
         raise ValueError('No such config file "{0}".'.format(file_name))
 
     # Validate that all mapping keys are valid python identifiers.
-    valid_key = re.compile('^[a-zA-Z_][a-zA-Z0-9_]*\Z')
+    valid_key = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*\Z')
     with open(file_name) as f:
         next_value_is_key = False
         for token in yaml.scan(f):

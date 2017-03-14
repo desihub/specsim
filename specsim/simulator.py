@@ -32,12 +32,6 @@ import specsim.fiberloss
 import specsim.observation
 
 
-try:
-    basestring          #- exists in py2
-except NameError:
-    basestring = str    #- for py3
-
-
 class Simulator(object):
     """Manage the simulation of a source, atmosphere and instrument.
 
@@ -50,7 +44,7 @@ class Simulator(object):
     """
     def __init__(self, config):
 
-        if isinstance(config, basestring):
+        if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
 
         # Initalize our component models.
@@ -156,12 +150,18 @@ class Simulator(object):
         return self._camera_output
 
 
-    def simulate(self):
+    def simulate(self, save_fiberloss=None):
         """Simulate a single exposure.
 
         Simulation results are written to internal tables that are overwritten
         each time this method is called.  Some metadata is also saved as
         attributes of this object: `focal_x`, `focal_y`, `fiber_area`.
+
+        Parameters
+        ----------
+        save_fiberloss : str or None
+            Basename for saving FITS images and tabulated fiberloss.
+            Ignored unless instrument.fiberloss.method is galsim.
         """
         # Get references to our results columns.
         wavelength = self.simulated['wavelength']
@@ -182,14 +182,14 @@ class Simulator(object):
             obs_airmass = (1 - 0.96 * np.sin(obs_zenith) ** 2) ** -0.5
             self.atmosphere.airmass = obs_airmass
         else:
-            self.focal_x, self.focal_y = self.source.focal_xy
+            self.focal_x, self.focal_y = self.source.focal_xy.T
 
         # Check that the source is within the field of view.
         focal_r = np.sqrt(self.focal_x ** 2 + self.focal_y ** 2)
-        if focal_r > self.instrument.field_radius:
+        if np.any(focal_r > self.instrument.field_radius):
             raise RuntimeError(
-                'Source is located outside the field of view: r = {0:.1f}'
-                .format(focal_r))
+                'Source is located outside the field of view: r < {0:.1f}'
+                .format(self.instrument.field_radius))
 
         # Calculate the on-sky fiber area at this focal-plane location.
         radial_fiber_size = (
@@ -204,11 +204,17 @@ class Simulator(object):
         source_flux[:] = self.source.flux_out.to(source_flux.unit)
 
         # Calculate fraction of source illumination entering the fiber.
+        if save_fiberloss is not None:
+            saved_images_file = save_fiberloss + '.fits'
+            saved_table_file = save_fiberloss + '.ecsv'
+        else:
+            saved_images_file, saved_table_file = None, None
         fiber_acceptance_fraction =\
             specsim.fiberloss.calculate_fiber_acceptance_fraction(
                 self.focal_x, self.focal_y, wavelength, self.source,
                 self.atmosphere, self.instrument,
-                save_images='fiberloss.fits', save_table='fiberloss.ecsv')
+                saved_images_file=saved_images_file,
+                saved_table_file=saved_table_file)
 
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (

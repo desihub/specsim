@@ -10,5 +10,6 @@ specsim
     config.rst
     cmdline.rst
     output.rst
+    fiberloss.rst
     history.rst
     api.rst

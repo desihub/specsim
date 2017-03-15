@@ -41,8 +41,10 @@ class Simulator(object):
     ----------
     config : specsim.config.Configuration or str
         A configuration object or configuration name.
+    num_fibers : int
+        Number of fibers to simulate.
     """
-    def __init__(self, config):
+    def __init__(self, config, num_fibers=1):
 
         if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
@@ -53,77 +55,82 @@ class Simulator(object):
         self.source = specsim.source.initialize(config)
         self.observation = specsim.observation.initialize(config)
 
+        self._num_fibers = int(num_fibers)
+        if self._num_fibers < 1:
+            raise ValueError('Must have num_fibers >= 1.')
+
         # Initialize our table of simulation results.
         self.camera_names = []
         self.camera_slices = {}
         num_rows = len(config.wavelength)
+        shape = (self.num_fibers,)
+        column_args = dict(dtype=float, length=num_rows, shape=shape)
         flux_unit = u.erg / (u.cm**2 * u.s * u.Angstrom)
         self._simulated = astropy.table.Table(
             meta=dict(description='Specsim simulation results'))
         self._simulated.add_column(astropy.table.Column(
             name='wavelength', data=config.wavelength))
         self._simulated.add_column(astropy.table.Column(
-            name='source_flux', dtype=float, length=num_rows, unit=flux_unit))
+            name='source_flux', unit=flux_unit, **column_args))
         self._simulated.add_column(astropy.table.Column(
-            name='source_fiber_flux', dtype=float, length=num_rows,
-            unit=flux_unit))
+            name='source_fiber_flux', unit=flux_unit, **column_args))
         self._simulated.add_column(astropy.table.Column(
-            name='sky_fiber_flux', dtype=float, length=num_rows,
-            unit=flux_unit))
+            name='sky_fiber_flux', unit=flux_unit, **column_args))
         self._simulated.add_column(astropy.table.Column(
-            name='num_source_photons', dtype=float, length=num_rows))
+            name='num_source_photons', **column_args))
         self._simulated.add_column(astropy.table.Column(
-            name='num_sky_photons', dtype=float, length=num_rows))
+            name='num_sky_photons', **column_args))
         for camera in self.instrument.cameras:
             name = camera.name
             self.camera_names.append(name)
             self.camera_slices[name] = camera.ccd_slice
             self._simulated.add_column(astropy.table.Column(
-                name='num_source_electrons_{0}'.format(name),
-                dtype=float, length=num_rows))
+                name='num_source_electrons_{0}'.format(name), **column_args))
             self._simulated.add_column(astropy.table.Column(
-                name='num_sky_electrons_{0}'.format(name),
-                dtype=float, length=num_rows))
+                name='num_sky_electrons_{0}'.format(name), **column_args))
             self._simulated.add_column(astropy.table.Column(
-                name='num_dark_electrons_{0}'.format(name),
-                dtype=float, length=num_rows))
+                name='num_dark_electrons_{0}'.format(name), **column_args))
             self._simulated.add_column(astropy.table.Column(
-                name='read_noise_electrons_{0}'.format(name),
-                dtype=float, length=num_rows))
+                name='read_noise_electrons_{0}'.format(name), **column_args))
 
         # Initialize each camera's table of results downsampled to
         # output pixels.
         self._camera_output = []
         for camera in self.instrument.cameras:
             meta = dict(
-                name=camera.name,
+                name=camera.name, num_fibers=self.num_fibers,
                 pixel_size=camera.output_pixel_size)
             table = astropy.table.Table(meta=meta)
             num_rows = len(camera.output_wavelength)
             table.add_column(astropy.table.Column(
                 name='wavelength', data=camera.output_wavelength))
             table.add_column(astropy.table.Column(
-                name='num_source_electrons', dtype=float, length=num_rows))
+                name='num_source_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='num_sky_electrons', dtype=float, length=num_rows))
+                name='num_sky_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='num_dark_electrons', dtype=float, length=num_rows))
+                name='num_dark_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='read_noise_electrons', dtype=float, length=num_rows))
+                name='read_noise_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='random_noise_electrons', dtype=float, length=num_rows))
+                name='random_noise_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='variance_electrons', dtype=float, length=num_rows))
+                name='variance_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='flux_calibration', dtype=float, length=num_rows,
-                unit=flux_unit))
+                name='flux_calibration', **column_args))
             table.add_column(astropy.table.Column(
-                name='observed_flux', dtype=float, length=num_rows,
-                unit=flux_unit))
+                name='observed_flux', **column_args), unit=flux_unit)
             table.add_column(astropy.table.Column(
-                name='flux_inverse_variance', dtype=float, length=num_rows,
-                unit=flux_unit ** -2))
+                name='flux_inverse_variance', unit=flux_unit ** -2,
+                **column_args))
             self._camera_output.append(table)
+
+
+    @property
+    def num_fibers(self):
+        """Number of fibers being simulated.
+        """
+        return self._num_fibers
 
 
     @property

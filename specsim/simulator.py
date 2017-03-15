@@ -101,7 +101,7 @@ class Simulator(object):
                 name=camera.name, num_fibers=self.num_fibers,
                 pixel_size=camera.output_pixel_size)
             table = astropy.table.Table(meta=meta)
-            num_rows = len(camera.output_wavelength)
+            column_args['length'] = len(camera.output_wavelength)
             table.add_column(astropy.table.Column(
                 name='wavelength', data=camera.output_wavelength))
             table.add_column(astropy.table.Column(
@@ -119,7 +119,7 @@ class Simulator(object):
             table.add_column(astropy.table.Column(
                 name='flux_calibration', **column_args))
             table.add_column(astropy.table.Column(
-                name='observed_flux', **column_args), unit=flux_unit)
+                name='observed_flux', unit=flux_unit, **column_args))
             table.add_column(astropy.table.Column(
                 name='flux_inverse_variance', unit=flux_unit ** -2,
                 **column_args))

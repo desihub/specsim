@@ -157,7 +157,11 @@ class Simulator(object):
         return self._camera_output
 
 
-    def simulate(self, save_fiberloss=None):
+    def simulate(self, sky_positions=None, focal_positions=None,
+                 source_fluxes=None, source_fraction=None,
+                 source_half_light_radius=None,
+                 source_minor_major_axis_ratio=None, source_position_angle=None,
+                 save_fiberloss=None):
         """Simulate a single exposure.
 
         Simulation results are written to internal tables that are overwritten
@@ -178,10 +182,16 @@ class Simulator(object):
         num_source_photons = self.simulated['num_source_photons']
         num_sky_photons = self.simulated['num_sky_photons']
 
-        # Locate the source centroid on the focal plane.
+        # Locate the source centroids on the focal plane.
         if self.source.focal_xy is None:
+            if sky_positions is None:
+                sky_positions = np.tile(
+                    self.source.sky_position, [self.num_fibers, 1])
+            elif len(sky_positions) != self.num_fibers:
+                raise ValueError(
+                    'Expected {0:d} sky_positions.'.format(self.num_fibers))
             self.focal_x, self.focal_y = self.observation.locate_on_focal_plane(
-                self.source.sky_position, self.instrument)
+                sky_positions, self.instrument)
 
             # Set the observing airmass in the atmosphere model using
             # Eqn.3 of Krisciunas & Schaefer 1991.
@@ -189,16 +199,22 @@ class Simulator(object):
             obs_airmass = (1 - 0.96 * np.sin(obs_zenith) ** 2) ** -0.5
             self.atmosphere.airmass = obs_airmass
         else:
-            self.focal_x, self.focal_y = self.source.focal_xy.T
+            if focal_positions is None:
+                focal_positions = np.tile(
+                    self.source.focal_xy, [self.num_fibers, 1])
+            elif len(focal_positions) != self.num_fibers:
+                raise ValueError(
+                    'Expected {0:d} focal_positions.'.format(self.num_fibers))
+            self.focal_x, self.focal_y = focal_positions.T
 
-        # Check that the source is within the field of view.
+        # Check that all sources are within the field of view.
         focal_r = np.sqrt(self.focal_x ** 2 + self.focal_y ** 2)
         if np.any(focal_r > self.instrument.field_radius):
             raise RuntimeError(
-                'Source is located outside the field of view: r < {0:.1f}'
+                'A source is located outside the field of view: r > {0:.1f}'
                 .format(self.instrument.field_radius))
 
-        # Calculate the on-sky fiber area at this focal-plane location.
+        # Calculate the on-sky fiber areas at each focal-plane location.
         radial_fiber_size = (
             0.5 * self.instrument.fiber_diameter /
             self.instrument.radial_scale(focal_r))
@@ -207,8 +223,14 @@ class Simulator(object):
             self.instrument.azimuthal_scale(focal_r))
         self.fiber_area = np.pi * radial_fiber_size * azimuthal_fiber_size
 
-        # Get the source flux incident on the atmosphere.
-        source_flux[:] = self.source.flux_out.to(source_flux.unit)
+        # Get the source fluxes incident on the atmosphere.
+        if source_fluxes is None:
+            source_fluxes = self.source.flux_out.to(
+                source_flux.unit)[:, np.newaxis]
+        elif len(source_fluxes) != self.num_fibers:
+            raise ValueError(
+                'Expected {0:d} source_fluxes.'.format(self.num_fibers))
+        source_flux[:] = source_fluxes
 
         # Calculate fraction of source illumination entering the fiber.
         if save_fiberloss is not None:
@@ -226,13 +248,13 @@ class Simulator(object):
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (
             source_flux *
-            self.atmosphere.extinction *
+            self.atmosphere.extinction[:, np.newaxis] *
             fiber_acceptance_fraction
             ).to(source_fiber_flux.unit)
 
         # Calculate the sky flux entering a fiber.
         sky_fiber_flux[:] = (
-            self.atmosphere.surface_brightness *
+            self.atmosphere.surface_brightness[:, np.newaxis] *
             self.fiber_area
             ).to(sky_fiber_flux.unit)
 
@@ -240,7 +262,7 @@ class Simulator(object):
         # per simulation bin.
         num_source_photons[:] = (
             source_fiber_flux *
-            self.instrument.photons_per_bin *
+            self.instrument.photons_per_bin[:, np.newaxis] *
             self.observation.exposure_time
             ).to(1).value
 
@@ -248,7 +270,7 @@ class Simulator(object):
         # per simulation bin.
         num_sky_photons[:] = (
             sky_fiber_flux *
-            self.instrument.photons_per_bin *
+            self.instrument.photons_per_bin[:, np.newaxis] *
             self.observation.exposure_time
             ).to(1).value
 
@@ -257,9 +279,9 @@ class Simulator(object):
         # We use this below to calculate the flux inverse variance in
         # each camera.
         source_flux_to_photons = (
-            self.atmosphere.extinction *
+            self.atmosphere.extinction[:, np.newaxis] *
             fiber_acceptance_fraction *
-            self.instrument.photons_per_bin *
+            self.instrument.photons_per_bin[:, np.newaxis] *
             self.observation.exposure_time).to(source_flux.unit ** -1).value
 
         # Loop over cameras to calculate their individual responses.
@@ -277,20 +299,20 @@ class Simulator(object):
 
             # Calculate the mean number of source electrons detected in the CCD.
             num_source_electrons[:] = camera.apply_resolution(
-                num_source_photons * camera.throughput)
+                num_source_photons * camera.throughput[:, np.newaxis])
 
             # Calculate the mean number of sky electrons detected in the CCD.
             num_sky_electrons[:] = camera.apply_resolution(
-                num_sky_photons * camera.throughput)
+                num_sky_photons * camera.throughput[:, np.newaxis])
 
             # Calculate the mean number of dark current electrons in the CCD.
             num_dark_electrons[:] = (
-                camera.dark_current_per_bin *
+                camera.dark_current_per_bin[:, np.newaxis] *
                 self.observation.exposure_time).to(u.electron).value
 
             # Copy the read noise in units of electrons.
             read_noise_electrons[:] = (
-                camera.read_noise_per_bin.to(u.electron).value)
+                camera.read_noise_per_bin.to(u.electron).value[:, np.newaxis])
 
             # Calculate the corresponding downsampled output quantities.
             output['num_source_electrons'] = (
@@ -311,7 +333,7 @@ class Simulator(object):
             # source flux above the atmosphere, downsampled to output pixels.
             output['flux_calibration'] = 1.0 / camera.downsample(
                 camera.apply_resolution(
-                    camera.throughput * source_flux_to_photons))
+                    camera.throughput[:, np.newaxis] * source_flux_to_photons))
 
             # Calculate the calibrated flux in this camera.
             output['observed_flux'] = (

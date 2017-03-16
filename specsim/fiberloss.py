@@ -276,6 +276,8 @@ class GalsimFiberlossCalculator(object):
 
 def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
+    source_fraction=None, source_half_light_radius=None,
+    source_minor_major_axis_ratio=None, source_position_angle=None,
     oversampling=32, saved_images_file=None, saved_table_file=None):
     """Calculate the acceptance fraction for a single fiber.
 
@@ -308,6 +310,18 @@ def calculate_fiber_acceptance_fraction(
         Atmosphere model to use for the calculation.
     instrument : :class:`specsim.instrument.Instrument`
         Instrument model to use for the calculation.
+    source_fraction : array
+        Array of shape (num_fibers, 2).  See
+        :meth:`GalsimFiberlossCalculator.create_source` for details.
+    source_half_light_radius : array
+        Array of shape (num_fibers, 2).  See
+        :meth:`GalsimFiberlossCalculator.create_source` for details.
+    source_minor_major_axis_ratio : array
+        Array of shape (num_fibers, 2).  See
+        :meth:`GalsimFiberlossCalculator.create_source` for details.
+    source_position_angle : array
+        Array of shape (num_fibers, 2).  See
+        :meth:`GalsimFiberlossCalculator.create_source` for details.
     oversampling : int
         Oversampling factor to use for anti-aliasing the fiber aperture.
     saved_images_file : str or None
@@ -324,10 +338,14 @@ def calculate_fiber_acceptance_fraction(
         Array of fiber acceptance fractions (dimensionless) at each of the
         input wavelengths.
     """
+    num_fibers = len(focal_x)
+    if len(focal_y) != num_fibers:
+        raise ValueError('Arrays focal_x and focal_y must have same length.')
+
     # Use pre-tabulated fiberloss vs wavelength when available.
     num_wlen = instrument.fiberloss_num_wlen
     if num_wlen == 0:
-        return instrument.fiber_acceptance_dict[source.type_name]
+        return instrument.fiber_acceptance_dict[source.type_name][:, np.newaxis]
 
     # Initialize the grid of wavelengths where the fiberloss will be
     # calculated.
@@ -350,19 +368,34 @@ def calculate_fiber_acceptance_fraction(
     # Calculate the atmospheric seeing at each wavelength.
     seeing_fwhm = atmosphere.get_seeing_fwhm(wlen_grid).to(u.arcsec).value
 
-    # Lookup the source model parameters, which we assume to be achromatic.
-    source_fraction = np.empty((1, 2))
-    source_hlr = np.empty((1, 2))
-    source_q = np.empty((1, 2))
-    source_beta = np.empty((1, 2))
-    source_fraction[0, 0] = source.disk_fraction
-    source_fraction[0, 1] = source.bulge_fraction
-    source_hlr[0, 0] = source.disk_shape.half_light_radius.to(u.arcsec).value
-    source_hlr[0, 1] = source.bulge_shape.half_light_radius.to(u.arcsec).value
-    source_q[0, 0] = source.disk_shape.minor_major_axis_ratio
-    source_q[0, 1] = source.bulge_shape.minor_major_axis_ratio
-    source_beta[0, 0] = source.disk_shape.position_angle.to(u.deg).value
-    source_beta[0, 1] = source.bulge_shape.position_angle.to(u.deg).value
+    # Replicate source parameters from the source config if they are not
+    # provided via args. If they are provided, check for the expected shape.
+    if source_fraction is None:
+        source_fraction = np.tile(
+            [source.disk_fraction, source.bulge_fraction], [num_fibers, 1])
+    elif source_fraction.shape != (num_fibers, 2):
+        raise ValueError('Unexpected shape for source_fraction.')
+    if source_half_light_radius is None:
+        source_half_light_radius = np.tile(
+            [source.disk_shape.half_light_radius.to(u.arcsec).value,
+             source.bulge_shape.half_light_radius.to(u.arcsec).value],
+            [num_fibers, 1])
+    elif source_half_light_radius.shape != (num_fibers, 2):
+        raise ValueError('Unexpected shape for source_half_light_radius.')
+    if source_minor_major_axis_ratio is None:
+        source_minor_major_axis_ratio = np.tile(
+            [source.disk_shape.minor_major_axis_ratio,
+             source.bulge_shape.minor_major_axis_ratio],
+            [num_fibers, 1])
+    elif source_minor_major_axis_ratio.shape != (num_fibers, 2):
+        raise ValueError('Unexpected shape for source_minor_major_axis_ratio.')
+    if source_position_angle is None:
+        source_position_angle = np.tile(
+            [source.disk_shape.position_angle.to(u.deg).value,
+             source.bulge_shape.position_angle.to(u.deg).value],
+            [num_fibers, 1])
+    elif source_position_angle.shape != (num_fibers, 2):
+        raise ValueError('Unexpected shape for source_position_angle.')
 
     # Calculate fiberloss fractions.  Note that the calculator expects arrays
     # with implicit units.
@@ -370,10 +403,12 @@ def calculate_fiber_acceptance_fraction(
         seeing_fwhm,
         scale.to(u.um / u.arcsec).value, offset.to(u.um).value,
         blur.to(u.um).value,
-        source_fraction, source_hlr, source_q, source_beta,
+        source_fraction, source_half_light_radius,
+        source_minor_major_axis_ratio, source_position_angle,
         saved_images_file)
 
-    if saved_table_file:
+    # TODO: add support for saving table when num_fibers > 1.
+    if saved_table_file and num_fibers == 1:
         meta = dict(
             description='Fiberloss fraction for source "{0}"'
             .format(source.name) +
@@ -392,4 +427,7 @@ def calculate_fiber_acceptance_fraction(
         table.write(saved_table_file, **args)
 
     # Interpolate (linearly) to the simulation wavelength grid.
-    return np.interp(wavelength.data, wlen_grid.value, fiberloss_grid[0])
+    print(fiberloss_grid.shape)
+    result = np.interp(wavelength.data, wlen_grid.value, fiberloss_grid)
+    print(result.shape)
+    return result

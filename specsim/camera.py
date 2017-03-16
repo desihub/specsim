@@ -244,7 +244,7 @@ class Camera(object):
         self._output_slice = slice(
             self.ccd_slice.start,
             self.ccd_slice.start + num_downsampled * self._downsampling)
-        self._downsampled_shape = (num_downsampled, self._downsampling)
+        self._downsampled_shape = (num_downsampled, self._downsampling, -1)
 
 
     def get_output_resolution_matrix(self):
@@ -320,12 +320,12 @@ class Camera(object):
         """Downsample data tabulated on the simulation grid to output pixels.
         """
         data = np.asanyarray(data)
-        if data.shape != self._wavelength.shape:
+        if len(data) != len(self._wavelength):
             raise ValueError(
                 'Invalid data shape for downsampling: {0}.'.format(data.shape))
 
         return method(
-            data[self._output_slice].reshape(self._downsampled_shape), axis=-1)
+            data[self._output_slice].reshape(self._downsampled_shape), axis=-2)
 
 
     def apply_resolution(self, flux):

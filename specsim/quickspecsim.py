@@ -120,14 +120,14 @@ def main(args=None):
 
     # Summarize the results.
     print('Source at focal plane (x, y) = ({0:.1f}, {1:.1f}).'
-          .format(simulator.focal_x, simulator.focal_y))
+          .format(simulator.focal_x[0], simulator.focal_y[0]))
     print('Observing airmass is {0:.3f}.'.format(simulator.atmosphere.airmass))
     for output in simulator.camera_output:
         camera_name = output.meta['name']
         pixel_size = output.meta['pixel_size']
         snr = (
-            output['num_source_electrons'] /
-            np.sqrt(output['variance_electrons']))
+            output['num_source_electrons'][:, 0] /
+            np.sqrt(output['variance_electrons'][:, 0]))
         print('Median SNR in {0} camera = {1:.3f} / {2}'
               .format(camera_name, np.median(snr), pixel_size))
 

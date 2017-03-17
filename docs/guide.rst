@@ -58,7 +58,8 @@ of its individual fibers, used to normalize the sky flux. The telescope also
 has an optical PSF that is convolved with the atmospheric PSF and the source
 profile to determine the profile of light incident upon the fiber entrance face
 in the focal plane.  The overlap between this convolved profile and the fiber
-aperture determines the fiber acceptance fraction :math:`f_S(\lambda)`. The
+aperture determines the fiber acceptance fraction :math:`f_S(\lambda)` (see
+:doc:`fiberloss` for details). The
 resulting flux :math:`F(\lambda)` in erg/|Ang| entering the fiber is:
 
 .. math::

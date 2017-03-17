@@ -5,6 +5,7 @@
 - Add fiberloss module with support for more realistic fiberloss calculations.
 - Add optional dependency on galsim (only required for on-the-fly fiberloss
   calculations).
+- Add notebook of fiberloss calculation examples.
 
 0.7 (2016-12-02)
 ----------------

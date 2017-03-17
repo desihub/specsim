@@ -381,8 +381,7 @@ class Simulator(object):
                 output['num_sky_electrons'] + output['num_dark_electrons'])
             output['random_noise_electrons'] = (
                 random_state.poisson(mean_electrons) - mean_electrons +
-                random_state.normal(
-                    scale=output['read_noise_electrons'], size=len(output)))
+                random_state.normal(scale=output['read_noise_electrons']))
 
 
     def plot(self, fiber=0, title=None):

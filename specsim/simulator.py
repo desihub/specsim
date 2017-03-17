@@ -385,8 +385,8 @@ class Simulator(object):
                     scale=output['read_noise_electrons'], size=len(output)))
 
 
-    def plot(self, title=None):
-        """Plot results of the last simulation.
+    def plot(self, fiber=0, title=None):
+        """Plot results of the last simulation for a single fiber.
 
         Uses the contents of the :attr:`simulated` and :attr:`camera_output`
         astropy tables to plot the results of the last call to :meth:`simulate`.
@@ -394,22 +394,26 @@ class Simulator(object):
 
         Parameters
         ----------
+        fiber : int
+            Fiber index to plot.  Must be less than `self.num_fibers`.
         title : str or None
             Plot title to use.  If None is specified, a title will be
             automatically generated using the source name, airmass and
             exposure time.
         """
+        if fiber < 0 or fiber >= self.num_fibers:
+            raise ValueError('Requested fiber is out of range.')
         if title is None:
             title = (
-                '{0}, X={1}, t={2}'
-                .format(self.source.name, self.atmosphere.airmass,
+                'Fiber={0}, X={1}, t={2}'
+                .format(fiber, self.atmosphere.airmass,
                         self.observation.exposure_time))
-        plot_simulation(self.simulated, self.camera_output, title)
+        plot_simulation(self.simulated, self.camera_output, fiber, title)
 
 
-def plot_simulation(simulated, camera_output, title=None,
+def plot_simulation(simulated, camera_output, fiber=0, title=None,
                     min_electrons=2.5, figsize=(11, 8.5), label_size='medium'):
-    """Plot simulation output tables.
+    """Plot simulation output tables for a single fiber.
 
     This function is normally called via :meth:`Simulator.plot` but is provided
     separately so that plots can be generated from results saved to a file.
@@ -428,6 +432,8 @@ def plot_simulation(simulated, camera_output, title=None,
     camera_output : list
         Lists of tables of per-camera simulation results tabulated on each
         camera's output pixel grid.
+    fiber : int
+        Fiber index to plot.
     title : str or None
         Descriptive title to use for the plot.
     min_electrons : float
@@ -450,9 +456,9 @@ def plot_simulation(simulated, camera_output, title=None,
 
     # Plot fluxes above the atmosphere and into the fiber.
 
-    src_flux = simulated['source_flux']
-    src_fiber_flux = simulated['source_fiber_flux']
-    sky_fiber_flux = simulated['sky_fiber_flux']
+    src_flux = simulated['source_flux'][:, fiber]
+    src_fiber_flux = simulated['source_fiber_flux'][:, fiber]
+    sky_fiber_flux = simulated['sky_fiber_flux'][:, fiber]
 
     ymin, ymax = 0.1 * np.min(src_flux), 10. * np.max(src_flux)
 
@@ -476,8 +482,8 @@ def plot_simulation(simulated, camera_output, title=None,
 
     # Plot numbers of photons into the fiber.
 
-    nsky = simulated['num_sky_photons'] / dwave
-    nsrc = simulated['num_source_photons'] / dwave
+    nsky = simulated['num_sky_photons'][:, fiber] / dwave
+    nsrc = simulated['num_source_photons'][:, fiber] / dwave
     nmax = np.max(nsrc)
 
     ax2.fill_between(wave, nsky + nsrc, 1e-1 * nmax, color='b', alpha=0.2, lw=0)
@@ -499,11 +505,11 @@ def plot_simulation(simulated, camera_output, title=None,
 
         cwave = output['wavelength']
         dwave = np.gradient(cwave)
-        nsky = output['num_sky_electrons'] / dwave
-        nsrc = output['num_source_electrons'] / dwave
-        ndark = output['num_dark_electrons'] / dwave
-        read_noise = output['read_noise_electrons'] / np.sqrt(dwave)
-        total_noise = np.sqrt(output['variance_electrons'] / dwave)
+        nsky = output['num_sky_electrons'][:, fiber] / dwave
+        nsrc = output['num_source_electrons'][:, fiber] / dwave
+        ndark = output['num_dark_electrons'][:, fiber] / dwave
+        read_noise = output['read_noise_electrons'][:, fiber] / np.sqrt(dwave)
+        total_noise = np.sqrt(output['variance_electrons'][:, fiber] / dwave)
         nmax = max(nmax, np.max(nsrc))
 
         ax3.fill_between(

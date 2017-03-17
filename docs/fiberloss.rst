@@ -19,7 +19,9 @@ fraction is also referred to as the "fiberloss", and depends on:
   face, which are expressed via radial and azimuthal plate scales, and generally
   transform a round fiber into an elliptical view of the sky.
 
-Further details specific to DESI are provided in `DESI-doc-2720 <https://desi.lbl.gov/DocDB/cgi-bin/private/ShowDocument?docid=2720>`_.
+Further details specific to DESI are provided in `DESI-doc-2720 <https://desi.lbl.gov/DocDB/cgi-bin/private/ShowDocument?docid=2720>`_.  The
+jupyter notebook in ``docs/nb/FiberlossExamples.ipynb`` was used to create the
+plots for this document and provide code examples for fiberloss calculations.
 
 Configuration
 -------------

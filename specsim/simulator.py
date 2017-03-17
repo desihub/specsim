@@ -168,8 +168,19 @@ class Simulator(object):
         each time this method is called.  Some metadata is also saved as
         attributes of this object: `focal_x`, `focal_y`, `fiber_area`.
 
+        The positions and properties of each source can either be specified
+        via arguments or else will be copied (for each fiber) from the
+        corresponding configuration data.
+
         Parameters
         ----------
+        sky_positions :
+        focal_positions :
+        source_fluxes : array or None
+        source_fraction : array or None
+        source_half_light_radius : array or None
+        source_minor_major_axis_ratio : array or None
+        source_position_angle : array or None
         save_fiberloss : str or None
             Basename for saving FITS images and tabulated fiberloss.
             Ignored unless instrument.fiberloss.method is galsim.

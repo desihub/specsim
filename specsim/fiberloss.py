@@ -311,22 +311,33 @@ def calculate_fiber_acceptance_fraction(
     instrument : :class:`specsim.instrument.Instrument`
         Instrument model to use for the calculation.
     source_types : array or None
+        Array of source type names that identify which tabulated fiberloss
+        fraction should be used for each fiber with the ``table`` method.
+        Each name should already be defined as a key in the
+        ``instruments.fiberloss.table.paths`` configuration.
+        Ignored for the ``galsim`` method.
     source_fraction : array or None
         Array of shape (num_fibers, 2).  See
         :meth:`GalsimFiberlossCalculator.create_source` for details.
+        Ignored for the ``table`` method.
     source_half_light_radius : array or None
         Array of shape (num_fibers, 2).  See
         :meth:`GalsimFiberlossCalculator.create_source` for details.
+        Ignored for the ``table`` method.
     source_minor_major_axis_ratio : array or None
         Array of shape (num_fibers, 2).  See
         :meth:`GalsimFiberlossCalculator.create_source` for details.
+        Ignored for the ``table`` method.
     source_position_angle : array or None
         Array of shape (num_fibers, 2).  See
         :meth:`GalsimFiberlossCalculator.create_source` for details.
+        Ignored for the ``table`` method.
     oversampling : int
         Oversampling factor to use for anti-aliasing the fiber aperture.
+        Ignored for the ``table`` method.
     saved_images_file : str or None
         See :meth:`GalsimFiberlossCalculator.calculate`.
+        Ignored for the ``table`` method.
     saved_table_file : str or None
         Write a table of calculated values to a file with this name.  The
         extension determines the file format, and .ecsv is recommended.
@@ -343,7 +354,7 @@ def calculate_fiber_acceptance_fraction(
     if len(focal_y) != num_fibers:
         raise ValueError('Arrays focal_x and focal_y must have same length.')
 
-    # Use pre-tabulated fiberloss vs wavelength when available.
+    # Use pre-tabulated fiberloss vs wavelength when requested.
     num_wlen = instrument.fiberloss_num_wlen
     if num_wlen == 0:
         if source_types is None:

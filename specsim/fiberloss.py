@@ -276,7 +276,7 @@ class GalsimFiberlossCalculator(object):
 
 def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
-    source_fraction=None, source_half_light_radius=None,
+    source_types=None, source_fraction=None, source_half_light_radius=None,
     source_minor_major_axis_ratio=None, source_position_angle=None,
     oversampling=32, saved_images_file=None, saved_table_file=None):
     """Calculate the acceptance fraction for a single fiber.
@@ -310,16 +310,17 @@ def calculate_fiber_acceptance_fraction(
         Atmosphere model to use for the calculation.
     instrument : :class:`specsim.instrument.Instrument`
         Instrument model to use for the calculation.
-    source_fraction : array
+    source_types : array or None
+    source_fraction : array or None
         Array of shape (num_fibers, 2).  See
         :meth:`GalsimFiberlossCalculator.create_source` for details.
-    source_half_light_radius : array
+    source_half_light_radius : array or None
         Array of shape (num_fibers, 2).  See
         :meth:`GalsimFiberlossCalculator.create_source` for details.
-    source_minor_major_axis_ratio : array
+    source_minor_major_axis_ratio : array or None
         Array of shape (num_fibers, 2).  See
         :meth:`GalsimFiberlossCalculator.create_source` for details.
-    source_position_angle : array
+    source_position_angle : array or None
         Array of shape (num_fibers, 2).  See
         :meth:`GalsimFiberlossCalculator.create_source` for details.
     oversampling : int
@@ -345,7 +346,16 @@ def calculate_fiber_acceptance_fraction(
     # Use pre-tabulated fiberloss vs wavelength when available.
     num_wlen = instrument.fiberloss_num_wlen
     if num_wlen == 0:
-        return instrument.fiber_acceptance_dict[source.type_name][:, np.newaxis]
+        if source_types is None:
+            # Use same source type for all fibers.
+            return instrument.fiber_acceptance_dict[
+                source.type_name][np.newaxis, :]
+        elif len(source_types) != num_fibers:
+            raise ValueError('Unexpected shape for source_types.')
+        floss = np.empty((num_fibers, len(wavelength)))
+        for i, type_name in enumerate(source_types):
+            floss[i] = instrument.fiber_acceptance_dict[type_name]
+        return floss
 
     # Initialize the grid of wavelengths where the fiberloss will be
     # calculated.
@@ -427,7 +437,4 @@ def calculate_fiber_acceptance_fraction(
         table.write(saved_table_file, **args)
 
     # Interpolate (linearly) to the simulation wavelength grid.
-    print(fiberloss_grid.shape)
-    result = np.interp(wavelength.data, wlen_grid.value, fiberloss_grid)
-    print(result.shape)
-    return result
+    return np.interp(wavelength.data, wlen_grid.value, fiberloss_grid)

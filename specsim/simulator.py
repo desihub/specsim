@@ -44,7 +44,7 @@ class Simulator(object):
     num_fibers : int
         Number of fibers to simulate.
     """
-    def __init__(self, config, num_fibers=1):
+    def __init__(self, config, num_fibers=2):
 
         if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
@@ -158,7 +158,7 @@ class Simulator(object):
 
 
     def simulate(self, sky_positions=None, focal_positions=None,
-                 source_fluxes=None, source_fraction=None,
+                 source_fluxes=None, source_types=None, source_fraction=None,
                  source_half_light_radius=None,
                  source_minor_major_axis_ratio=None, source_position_angle=None,
                  save_fiberloss=None):
@@ -166,7 +166,8 @@ class Simulator(object):
 
         Simulation results are written to internal tables that are overwritten
         each time this method is called.  Some metadata is also saved as
-        attributes of this object: `focal_x`, `focal_y`, `fiber_area`.
+        attributes of this object: `focal_x`, `focal_y`, `fiber_area`,
+        `fiber_acceptance_fraction`.
 
         The positions and properties of each source can either be specified
         via arguments or else will be copied (for each fiber) from the
@@ -177,6 +178,7 @@ class Simulator(object):
         sky_positions :
         focal_positions :
         source_fluxes : array or None
+        source_types : array or None
         source_fraction : array or None
         source_half_light_radius : array or None
         source_minor_major_axis_ratio : array or None
@@ -185,7 +187,12 @@ class Simulator(object):
             Basename for saving FITS images and tabulated fiberloss.
             Ignored unless instrument.fiberloss.method is galsim.
         """
-        # Get references to our results columns.
+        # Get references to our results columns. Since table rows index
+        # wavelength, the shape of each column is (nwlen, nfiber) and
+        # therefore some transposes are necessary to match with the shape
+        # (nfiber, nwlen) of source_fluxes and fiber_acceptance_fraction,
+        # and before calling the camera downsample() and apply_resolution()
+        # methods.
         wavelength = self.simulated['wavelength']
         source_flux = self.simulated['source_flux']
         source_fiber_flux = self.simulated['source_fiber_flux']
@@ -237,11 +244,11 @@ class Simulator(object):
         # Get the source fluxes incident on the atmosphere.
         if source_fluxes is None:
             source_fluxes = self.source.flux_out.to(
-                source_flux.unit)[:, np.newaxis]
+                source_flux.unit)[np.newaxis, :]
         elif len(source_fluxes) != self.num_fibers:
             raise ValueError(
                 'Expected {0:d} source_fluxes.'.format(self.num_fibers))
-        source_flux[:] = source_fluxes
+        source_flux[:] = source_fluxes.T
 
         # Calculate fraction of source illumination entering the fiber.
         if save_fiberloss is not None:
@@ -249,18 +256,20 @@ class Simulator(object):
             saved_table_file = save_fiberloss + '.ecsv'
         else:
             saved_images_file, saved_table_file = None, None
-        fiber_acceptance_fraction =\
+
+        self.fiber_acceptance_fraction =\
             specsim.fiberloss.calculate_fiber_acceptance_fraction(
                 self.focal_x, self.focal_y, wavelength, self.source,
-                self.atmosphere, self.instrument,
-                saved_images_file=saved_images_file,
+                self.atmosphere, self.instrument, source_types, source_fraction,
+                source_half_light_radius, source_minor_major_axis_ratio,
+                source_position_angle, saved_images_file=saved_images_file,
                 saved_table_file=saved_table_file)
 
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (
             source_flux *
             self.atmosphere.extinction[:, np.newaxis] *
-            fiber_acceptance_fraction
+            self.fiber_acceptance_fraction.T
             ).to(source_fiber_flux.unit)
 
         # Calculate the sky flux entering a fiber.
@@ -290,10 +299,11 @@ class Simulator(object):
         # We use this below to calculate the flux inverse variance in
         # each camera.
         source_flux_to_photons = (
-            self.atmosphere.extinction[:, np.newaxis] *
-            fiber_acceptance_fraction *
-            self.instrument.photons_per_bin[:, np.newaxis] *
-            self.observation.exposure_time).to(source_flux.unit ** -1).value
+            self.atmosphere.extinction *
+            self.fiber_acceptance_fraction *
+            self.instrument.photons_per_bin *
+            self.observation.exposure_time
+            ).to(source_flux.unit ** -1).value.T
 
         # Loop over cameras to calculate their individual responses.
         for output, camera in zip(self.camera_output, self.instrument.cameras):
@@ -310,11 +320,11 @@ class Simulator(object):
 
             # Calculate the mean number of source electrons detected in the CCD.
             num_source_electrons[:] = camera.apply_resolution(
-                num_source_photons * camera.throughput[:, np.newaxis])
+                num_source_photons.T * camera.throughput).T
 
             # Calculate the mean number of sky electrons detected in the CCD.
             num_sky_electrons[:] = camera.apply_resolution(
-                num_sky_photons * camera.throughput[:, np.newaxis])
+                num_sky_photons.T * camera.throughput).T
 
             # Calculate the mean number of dark current electrons in the CCD.
             num_dark_electrons[:] = (
@@ -323,17 +333,17 @@ class Simulator(object):
 
             # Copy the read noise in units of electrons.
             read_noise_electrons[:] = (
-                camera.read_noise_per_bin.to(u.electron).value[:, np.newaxis])
+                camera.read_noise_per_bin[:, np.newaxis].to(u.electron).value)
 
             # Calculate the corresponding downsampled output quantities.
             output['num_source_electrons'] = (
-                camera.downsample(num_source_electrons))
+                camera.downsample(num_source_electrons.T)).T
             output['num_sky_electrons'] = (
-                camera.downsample(num_sky_electrons))
+                camera.downsample(num_sky_electrons.T)).T
             output['num_dark_electrons'] = (
-                camera.downsample(num_dark_electrons))
+                camera.downsample(num_dark_electrons.T)).T
             output['read_noise_electrons'] = np.sqrt(
-                camera.downsample(read_noise_electrons ** 2))
+                camera.downsample(read_noise_electrons.T ** 2)).T
             output['variance_electrons'] = (
                 output['num_source_electrons'] +
                 output['num_sky_electrons'] +
@@ -344,7 +354,7 @@ class Simulator(object):
             # source flux above the atmosphere, downsampled to output pixels.
             output['flux_calibration'] = 1.0 / camera.downsample(
                 camera.apply_resolution(
-                    camera.throughput[:, np.newaxis] * source_flux_to_photons))
+                    source_flux_to_photons.T * camera.throughput)).T
 
             # Calculate the calibrated flux in this camera.
             output['observed_flux'] = (

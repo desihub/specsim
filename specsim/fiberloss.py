@@ -354,9 +354,8 @@ def calculate_fiber_acceptance_fraction(
     if len(focal_y) != num_fibers:
         raise ValueError('Arrays focal_x and focal_y must have same length.')
 
-    # Use pre-tabulated fiberloss vs wavelength when requested.
-    num_wlen = instrument.fiberloss_num_wlen
-    if num_wlen == 0:
+    # Use pre-tabulated fiberloss fractions when requested.
+    if instrument.fiberloss_method == 'table':
         if source_types is None:
             # Use same source type for all fibers.
             return instrument.fiber_acceptance_dict[
@@ -368,8 +367,11 @@ def calculate_fiber_acceptance_fraction(
             floss[i] = instrument.fiber_acceptance_dict[type_name]
         return floss
 
+    # Otherwise, use GalSim to calculate fiberloss fractions on the fly...
+
     # Initialize the grid of wavelengths where the fiberloss will be
     # calculated.
+    num_wlen = instrument.fiberloss_num_wlen
     wlen_unit = wavelength.unit
     wlen_grid = np.linspace(wavelength.data[0], wavelength.data[-1],
                             num_wlen) * wlen_unit

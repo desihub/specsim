@@ -44,15 +44,20 @@ class Instrument(object):
     wavelength : astropy.units.Quantity
         Array of wavelength bin centers where the instrument response is
         calculated, with units.
+    fiberloss_method : str
+        Must be "table" or "galsim".  Specifies how fiber acceptance fractions
+        will be loaded or calculated.
     fiber_acceptance_dict : dict or None
         Dictionary of fiber acceptance fractions tabulated for different
         source models, with keys corresponding to source model names.
+        Ignored when fiberloss_method is "galsim".
     fiberloss_num_wlen : int
         Number of wavelengths where the fiberloss fraction should be tabulated
-        for interpolation.  Will be zero when fiber_acceptance_dict is set.
+        for interpolation.  Ignored when fiberloss_method is "table".
     fiberloss_num_pixels : int
         Number of pixels used to subdivide the fiber diameter for
         numerical convolution and integration calculations.
+        Ignored when fiberloss_method is "table".
     blur_function : callable
         Function of field angle and wavelength that returns the corresponding
         RMS blur in length units (e.g., microns).
@@ -85,13 +90,16 @@ class Instrument(object):
         (sagittal) direction (with appropriate units) as a function of
         focal-plane distance (with length units) from the boresight.
     """
-    def __init__(self, name, wavelength, fiber_acceptance_dict,
-                 fiberloss_num_wlen, fiberloss_num_pixels,
-                 blur_function, offset_function, cameras,
+    def __init__(self, name, wavelength, fiberloss_method,
+                 fiber_acceptance_dict, fiberloss_num_wlen,
+                 fiberloss_num_pixels, blur_function, offset_function, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
                  fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
+        if fiberloss_method not in ('table', 'galsim'):
+            raise ValueError('fiberloss_method must be "table" or "galsim".')
+        self.fiberloss_method = fiberloss_method
         self.fiber_acceptance_dict = fiber_acceptance_dict
         self.fiberloss_num_wlen = fiberloss_num_wlen
         self.fiberloss_num_pixels = fiberloss_num_pixels
@@ -608,15 +616,18 @@ def initialize(config):
         radial_scale = lambda r: value * np.ones_like(r.value)
         azimuthal_scale = lambda r: value * np.ones_like(r.value)
 
-    if config.instrument.fiberloss.method == 'table':
+    method = config.instrument.fiberloss.method
+    if method == 'table':
         fiber_acceptance_dict = config.load_table(
             config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
         fiberloss_num_wlen = 0
         fiberloss_num_pixels = 0
-    else:
+    elif method == 'galsim':
         fiber_acceptance_dict = None
         fiberloss_num_wlen = config.instrument.fiberloss.num_wlen
         fiberloss_num_pixels = config.instrument.fiberloss.num_pixels
+    else:
+        raise RuntimeError('Invalid fiberloss.method: {0}.'.format(method))
 
     blur_value = getattr(config.instrument.blur, 'value', None)
     if blur_value:
@@ -666,9 +677,9 @@ def initialize(config):
             return dr * ux + random_dx, dr * uy + random_dy
 
     instrument = Instrument(
-        name, config.wavelength, fiber_acceptance_dict, fiberloss_num_wlen,
-        fiberloss_num_pixels, blur_function, offset_function,
-        initialized_cameras,
+        name, config.wavelength, method, fiber_acceptance_dict,
+        fiberloss_num_wlen, fiberloss_num_pixels, blur_function,
+        offset_function, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['field_radius'], radial_scale, azimuthal_scale)
@@ -680,7 +691,7 @@ def initialize(config):
         print('Field of view diameter: {0:.1f} = {1:.2f}.'
               .format(2 * instrument.field_radius.to(u.mm),
                       2 * instrument.field_angle.to(u.deg)))
-        if instrument.fiber_acceptance_dict:
+        if method == 'table':
             print('Source types: {0}.'
                   .format(instrument.fiber_acceptance_dict.keys()))
 

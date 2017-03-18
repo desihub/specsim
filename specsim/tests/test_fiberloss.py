@@ -12,9 +12,9 @@ from ..fiberloss import *
 
 
 def test_fiberloss():
-    sim = specsim.simulator.Simulator('test')
+    sim = specsim.simulator.Simulator('test', num_fibers=1)
     xy = np.array([0.,]) * u.mm
     wlen = np.linspace(4000., 10000., 7) * u.Angstrom
     floss = calculate_fiber_acceptance_fraction(
         xy, xy, wlen, sim.source, sim.atmosphere, sim.instrument)
-    assert(np.allclose(np.mean(floss[:, 0]), 0.55))
+    assert(np.allclose(np.mean(floss[0]), 0.55))

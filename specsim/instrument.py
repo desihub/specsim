@@ -97,10 +97,8 @@ class Instrument(object):
                  fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
-        if fiberloss_method not in ('table', 'galsim'):
-            raise ValueError('fiberloss_method must be "table" or "galsim".')
-        self.fiberloss_method = fiberloss_method
         self.fiber_acceptance_dict = fiber_acceptance_dict
+        self.fiberloss_method = fiberloss_method
         self.fiberloss_num_wlen = fiberloss_num_wlen
         self.fiberloss_num_pixels = fiberloss_num_pixels
         self._blur_function = blur_function
@@ -167,6 +165,26 @@ class Instrument(object):
 
         # Sort cameras in order of increasing wavelength.
         self.cameras = [x for (y, x) in sorted(zip(wave_mid, self.cameras))]
+
+
+    @property
+    def fiberloss_method(self):
+        """The current method used to calculate fiber acceptance fractions.
+        """
+        return self._fiberloss_method
+
+
+    @fiberloss_method.setter
+    def fiberloss_method(self, fiberloss_method):
+        """Set the method used to calculate fiber acceptance fractions.
+
+        Must be one of "table" or "galsim".
+        """
+        if fiberloss_method not in ('table', 'galsim'):
+            raise ValueError('fiberloss_method must be "table" or "galsim".')
+        if fiberloss_method == 'table' and self.fiber_acceptance_dict is None:
+            raise ValueError('Missing required instrument.fiberloss.table.')
+        self._fiberloss_method = fiberloss_method
 
 
     def field_radius_to_angle(self, radius):
@@ -616,18 +634,16 @@ def initialize(config):
         radial_scale = lambda r: value * np.ones_like(r.value)
         azimuthal_scale = lambda r: value * np.ones_like(r.value)
 
-    method = config.instrument.fiberloss.method
-    if method == 'table':
+    # Initialize for both fiberloss methods so that method can be changed
+    # at run time.
+    fiberloss_method = config.instrument.fiberloss.method
+    fiberloss_num_wlen = config.instrument.fiberloss.num_wlen
+    fiberloss_num_pixels = config.instrument.fiberloss.num_pixels
+    if hasattr(config.instrument.fiberloss, 'table'):
         fiber_acceptance_dict = config.load_table(
             config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
-        fiberloss_num_wlen = 0
-        fiberloss_num_pixels = 0
-    elif method == 'galsim':
-        fiber_acceptance_dict = None
-        fiberloss_num_wlen = config.instrument.fiberloss.num_wlen
-        fiberloss_num_pixels = config.instrument.fiberloss.num_pixels
     else:
-        raise RuntimeError('Invalid fiberloss.method: {0}.'.format(method))
+        fiber_acceptance_dict = None
 
     blur_value = getattr(config.instrument.blur, 'value', None)
     if blur_value:
@@ -677,7 +693,7 @@ def initialize(config):
             return dr * ux + random_dx, dr * uy + random_dy
 
     instrument = Instrument(
-        name, config.wavelength, method, fiber_acceptance_dict,
+        name, config.wavelength, fiberloss_method, fiber_acceptance_dict,
         fiberloss_num_wlen, fiberloss_num_pixels, blur_function,
         offset_function, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
@@ -691,8 +707,8 @@ def initialize(config):
         print('Field of view diameter: {0:.1f} = {1:.2f}.'
               .format(2 * instrument.field_radius.to(u.mm),
                       2 * instrument.field_angle.to(u.deg)))
-        if method == 'table':
-            print('Source types: {0}.'
+        if fiber_acceptance_dict is not None:
+            print('Fiberloss source types: {0}.'
                   .format(instrument.fiber_acceptance_dict.keys()))
 
     return instrument

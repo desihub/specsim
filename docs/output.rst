@@ -66,7 +66,6 @@ The initial ``wavelength``
 column has shape (nwlen_out) and the remaining columns all have shape
 (nwlen_out, nfibers).
 
-
 +----------------------------+------------------------------------------------+
 | Column Name                | Description                                    |
 +============================+================================================+
@@ -104,3 +103,7 @@ optionally filled (repeatedly when useful) with :meth:`generate_random_noise
 realization in electrons to flux, use::
 
     random_noise_flux = flux_calibration * random_noise_electrons
+
+To calculate the signal-to-noise ratio (SNR) in each camera output pixel use::
+
+    SNR = num_source_electrons / sqrt(variance_electrons)

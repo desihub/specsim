@@ -73,6 +73,8 @@ class Simulator(object):
         self._simulated.add_column(astropy.table.Column(
             name='source_flux', unit=flux_unit, **column_args))
         self._simulated.add_column(astropy.table.Column(
+            name='fiberloss', **column_args))
+        self._simulated.add_column(astropy.table.Column(
             name='source_fiber_flux', unit=flux_unit, **column_args))
         self._simulated.add_column(astropy.table.Column(
             name='sky_fiber_flux', unit=flux_unit, **column_args))
@@ -166,8 +168,7 @@ class Simulator(object):
 
         Simulation results are written to internal tables that are overwritten
         each time this method is called.  Some metadata is also saved as
-        attributes of this object: `focal_x`, `focal_y`, `fiber_area`,
-        `fiber_acceptance_fraction`.
+        attributes of this object: `focal_x`, `focal_y`, `fiber_area`.
 
         The positions and properties of each source can either be specified
         via arguments or else will be copied (for each fiber) from the
@@ -192,9 +193,10 @@ class Simulator(object):
         # therefore some transposes are necessary to match with the shape
         # (nfiber, nwlen) of source_fluxes and fiber_acceptance_fraction,
         # and before calling the camera downsample() and apply_resolution()
-        # methods.
+        # methods (which expect wavelength in the last index).
         wavelength = self.simulated['wavelength']
         source_flux = self.simulated['source_flux']
+        fiberloss = self.simulated['fiberloss']
         source_fiber_flux = self.simulated['source_fiber_flux']
         sky_fiber_flux = self.simulated['sky_fiber_flux']
         num_source_photons = self.simulated['num_source_photons']
@@ -257,19 +259,20 @@ class Simulator(object):
         else:
             saved_images_file, saved_table_file = None, None
 
-        self.fiber_acceptance_fraction =\
+        fiber_acceptance_fraction =\
             specsim.fiberloss.calculate_fiber_acceptance_fraction(
                 self.focal_x, self.focal_y, wavelength, self.source,
                 self.atmosphere, self.instrument, source_types, source_fraction,
                 source_half_light_radius, source_minor_major_axis_ratio,
                 source_position_angle, saved_images_file=saved_images_file,
                 saved_table_file=saved_table_file)
+        fiberloss[:] = fiber_acceptance_fraction.T
 
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (
             source_flux *
             self.atmosphere.extinction[:, np.newaxis] *
-            self.fiber_acceptance_fraction.T
+            fiberloss
             ).to(source_fiber_flux.unit)
 
         # Calculate the sky flux entering a fiber.
@@ -299,11 +302,11 @@ class Simulator(object):
         # We use this below to calculate the flux inverse variance in
         # each camera.
         source_flux_to_photons = (
-            self.atmosphere.extinction *
-            self.fiber_acceptance_fraction *
-            self.instrument.photons_per_bin *
+            self.atmosphere.extinction[:, np.newaxis] *
+            fiberloss *
+            self.instrument.photons_per_bin[:, np.newaxis] *
             self.observation.exposure_time
-            ).to(source_flux.unit ** -1).value.T
+            ).to(source_flux.unit ** -1).value
 
         # Loop over cameras to calculate their individual responses.
         for output, camera in zip(self.camera_output, self.instrument.cameras):

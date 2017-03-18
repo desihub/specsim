@@ -27,7 +27,9 @@ Simulated Output Table
 ----------------------
 
 The table below defines the colums of the :attr:`simulated
-<specsim.simulator.Simulator.simulated>` table.
+<specsim.simulator.Simulator.simulated>` table.  The initial ``wavelength``
+column has shape (nwlen) and the remaining columns all have shape
+(nwlen, nfibers).
 
 +----------------------------+------------------------------------------------+
 | Column Name                | Description                                    |
@@ -35,6 +37,8 @@ The table below defines the colums of the :attr:`simulated
 | ``wavelength``             | Central wavelength of each simulation bin      |
 +----------------------------+------------------------------------------------+
 | ``source_flux``            | Source flux above the atmosphere               |
++----------------------------+------------------------------------------------+
+| ``fiberloss``              | Fraction of source flux entering the fiber     |
 +----------------------------+------------------------------------------------+
 | ``source_fiber_flux``      | Source flux into the fiber                     |
 +----------------------------+------------------------------------------------+
@@ -58,6 +62,10 @@ Camera Output Tables
 
 The table below defines the columns of each table listed in
 :attr:`camera_output <specsim.simulator.Simulator.camera_output>`.
+The initial ``wavelength``
+column has shape (nwlen_out) and the remaining columns all have shape
+(nwlen_out, nfibers).
+
 
 +----------------------------+------------------------------------------------+
 | Column Name                | Description                                    |

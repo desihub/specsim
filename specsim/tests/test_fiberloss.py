@@ -17,4 +17,18 @@ def test_fiberloss():
     wlen = np.linspace(4000., 10000., 7) * u.Angstrom
     floss = calculate_fiber_acceptance_fraction(
         xy, xy, wlen, sim.source, sim.atmosphere, sim.instrument)
-    assert(np.allclose(np.mean(floss[0]), 0.55))
+    assert(np.allclose(np.mean(floss[0]), 0.5500))
+
+
+def test_galsim():
+    try:
+        import galsim
+    except ImportError:
+        return
+    sim = specsim.simulator.Simulator('test', num_fibers=1)
+    sim.instrument.fiberloss_method = 'galsim'
+    xy = np.array([0.,]) * u.mm
+    wlen = np.linspace(4000., 10000., 7) * u.Angstrom
+    floss = calculate_fiber_acceptance_fraction(
+        xy, xy, wlen, sim.source, sim.atmosphere, sim.instrument)
+    assert(np.allclose(np.mean(floss[0]), 0.5653))

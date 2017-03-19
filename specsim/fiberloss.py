@@ -9,6 +9,8 @@ from __future__ import print_function, division
 import numpy as np
 import numpy.lib.stride_tricks
 
+import scipy.interpolate
+
 import astropy.units as u
 import astropy.table
 
@@ -301,9 +303,9 @@ def calculate_fiber_acceptance_fraction(
         X coordinate of the fiber center in the focal plane with length units.
     focal_y : :class:`astropy.units.Quantity`
         Y coordinate of the fiber center in the focal plane with length units.
-    wavelength : :class:`astropy.table.Column`
-        Array of simulation wavelengths where the fiber acceptance fraction
-        should be tabulated.
+    wavelength : :class:`astropy.units.Quantity`
+        Array of simulation wavelengths (with length units) where the fiber
+        acceptance fraction should be tabulated.
     source : :class:`specsim.source.Source`
         Source model to use for the calculation.
     atmosphere : :class:`specsim.atmosphere.Atmosphere`
@@ -373,7 +375,7 @@ def calculate_fiber_acceptance_fraction(
     # calculated.
     num_wlen = instrument.fiberloss_num_wlen
     wlen_unit = wavelength.unit
-    wlen_grid = np.linspace(wavelength.data[0], wavelength.data[-1],
+    wlen_grid = np.linspace(wavelength.value[0], wavelength.value[-1],
                             num_wlen) * wlen_unit
 
     # Initialize a new calculator.
@@ -386,7 +388,7 @@ def calculate_fiber_acceptance_fraction(
 
     # Calculate the focal-plane optics at the fiber locations.
     scale, blur, offset = instrument.get_focal_plane_optics(
-        focal_x.reshape(1,), focal_y.reshape(1,), wlen_grid)
+        focal_x, focal_y, wlen_grid)
 
     # Calculate the atmospheric seeing at each wavelength.
     seeing_fwhm = atmosphere.get_seeing_fwhm(wlen_grid).to(u.arcsec).value
@@ -450,4 +452,12 @@ def calculate_fiber_acceptance_fraction(
         table.write(saved_table_file, **args)
 
     # Interpolate (linearly) to the simulation wavelength grid.
-    return np.interp(wavelength.data, wlen_grid.value, fiberloss_grid)
+    # Use scipy.interpolate instead of np.interp here to avoid looping
+    # over fibers.
+    print(wlen_grid.shape, fiberloss_grid.shape)
+    interpolator = scipy.interpolate.interp1d(
+        wlen_grid.value, fiberloss_grid, kind='linear', axis=1,
+        copy=False, assume_sorted=True)
+    # Both wavelength grids have the same units, by construction, so no
+    # conversion factor is required here.
+    return interpolator(wavelength.value)

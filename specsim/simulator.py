@@ -44,10 +44,11 @@ class Simulator(object):
     num_fibers : int
         Number of fibers to simulate.
     """
-    def __init__(self, config, num_fibers=2):
+    def __init__(self, config, num_fibers=2, verbose=False):
 
         if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
+        config.verbose = verbose
 
         # Initalize our component models.
         self.atmosphere = specsim.atmosphere.initialize(config)

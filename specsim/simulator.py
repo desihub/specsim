@@ -17,12 +17,14 @@ See :mod:`source`, :mod:`atmosphere` and :mod:`instrument` for details.
 from __future__ import print_function, division
 
 import math
+import os.path
 
 import numpy as np
 import scipy.sparse as sp
 
 from astropy import units as u
 import astropy.table
+import astropy.io.fits
 
 import specsim.config
 import specsim.atmosphere
@@ -407,6 +409,36 @@ class Simulator(object):
             output['random_noise_electrons'] = (
                 random_state.poisson(mean_electrons) - mean_electrons +
                 random_state.normal(scale=output['read_noise_electrons']))
+
+
+    def save(self, filename, clobber=True):
+        """Save results of the last simulation to a FITS file.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file where results should be saved.  Must use the
+            .fits extension.
+        clobber : bool
+            Any existing file will be silently overwritten when clobber is True.
+        """
+        base, ext = os.path.splitext(filename)
+        if ext != '.fits':
+            raise ValueError('Filename must have the .fits extension.')
+        # Create an empty primary HDU for header keywords
+        primary = astropy.io.fits.PrimaryHDU()
+        hdr = primary.header
+        hdr['name'] = self.instrument.name
+        # Save each table to its own HDU.
+        simulated = astropy.io.fits.BinTableHDU(
+            name='simulated', data=self.simulated.as_array())
+        hdus = astropy.io.fits.HDUList([primary, simulated])
+        for output in self.camera_output:
+            hdus.append(astropy.io.fits.BinTableHDU(
+                name=output.meta['name'], data=output.as_array()))
+        # Write the file.
+        hdus.writeto(filename, clobber=clobber)
+        hdus.close()
 
 
     def plot(self, fiber=0, title=None):

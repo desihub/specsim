@@ -3,14 +3,12 @@
 """
 from __future__ import print_function, division
 
-import os.path
 import warnings
 import argparse
 
 import numpy as np
 
 import astropy.units as u
-import astropy.io.fits as fits
 
 import specsim.config
 import specsim.simulator
@@ -133,23 +131,13 @@ def main(args=None):
 
     # Save the results, if requested.
     if args.output:
-        base, ext = os.path.splitext(args.output)
-        if ext != '.fits':
-            print('Output file must have the .fits extension.')
+        try:
+            simulator.save(args.output)
+        except Exception as e:
+            print(e)
             return -1
-        # Create an empty primary HDU for header keywords
-        primary = fits.PrimaryHDU()
-        hdr = primary.header
-        hdr['config'] = args.config
-        # Save each table to its own HDU.
-        simulated = fits.BinTableHDU(
-            name='simulated', data=simulator.simulated.as_array())
-        hdus = fits.HDUList([primary, simulated])
-        for output in simulator.camera_output:
-            hdus.append(fits.BinTableHDU(
-                name=output.meta['name'], data=output.as_array()))
-        # Write the file.
-        hdus.writeto(args.output, clobber=True)
+        if args.verbose:
+            print('Saved outputs to {0}'.format(args.output))
 
     # Plot the results if requested.
     if args.save_plot:

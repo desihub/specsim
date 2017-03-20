@@ -34,3 +34,13 @@ Lines in `.travis.yml` that you should not change unless you are certain:
 ```
 
 Files that you should normally never update from the template: `CHANGES.rst`, `README.rst`, `TEMPLATE_CHANGES.md`.
+
+To update to a more recent tag of `astropy_helpers`, use something like:
+```
+cd astropy_helpers
+git fetch
+git checkout v1.3.1
+cd ..
+git add astropy_helpers
+git commit -m 'Update to astropy_helpers v1.3.1'
+```

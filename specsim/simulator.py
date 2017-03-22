@@ -163,6 +163,7 @@ class Simulator(object):
 
 
     def simulate(self, sky_positions=None, focal_positions=None,
+                 fiber_acceptance_fraction=None,
                  source_fluxes=None, source_types=None, source_fraction=None,
                  source_half_light_radius=None,
                  source_minor_major_axis_ratio=None, source_position_angle=None,
@@ -179,8 +180,9 @@ class Simulator(object):
 
         Parameters
         ----------
-        sky_positions :
-        focal_positions :
+        sky_positions : astropy.units.Quantity or None
+        focal_positions : astropy.units.Quantity or None
+        fiber_acceptance_fraction : array or None
         source_fluxes : array or None
         source_types : array or None
         source_fraction : array or None
@@ -204,6 +206,7 @@ class Simulator(object):
         sky_fiber_flux = self.simulated['sky_fiber_flux']
         num_source_photons = self.simulated['num_source_photons']
         num_sky_photons = self.simulated['num_sky_photons']
+        nwlen = len(wavelength)
 
         # Locate the source centroids on the focal plane.
         if self.source.focal_xy is None:
@@ -250,9 +253,8 @@ class Simulator(object):
         if source_fluxes is None:
             source_fluxes = self.source.flux_out.to(
                 source_flux.unit)[np.newaxis, :]
-        elif len(source_fluxes) != self.num_fibers:
-            raise ValueError(
-                'Expected {0:d} source_fluxes.'.format(self.num_fibers))
+        elif source_fluxes.shape != (self.num_fibers, nwlen):
+            raise ValueError('Invalid shape for source_fluxes.')
         try:
             source_flux[:] = source_fluxes.to(source_flux.unit).T
         except u.UnitConversionError as e:
@@ -265,13 +267,21 @@ class Simulator(object):
         else:
             saved_images_file, saved_table_file = None, None
 
-        fiber_acceptance_fraction =\
-            specsim.fiberloss.calculate_fiber_acceptance_fraction(
-                self.focal_x, self.focal_y, wavelength.quantity, self.source,
-                self.atmosphere, self.instrument, source_types, source_fraction,
-                source_half_light_radius, source_minor_major_axis_ratio,
-                source_position_angle, saved_images_file=saved_images_file,
-                saved_table_file=saved_table_file)
+        if fiber_acceptance_fraction is None:
+            # Calculate fiberloss using the method specified in
+            # instrument.fiberloss_method.
+            fiber_acceptance_fraction =\
+                specsim.fiberloss.calculate_fiber_acceptance_fraction(
+                    self.focal_x, self.focal_y, wavelength.quantity,
+                    self.source, self.atmosphere, self.instrument, source_types,
+                    source_fraction, source_half_light_radius,
+                    source_minor_major_axis_ratio, source_position_angle,
+                    saved_images_file=saved_images_file,
+                    saved_table_file=saved_table_file)
+        else:
+            fiber_acceptance_fraction = np.asarray(fiber_acceptance_fraction)
+            if fiber_acceptance_fraction.shape != (self.num_fibers, nwlen):
+                raise ValueError('Invalid shape for fiber_acceptance_fraction.')
         fiberloss[:] = fiber_acceptance_fraction.T
 
         # Calculate the source flux entering a fiber.

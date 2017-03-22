@@ -75,7 +75,10 @@ class Atmosphere(object):
         Sky emission condition to use, which must be one of the keys
         of ``surface_brightness_dict``.
     seeing : dict or None
-        Dictionary of seeing PSF parameters to use.
+        Dictionary of seeing PSF parameters to use which must contain keys
+        "fwhm_ref", "wlen_ref" and "moffat_beta".  Seeing is used to define
+        the atmospheric PSF, which is only used when
+        :attr:`instrument.fiberloss_method` equals "galsim".
     airmass : float
         Airmass of the observation.
     moon : :class:`Moon` or None
@@ -92,6 +95,11 @@ class Atmosphere(object):
         self._moon = moon
         self.condition = condition
         self.airmass = airmass
+        if seeing is not None:
+            for required in ('fwhm_ref', 'wlen_ref', 'moffat_beta'):
+                if required not in seeing:
+                    raise ValueError('Missing required seeing key "{0}"'
+                                     .format(required))
         self.seeing = seeing
 
 

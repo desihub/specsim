@@ -184,6 +184,11 @@ class Instrument(object):
             raise ValueError('fiberloss_method must be "table" or "galsim".')
         if fiberloss_method == 'table' and self.fiber_acceptance_dict is None:
             raise ValueError('Missing required instrument.fiberloss.table.')
+        if fiberloss_method == 'galsim':
+            try:
+                import galsim
+            except ImportError:
+                raise ValueError('The galsim package is not installed.')
         self._fiberloss_method = fiberloss_method
 
 

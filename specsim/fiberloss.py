@@ -454,7 +454,6 @@ def calculate_fiber_acceptance_fraction(
     # Interpolate (linearly) to the simulation wavelength grid.
     # Use scipy.interpolate instead of np.interp here to avoid looping
     # over fibers.
-    print(wlen_grid.shape, fiberloss_grid.shape)
     interpolator = scipy.interpolate.interp1d(
         wlen_grid.value, fiberloss_grid, kind='linear', axis=1,
         copy=False, assume_sorted=True)

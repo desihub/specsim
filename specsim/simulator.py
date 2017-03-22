@@ -253,7 +253,10 @@ class Simulator(object):
         elif len(source_fluxes) != self.num_fibers:
             raise ValueError(
                 'Expected {0:d} source_fluxes.'.format(self.num_fibers))
-        source_flux[:] = source_fluxes.T
+        try:
+            source_flux[:] = source_fluxes.to(source_flux.unit).T
+        except u.UnitConversionError as e:
+            raise ValueError('Invalid units for source_fluxes.')
 
         # Calculate fraction of source illumination entering the fiber.
         if save_fiberloss is not None:

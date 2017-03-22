@@ -384,7 +384,7 @@ def calculate_fiber_acceptance_fraction(
         wlen_grid.to(u.Angstrom).value,
         instrument.fiberloss_num_pixels,
         oversampling,
-        atmosphere.seeing['moffat_beta'])
+        atmosphere.seeing_moffat_beta)
 
     # Calculate the focal-plane optics at the fiber locations.
     scale, blur, offset = instrument.get_focal_plane_optics(

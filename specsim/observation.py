@@ -79,13 +79,12 @@ class Observation(object):
             self.boresight_altaz.alt, self.boresight_altaz.az)
         # Convert field angles to focal-plane coordinates.
         angle = np.sqrt(x ** 2 + y ** 2)
-        if angle > 0:
-            radius = instrument.field_angle_to_radius(angle)
-            scale = radius / angle
-        else:
-            scale = 0 * u.mm / u.arcsec
-        x *= scale
-        y *= scale
+        scale = np.zeros(angle.shape) * u.mm / u.deg
+        nonzero = angle > 0
+        scale[nonzero] = (
+            instrument.field_angle_to_radius(angle[nonzero]) / angle[nonzero])
+        x = x * scale
+        y = y * scale
         return x, y
 
 

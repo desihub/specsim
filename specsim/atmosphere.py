@@ -198,7 +198,7 @@ class Atmosphere(object):
     def seeing_wlen_ref(self):
         """float: Reference wavelength for :attr:`seeing_fwhm_ref`
 
-
+        Returns None if no seeing has been specified.
         """
         return self._seeing['wlen_ref'] if self._seeing else None
 

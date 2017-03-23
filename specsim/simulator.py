@@ -209,7 +209,7 @@ class Simulator(object):
         nwlen = len(wavelength)
 
         # Locate the source centroids on the focal plane.
-        if self.source.focal_xy is None:
+        if self.source.focal_xy is None or sky_positions is not None:
             if sky_positions is None:
                 sky_positions = np.tile(
                     self.source.sky_position, [self.num_fibers, 1])

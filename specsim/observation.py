@@ -24,6 +24,9 @@ import specsim.transform
 class Observation(object):
     """Model the parameters describing a single spectroscopic observation.
 
+    The following parameters can be changed after an Observation object has
+    been created: exposure_time, exposure_start, pointing.
+
     Parameters
     ----------
     location : astropy.coordinates.EarthLocation
@@ -50,22 +53,107 @@ class Observation(object):
     """
     def __init__(self, location, exposure_time, exposure_start, pointing,
                  wavelength, pressure, temperature, relative_humidity):
-        self.location = location
-        self.exposure_time = exposure_time
-        self.exposure_start = exposure_start
-        self.pointing = pointing
+        self.central_wavelength = 0.5 * (wavelength[0] + wavelength[-1])
+        self._exposure_time = exposure_time
+        self._location = location
+        self._exposure_start = exposure_start
+        self._pointing = pointing
+        self._temperature = temperature
+        self._pressure = pressure
+        self._relative_humidity = relative_humidity
+        self._update_model()
+
+
+    def _update_model(self):
+        """Update observing model. Triggered internally.
+        """
         # Initialize an observing model at the middle of the exposure and
         # at the central wavelength of the simulation, i.e., ignore temporal
         # and chromatic variations (for now).
         exposure_midpoint = self.exposure_start + 0.5 * self.exposure_time
-        central_wavelength = 0.5 * (wavelength[0] + wavelength[-1])
         self.observing_model = specsim.transform.create_observing_model(
-            self.location, exposure_midpoint, central_wavelength,
-            temperature, pressure, relative_humidity)
+            self.location, exposure_midpoint, self.central_wavelength,
+            self.temperature, self.pressure, self.relative_humidity)
         # Calculate the boresight angles (fixed, since we do not consider
         # temporal or chromatic effects yet).
         self.boresight_altaz = specsim.transform.sky_to_altaz(
             self.pointing, self.observing_model)
+
+
+    @property
+    def location(self):
+        """astropy.coordinates.EarthLocation: Observatory location.
+        """
+        return self._location
+
+
+    @property
+    def exposure_time(self):
+        """astropy.units.Quantity: Exposure time for this observation.
+        """
+        return self._exposure_time
+
+
+    @exposure_time.setter
+    def exposure_time(self, value):
+        try:
+            self._exposure_time = value.to(u.s)
+            self._update_model()
+        except (AttributeError, u.UnitConversionError):
+            raise ValueError('Invalid units for exposure_time.')
+
+
+    @property
+    def exposure_start(self):
+        """astropy.time.Time: Time when the shutter opens.
+        """
+        return self._exposure_start
+
+
+    @exposure_start.setter
+    def exposure_start(self, value):
+        self._exposure_start = value
+        self._update_model()
+
+
+    @property
+    def pointing(self):
+        """astropy.coordinates.SkyCoord: Telescope boresight pointing.
+        """
+        return self._pointing
+
+
+    @pointing.setter
+    def pointing(self, value):
+        self._pointing = value
+        self._update_model()
+
+
+    @property
+    def temperature(self):
+        """astropy.units.Quantity: Air temperature at observatory.
+
+        Used for atmospheric refraction model.
+        """
+        return self._temperature
+
+
+    @property
+    def pressure(self):
+        """astropy.units.Quantity: Atmospheric pressure at observatory.
+
+        Used for atmospheric refraction model.
+        """
+        return self._pressure
+
+
+    @property
+    def relative_humidity(self):
+        """float: Relative humidity at observatory.
+
+        Used for atmospheric refraction model.
+        """
+        return self._relative_humidity
 
 
     def locate_on_focal_plane(self, sky_position, instrument):

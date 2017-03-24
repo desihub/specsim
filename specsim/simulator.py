@@ -1,9 +1,13 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Top-level manager for spectroscopic simulation.
 
+For an overview of using a :class:`Simulator`, see the
+`examples notebook
+<https://github.com/desihub/specsim/blob/master/docs/nb/SimulationExamples.ipynb>`__.
+
 A simulator is usually initialized from a configuration, for example:
 
-    >>> simulator = Simulator('test')
+    >>> simulator = Simulator('test', num_fibers=500)
 
 See :doc:`/api` for examples of changing model parameters defined in the
 configuration.  Certain parameters can also be changed after a model has
@@ -13,6 +17,10 @@ been initialized, for example:
     >>> simulator.observation.exposure_time = 1200 * u.s
 
 See :mod:`source`, :mod:`atmosphere` and :mod:`instrument` for details.
+
+The positions and properties of individual sources in an exposure can be
+specified using optional array arguments to the :meth:`simulate method
+<Simulator.simulate>`.
 """
 from __future__ import print_function, division
 
@@ -174,21 +182,51 @@ class Simulator(object):
         each time this method is called.  Some metadata is also saved as
         attributes of this object: `focal_x`, `focal_y`, `fiber_area`.
 
-        The positions and properties of each source can either be specified
-        via arguments or else will be copied (for each fiber) from the
-        corresponding configuration data.
+        The positions and properties of each source can optionally be specified
+        individually for each fiber via array arguments.  Any parameters that
+        are not specified this way will use the same value for each fiber
+        taken from the configuration data, as noted below.
 
         Parameters
         ----------
         sky_positions : astropy.units.Quantity or None
+            Sky positions of each object. Must have a length equal to
+            num_fibers.  Defaults to ``source.location.sky`` when None.
         focal_positions : astropy.units.Quantity or None
+            Focal-plane coordinates of each object relative to the plate
+            center, with length units. Must have a length equal to num_fibers.
+            Defaults to ``source.location.constants.focal_x,y`` when None.
         fiber_acceptance_fraction : array or None
+            Array of shape (num_fibers, num_wlen) giving the fiber acceptance
+            fraction to use for each fiber. Defaults to calling
+            :meth:`fiberloss.calculate_fiber_acceptance_fraction` when None.
         source_fluxes : array or None
+            Array of shape (num_fibers, num_wlen) giving the source flux
+            above the atmosphere illuminating each fiber. Defaults to
+            ``source.table`` when None.
         source_types : array or None
+            Array of strings with length num_fibers.  Each string must have a
+            corresponding pre-loaded fiberloss file in the configuration.
+            Defaults to ``source.type`` when None.
         source_fraction : array or None
+            Array of shape (num_fibers, 2) giving the disk and bulge fractions
+            for each source.  Fractions must be in the range [0, 1] and their
+            sum must be <= 1.  If their sum is <1, the remainder is modeled as
+            a point-like component.  Defaults to
+            ``source.profile.disk,bulge_fraction`` when None.
         source_half_light_radius : array or None
+            Array of shape (num_fibers, 2) giving the disk and bulge half-light
+            radii in on-sky angular units.  Defaults to values in
+            ``source.profile.disk,bulge_shape`` when None.
         source_minor_major_axis_ratio : array or None
+            Array of shape (num_fibers, 2) giving the disk and bulge minor/major
+            axis ratios, in the range (0,1]. Defaults to values in
+            ``source.profile.disk,bulge_shape`` when None.
         source_position_angle : array or None
+            Array of shape (num_fibers, 2) giving the disk and bulge major
+            axis alignments, expressed as a clockwise rotation from the +x
+            axis, with angular units. Defaults to values in
+            ``source.profile.disk,bulge_shape`` when None.
         save_fiberloss : str or None
             Basename for saving FITS images and tabulated fiberloss.
             Ignored unless instrument.fiberloss.method is galsim.

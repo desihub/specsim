@@ -157,7 +157,22 @@ class Observation(object):
 
 
     def locate_on_focal_plane(self, sky_position, instrument):
-        """
+        """Transform a sky position into focal-plane coordinates.
+
+        The input sky position can refer to one or more objects.
+
+        Parameters
+        ----------
+        sky_position : astropy.coordinates.SkyCoord
+            Position of one or more objects on the sky.
+        instrument : specsim.instrument.Instrument
+            Description of the instrument being simulated.
+
+        Returns
+        -------
+        tuple
+            Tuple (x, y) of focal-plane coordinates given as astropy
+            quantities with length units.
         """
         altaz = specsim.transform.sky_to_altaz(
             sky_position, self.observing_model)
@@ -169,8 +184,13 @@ class Observation(object):
         angle = np.sqrt(x ** 2 + y ** 2)
         scale = np.zeros(angle.shape) * u.mm / u.deg
         nonzero = angle > 0
-        scale[nonzero] = (
-            instrument.field_angle_to_radius(angle[nonzero]) / angle[nonzero])
+        try:
+            scale[nonzero] = (
+                instrument.field_angle_to_radius(angle[nonzero]) /
+                angle[nonzero])
+        except TypeError:
+            if nonzero:
+                scale = instrument.field_angle_to_radius(angle) / angle
         x = x * scale
         y = y * scale
         return x, y

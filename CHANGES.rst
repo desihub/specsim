@@ -1,4 +1,4 @@
-0.8 (unreleased)
+0.8 (2017-03-25)
 ----------------
 
 This version adds the ability to specify per-fiber positions and source

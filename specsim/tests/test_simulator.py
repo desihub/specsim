@@ -7,6 +7,9 @@ from ..simulator import *
 
 import specsim.config
 
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+
 import matplotlib
 matplotlib.use('Agg') # Must be before importing matplotlib.pyplot or pylab!
 
@@ -47,6 +50,40 @@ def test_changing_airmass():
 
     sum1, sum2 = np.sum(sky1), np.sum(sky2)
     assert sum1 > 0 and sum2 > 0 and sum1 != sum2
+
+
+def test_fiber_positioning():
+    """Test the logic for fiber positioning.
+    """
+    sim = specsim.simulator.Simulator('test', num_fibers=10)
+    # This should be the default.
+    sim.source.focal_xy = np.array([-1, -1]) * u.mm
+    sim.simulate()
+    assert np.allclose(sim.focal_x.to(u.mm).value, -1.)
+    assert np.allclose(sim.focal_y.to(u.mm).value, -1.)
+    # Set the config sky position to the boresight.
+    p = sim.observation.pointing
+    sim.source.sky_position = p
+    # Test it is used when x,y not set.
+    sim.source.focal_xy = None
+    sim.simulate()
+    assert np.allclose(sim.focal_x.to(u.mm).value, 0.)
+    assert np.allclose(sim.focal_y.to(u.mm).value, 0.)
+    sim.source.focal_xy = np.array([-1, -1]) * u.mm
+    # Build arrays to pass simulate()
+    xy = np.ones((10, 2)) * u.mm
+    sky = SkyCoord(ra=p.ra + np.zeros(10), dec=p.dec + np.zeros(10))
+    # Check that focal_positions has the highest priority.
+    sim.simulate(focal_positions=xy)
+    assert np.allclose(sim.focal_x.to(u.mm).value, 1.)
+    assert np.allclose(sim.focal_y.to(u.mm).value, 1.)
+    sim.simulate(focal_positions=xy, sky_positions=sky)
+    assert np.allclose(sim.focal_x.to(u.mm).value, 1.)
+    assert np.allclose(sim.focal_y.to(u.mm).value, 1.)
+    # Check that sky_positions has the next highest priority.
+    sim.simulate(sky_positions=sky)
+    assert np.allclose(sim.focal_x.to(u.mm).value, 0.)
+    assert np.allclose(sim.focal_y.to(u.mm).value, 0.)
 
 
 def test_plot():

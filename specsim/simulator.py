@@ -196,7 +196,9 @@ class Simulator(object):
         - ``source.location.constants.focal_x,y`` config data.
         - ``source.location.sky`` config data.
         When config data is used, it is duplicated for all fibers. Use the
-        verbose mode to see details on how fibers are being positioned.
+        verbose mode to see details on how fibers are being positioned. Note
+        that the observing airmass will be calculated when positioning with
+        sky coordinates, and then available via ``self.observation.airmass``.
 
         Parameters
         ----------

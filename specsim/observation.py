@@ -9,7 +9,6 @@ a simulator and then accessible via its ``observation`` attribute, for example:
     >>> print(simulator.observation.exposure_time)
     1000.0 s
 
-After initialization, all aspects of an observation can be modified at runtime.
 """
 from __future__ import print_function, division
 

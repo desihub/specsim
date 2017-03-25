@@ -191,8 +191,8 @@ class Observation(object):
         except TypeError:
             if nonzero:
                 scale = instrument.field_angle_to_radius(angle) / angle
-        x = x * scale
-        y = y * scale
+        x = (x * scale).to(u.mm)
+        y = (y * scale).to(u.mm)
         return x, y
 
 

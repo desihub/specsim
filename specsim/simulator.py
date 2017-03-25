@@ -59,6 +59,7 @@ class Simulator(object):
         if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
         config.verbose = verbose
+        self.verbose = verbose
 
         # Initalize our component models.
         self.atmosphere = specsim.atmosphere.initialize(config)
@@ -187,6 +188,16 @@ class Simulator(object):
         are not specified this way will use the same value for each fiber
         taken from the configuration data, as noted below.
 
+        Fibers are positioned using either (x,y) focal-plane coordinates
+        or else (ra,dec) sky coordinates.  The first available item on this
+        list will be used:
+        - ``focal_positions`` argument.
+        - ``sky_positions`` argument.
+        - ``source.location.constants.focal_x,y`` config data.
+        - ``source.location.sky`` config data.
+        When config data is used, it is duplicated for all fibers. Use the
+        verbose mode to see details on how fibers are being positioned.
+
         Parameters
         ----------
         sky_positions : astropy.units.Quantity or None
@@ -246,30 +257,55 @@ class Simulator(object):
         num_sky_photons = self.simulated['num_sky_photons']
         nwlen = len(wavelength)
 
-        # Locate the source centroids on the focal plane.
-        if self.source.focal_xy is None or sky_positions is not None:
-            if sky_positions is None:
-                sky_positions = np.tile(
-                    self.source.sky_position, [self.num_fibers, 1])
-            elif len(sky_positions) != self.num_fibers:
+        # Position each fiber.
+        if focal_positions is not None:
+            if len(focal_positions) != self.num_fibers:
+                raise ValueError(
+                    'Expected {0:d} focal_positions.'.format(self.num_fibers))
+            try:
+                focal_positions = focal_positions.to(u.mm)
+            except (AttributeError, u.UnitConversionError):
+                raise ValueError('Invalid units for focal_positions.')
+            self.focal_x, self.focal_y = focal_positions.T
+            on_sky = False
+            if self.verbose:
+                print('Fibers positioned with focal_positions array.')
+        elif sky_positions is not None:
+            if len(sky_positions) != self.num_fibers:
                 raise ValueError(
                     'Expected {0:d} sky_positions.'.format(self.num_fibers))
             self.focal_x, self.focal_y = self.observation.locate_on_focal_plane(
                 sky_positions, self.instrument)
+            on_sky = True
+            if self.verbose:
+                print('Fibers positioned with sky_positions array.')
+        elif self.source.focal_xy is not None:
+            self.focal_x, self.focal_y = np.tile(
+                self.source.focal_xy, [self.num_fibers, 1]).T
+            on_sky = False
+            if self.verbose:
+                print('All fibers positioned at config (x,y).')
+        elif self.source.sky_position is not None:
+            focal_x, focal_y = self.observation.locate_on_focal_plane(
+                self.source.sky_position, self.instrument)
+            self.focal_x = np.tile(focal_x, [self.num_fibers])
+            self.focal_y = np.tile(focal_y, [self.num_fibers])
+            on_sky = True
+            if self.verbose:
+                print('All fibers positioned at config (ra,dec).')
+        else:
+            raise RuntimeError('No fiber positioning info available.')
 
+        if on_sky:
             # Set the observing airmass in the atmosphere model using
             # Eqn.3 of Krisciunas & Schaefer 1991.
             obs_zenith = 90 * u.deg - self.observation.boresight_altaz.alt
             obs_airmass = (1 - 0.96 * np.sin(obs_zenith) ** 2) ** -0.5
             self.atmosphere.airmass = obs_airmass
-        else:
-            if focal_positions is None:
-                focal_positions = np.tile(
-                    self.source.focal_xy, [self.num_fibers, 1])
-            elif len(focal_positions) != self.num_fibers:
-                raise ValueError(
-                    'Expected {0:d} focal_positions.'.format(self.num_fibers))
-            self.focal_x, self.focal_y = focal_positions.T
+            if self.verbose:
+                print('Calculated alt={0:.1f} az={1:.1f} airmass={2:.3f}'
+                      .format(self.observation.boresight_altaz.alt,
+                              self.observation.boresight_altaz.az, obs_airmass))
 
         # Check that all sources are within the field of view.
         focal_r = np.sqrt(self.focal_x ** 2 + self.focal_y ** 2)

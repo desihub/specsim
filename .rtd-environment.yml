@@ -1,11 +1,10 @@
-name: package-template
+name: specsim
 
 channels:
     - astropy
 
 dependencies:
     - astropy
-    - Cython
     - matplotlib
     - numpy
 #   - pip:

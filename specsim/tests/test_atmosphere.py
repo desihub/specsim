@@ -76,6 +76,33 @@ def test_property_updates():
     assert np.allclose(m.obs_zenith.value, 0.)
 
 
+def test_seeing():
+    c = specsim.config.load_config('test')
+    a = initialize(c)
+    # No setters for moffat_beta and wlen_ref
+    with pytest.raises(AttributeError):
+        a.seeing_moffat_beta = None
+    with pytest.raises(AttributeError):
+        a.seeing_wlen_ref = None
+    # Units must be ok when setting fwhm_ref
+    a.seeing_fwhm_ref = 1.0 * u.arcsec
+    with pytest.raises(ValueError):
+        a.seeing_fwhm_ref = 1.0
+    with pytest.raises(ValueError):
+        a.seeing_fwhm_ref = 1.0 * u.m
+
+
+def test_seeing_none():
+    c = specsim.config.load_config('test')
+    a = initialize(c)
+    a._seeing = None
+    assert a.seeing_moffat_beta is None
+    assert a.seeing_wlen_ref is None
+    assert a.seeing_fwhm_ref is None
+    with pytest.raises(ValueError):
+        a.seeing_fwhm_ref = 1.5 * u.arcsec
+
+
 def test_plot():
     c = specsim.config.load_config('test')
     a = initialize(c)

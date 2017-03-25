@@ -3,6 +3,11 @@
 User's Guide
 ============
 
+SpecSim is a python package for quick simulations of multi-fiber spectrograph
+response.  For a quick introduction, browse the `examples notebook
+<https://github.com/desihub/specsim/blob/master/docs/nb/SimulationExamples.ipynb>`__
+or try one of the :doc:`command-line programs <cmdline>`.
+
 A simulation has the following main components, as illustrated in the figure
 below:
 

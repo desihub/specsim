@@ -1,11 +1,19 @@
 0.8 (unreleased)
 ----------------
 
+This version adds the ability to specify per-fiber positions and source
+properties.  Fiber acceptance fractions can now be calculated on the fly
+(using GalSim) to simulate realistic throughput variations across the
+focal plane.
+
 - Add support and travis testing for python 3.6.
 - Add fiberloss module with support for more realistic fiberloss calculations.
 - Add optional dependency on galsim (only required for on-the-fly fiberloss
   calculations).
-- Add notebook of fiberloss calculation examples.
+- Add jupyter notebooks to document the Simulator and fiberloss calculations.
+- Update the simulate() method to take optional array parameters specifying
+  per-fiber positions and source properties.
+- Allow the observation time and pointing to be changed after initialization.
 
 0.7 (2016-12-02)
 ----------------

@@ -75,7 +75,10 @@ class Atmosphere(object):
         Sky emission condition to use, which must be one of the keys
         of ``surface_brightness_dict``.
     seeing : dict or None
-        Dictionary of seeing PSF parameters to use.
+        Dictionary of seeing PSF parameters to use which must contain keys
+        "fwhm_ref", "wlen_ref" and "moffat_beta".  Seeing is used to define
+        the atmospheric PSF, which is only used when
+        :attr:`instrument.fiberloss_method` equals "galsim".
     airmass : float
         Airmass of the observation.
     moon : :class:`Moon` or None
@@ -92,7 +95,12 @@ class Atmosphere(object):
         self._moon = moon
         self.condition = condition
         self.airmass = airmass
-        self.seeing = seeing
+        if seeing is not None:
+            for required in ('fwhm_ref', 'wlen_ref', 'moffat_beta'):
+                if required not in seeing:
+                    raise ValueError('Missing required seeing key "{0}"'
+                                     .format(required))
+        self._seeing = seeing
 
 
     @property
@@ -177,6 +185,43 @@ class Atmosphere(object):
             self.moon.airmass = airmass
 
 
+    @property
+    def seeing_moffat_beta(self):
+        """float: Beta parameter for atmospheric Moffat profile.
+
+        Returns None if no seeing has been specified.
+        """
+        return self._seeing['moffat_beta'] if self._seeing else None
+
+
+    @property
+    def seeing_wlen_ref(self):
+        """float: Reference wavelength for :attr:`seeing_fwhm_ref`
+
+        Returns None if no seeing has been specified.
+        """
+        return self._seeing['wlen_ref'] if self._seeing else None
+
+
+    @property
+    def seeing_fwhm_ref(self):
+        """float: FWHM zenith seeing at :attr:`seeing_wlen_ref`.
+
+        Returns None if no seeing has been specified.
+        """
+        return self._seeing['fwhm_ref'] if self._seeing else None
+
+
+    @seeing_fwhm_ref.setter
+    def seeing_fwhm_ref(self, fwhm_ref):
+        try:
+            self._seeing['fwhm_ref'] = fwhm_ref.to(u.arcsec)
+        except TypeError:
+            raise ValueError('Seeing has not been initialized.')
+        except (u.UnitConversionError, AttributeError):
+            raise ValueError('Invalid units for seeing_fwhm_ref.')
+
+
     def get_seeing_fwhm(self, wavelength):
         """Calculate the seeing FWHM at the specified wavelength.
 
@@ -195,8 +240,8 @@ class Atmosphere(object):
             wavelength, in on-sky angular units.
         """
         wlen_ratio = (wavelength.to(u.Angstrom).value /
-                      self.seeing['wlen_ref'].to(u.Angstrom).value)
-        return self.seeing['fwhm_ref'] * wlen_ratio ** (-0.2)
+                      self._seeing['wlen_ref'].to(u.Angstrom).value)
+        return self._seeing['fwhm_ref'] * wlen_ratio ** (-0.2)
 
 
     def plot(self):

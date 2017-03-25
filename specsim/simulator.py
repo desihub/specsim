@@ -1,9 +1,13 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Top-level manager for spectroscopic simulation.
 
+For an overview of using a :class:`Simulator`, see the
+`examples notebook
+<https://github.com/desihub/specsim/blob/master/docs/nb/SimulationExamples.ipynb>`__.
+
 A simulator is usually initialized from a configuration, for example:
 
-    >>> simulator = Simulator('test')
+    >>> simulator = Simulator('test', num_fibers=500)
 
 See :doc:`/api` for examples of changing model parameters defined in the
 configuration.  Certain parameters can also be changed after a model has
@@ -13,16 +17,22 @@ been initialized, for example:
     >>> simulator.observation.exposure_time = 1200 * u.s
 
 See :mod:`source`, :mod:`atmosphere` and :mod:`instrument` for details.
+
+The positions and properties of individual sources in an exposure can be
+specified using optional array arguments to the :meth:`simulate method
+<Simulator.simulate>`.
 """
 from __future__ import print_function, division
 
 import math
+import os.path
 
 import numpy as np
 import scipy.sparse as sp
 
 from astropy import units as u
 import astropy.table
+import astropy.io.fits
 
 import specsim.config
 import specsim.atmosphere
@@ -41,11 +51,15 @@ class Simulator(object):
     ----------
     config : specsim.config.Configuration or str
         A configuration object or configuration name.
+    num_fibers : int
+        Number of fibers to simulate.
     """
-    def __init__(self, config):
+    def __init__(self, config, num_fibers=2, verbose=False):
 
         if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
+        config.verbose = verbose
+        self.verbose = verbose
 
         # Initalize our component models.
         self.atmosphere = specsim.atmosphere.initialize(config)
@@ -53,77 +67,84 @@ class Simulator(object):
         self.source = specsim.source.initialize(config)
         self.observation = specsim.observation.initialize(config)
 
+        self._num_fibers = int(num_fibers)
+        if self._num_fibers < 1:
+            raise ValueError('Must have num_fibers >= 1.')
+
         # Initialize our table of simulation results.
         self.camera_names = []
         self.camera_slices = {}
         num_rows = len(config.wavelength)
+        shape = (self.num_fibers,)
+        column_args = dict(dtype=float, length=num_rows, shape=shape)
         flux_unit = u.erg / (u.cm**2 * u.s * u.Angstrom)
         self._simulated = astropy.table.Table(
             meta=dict(description='Specsim simulation results'))
         self._simulated.add_column(astropy.table.Column(
             name='wavelength', data=config.wavelength))
         self._simulated.add_column(astropy.table.Column(
-            name='source_flux', dtype=float, length=num_rows, unit=flux_unit))
+            name='source_flux', unit=flux_unit, **column_args))
         self._simulated.add_column(astropy.table.Column(
-            name='source_fiber_flux', dtype=float, length=num_rows,
-            unit=flux_unit))
+            name='fiberloss', **column_args))
         self._simulated.add_column(astropy.table.Column(
-            name='sky_fiber_flux', dtype=float, length=num_rows,
-            unit=flux_unit))
+            name='source_fiber_flux', unit=flux_unit, **column_args))
         self._simulated.add_column(astropy.table.Column(
-            name='num_source_photons', dtype=float, length=num_rows))
+            name='sky_fiber_flux', unit=flux_unit, **column_args))
         self._simulated.add_column(astropy.table.Column(
-            name='num_sky_photons', dtype=float, length=num_rows))
+            name='num_source_photons', **column_args))
+        self._simulated.add_column(astropy.table.Column(
+            name='num_sky_photons', **column_args))
         for camera in self.instrument.cameras:
             name = camera.name
             self.camera_names.append(name)
             self.camera_slices[name] = camera.ccd_slice
             self._simulated.add_column(astropy.table.Column(
-                name='num_source_electrons_{0}'.format(name),
-                dtype=float, length=num_rows))
+                name='num_source_electrons_{0}'.format(name), **column_args))
             self._simulated.add_column(astropy.table.Column(
-                name='num_sky_electrons_{0}'.format(name),
-                dtype=float, length=num_rows))
+                name='num_sky_electrons_{0}'.format(name), **column_args))
             self._simulated.add_column(astropy.table.Column(
-                name='num_dark_electrons_{0}'.format(name),
-                dtype=float, length=num_rows))
+                name='num_dark_electrons_{0}'.format(name), **column_args))
             self._simulated.add_column(astropy.table.Column(
-                name='read_noise_electrons_{0}'.format(name),
-                dtype=float, length=num_rows))
+                name='read_noise_electrons_{0}'.format(name), **column_args))
 
         # Initialize each camera's table of results downsampled to
         # output pixels.
         self._camera_output = []
         for camera in self.instrument.cameras:
             meta = dict(
-                name=camera.name,
+                name=camera.name, num_fibers=self.num_fibers,
                 pixel_size=camera.output_pixel_size)
             table = astropy.table.Table(meta=meta)
-            num_rows = len(camera.output_wavelength)
+            column_args['length'] = len(camera.output_wavelength)
             table.add_column(astropy.table.Column(
                 name='wavelength', data=camera.output_wavelength))
             table.add_column(astropy.table.Column(
-                name='num_source_electrons', dtype=float, length=num_rows))
+                name='num_source_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='num_sky_electrons', dtype=float, length=num_rows))
+                name='num_sky_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='num_dark_electrons', dtype=float, length=num_rows))
+                name='num_dark_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='read_noise_electrons', dtype=float, length=num_rows))
+                name='read_noise_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='random_noise_electrons', dtype=float, length=num_rows))
+                name='random_noise_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='variance_electrons', dtype=float, length=num_rows))
+                name='variance_electrons', **column_args))
             table.add_column(astropy.table.Column(
-                name='flux_calibration', dtype=float, length=num_rows,
-                unit=flux_unit))
+                name='flux_calibration', **column_args))
             table.add_column(astropy.table.Column(
-                name='observed_flux', dtype=float, length=num_rows,
-                unit=flux_unit))
+                name='observed_flux', unit=flux_unit, **column_args))
             table.add_column(astropy.table.Column(
-                name='flux_inverse_variance', dtype=float, length=num_rows,
-                unit=flux_unit ** -2))
+                name='flux_inverse_variance', unit=flux_unit ** -2,
+                **column_args))
             self._camera_output.append(table)
+
+
+    @property
+    def num_fibers(self):
+        """Number of fibers being simulated.
+        """
+        return self._num_fibers
 
 
     @property
@@ -150,48 +171,152 @@ class Simulator(object):
         return self._camera_output
 
 
-    def simulate(self, save_fiberloss=None):
+    def simulate(self, sky_positions=None, focal_positions=None,
+                 fiber_acceptance_fraction=None,
+                 source_fluxes=None, source_types=None, source_fraction=None,
+                 source_half_light_radius=None,
+                 source_minor_major_axis_ratio=None, source_position_angle=None,
+                 save_fiberloss=None):
         """Simulate a single exposure.
 
         Simulation results are written to internal tables that are overwritten
         each time this method is called.  Some metadata is also saved as
         attributes of this object: `focal_x`, `focal_y`, `fiber_area`.
 
+        The positions and properties of each source can optionally be specified
+        individually for each fiber via array arguments.  Any parameters that
+        are not specified this way will use the same value for each fiber
+        taken from the configuration data, as noted below.
+
+        Fibers are positioned using either (x,y) focal-plane coordinates
+        or else (ra,dec) sky coordinates.  The first available item on this
+        list will be used:
+        - ``focal_positions`` argument.
+        - ``sky_positions`` argument.
+        - ``source.location.constants.focal_x,y`` config data.
+        - ``source.location.sky`` config data.
+        When config data is used, it is duplicated for all fibers. Use the
+        verbose mode to see details on how fibers are being positioned. Note
+        that the observing airmass will be calculated when positioning with
+        sky coordinates, and then available via ``self.observation.airmass``.
+
         Parameters
         ----------
+        sky_positions : astropy.units.Quantity or None
+            Sky positions of each object. Must have a length equal to
+            num_fibers.  Defaults to ``source.location.sky`` when None.
+        focal_positions : astropy.units.Quantity or None
+            Focal-plane coordinates of each object relative to the plate
+            center, with length units. Must have a length equal to num_fibers.
+            Defaults to ``source.location.constants.focal_x,y`` when None.
+        fiber_acceptance_fraction : array or None
+            Array of shape (num_fibers, num_wlen) giving the fiber acceptance
+            fraction to use for each fiber. Defaults to calling
+            :meth:`fiberloss.calculate_fiber_acceptance_fraction` when None.
+        source_fluxes : array or None
+            Array of shape (num_fibers, num_wlen) giving the source flux
+            above the atmosphere illuminating each fiber. Defaults to
+            ``source.table`` when None.
+        source_types : array or None
+            Array of strings with length num_fibers.  Each string must have a
+            corresponding pre-loaded fiberloss file in the configuration.
+            Defaults to ``source.type`` when None.
+        source_fraction : array or None
+            Array of shape (num_fibers, 2) giving the disk and bulge fractions
+            for each source.  Fractions must be in the range [0, 1] and their
+            sum must be <= 1.  If their sum is <1, the remainder is modeled as
+            a point-like component.  Defaults to
+            ``source.profile.disk,bulge_fraction`` when None.
+        source_half_light_radius : array or None
+            Array of shape (num_fibers, 2) giving the disk and bulge half-light
+            radii in on-sky angular units.  Defaults to values in
+            ``source.profile.disk,bulge_shape`` when None.
+        source_minor_major_axis_ratio : array or None
+            Array of shape (num_fibers, 2) giving the disk and bulge minor/major
+            axis ratios, in the range (0,1]. Defaults to values in
+            ``source.profile.disk,bulge_shape`` when None.
+        source_position_angle : array or None
+            Array of shape (num_fibers, 2) giving the disk and bulge major
+            axis alignments, expressed as a clockwise rotation from the +x
+            axis, with angular units. Defaults to values in
+            ``source.profile.disk,bulge_shape`` when None.
         save_fiberloss : str or None
             Basename for saving FITS images and tabulated fiberloss.
             Ignored unless instrument.fiberloss.method is galsim.
         """
-        # Get references to our results columns.
+        # Get references to our results columns. Since table rows index
+        # wavelength, the shape of each column is (nwlen, nfiber) and
+        # therefore some transposes are necessary to match with the shape
+        # (nfiber, nwlen) of source_fluxes and fiber_acceptance_fraction,
+        # and before calling the camera downsample() and apply_resolution()
+        # methods (which expect wavelength in the last index).
         wavelength = self.simulated['wavelength']
         source_flux = self.simulated['source_flux']
+        fiberloss = self.simulated['fiberloss']
         source_fiber_flux = self.simulated['source_fiber_flux']
         sky_fiber_flux = self.simulated['sky_fiber_flux']
         num_source_photons = self.simulated['num_source_photons']
         num_sky_photons = self.simulated['num_sky_photons']
+        nwlen = len(wavelength)
 
-        # Locate the source centroid on the focal plane.
-        if self.source.focal_xy is None:
+        # Position each fiber.
+        if focal_positions is not None:
+            if len(focal_positions) != self.num_fibers:
+                raise ValueError(
+                    'Expected {0:d} focal_positions.'.format(self.num_fibers))
+            try:
+                focal_positions = focal_positions.to(u.mm)
+            except (AttributeError, u.UnitConversionError):
+                raise ValueError('Invalid units for focal_positions.')
+            self.focal_x, self.focal_y = focal_positions.T
+            on_sky = False
+            if self.verbose:
+                print('Fibers positioned with focal_positions array.')
+        elif sky_positions is not None:
+            if len(sky_positions) != self.num_fibers:
+                raise ValueError(
+                    'Expected {0:d} sky_positions.'.format(self.num_fibers))
             self.focal_x, self.focal_y = self.observation.locate_on_focal_plane(
+                sky_positions, self.instrument)
+            on_sky = True
+            if self.verbose:
+                print('Fibers positioned with sky_positions array.')
+        elif self.source.focal_xy is not None:
+            self.focal_x, self.focal_y = np.tile(
+                self.source.focal_xy, [self.num_fibers, 1]).T
+            on_sky = False
+            if self.verbose:
+                print('All fibers positioned at config (x,y).')
+        elif self.source.sky_position is not None:
+            focal_x, focal_y = self.observation.locate_on_focal_plane(
                 self.source.sky_position, self.instrument)
+            self.focal_x = np.tile(focal_x, [self.num_fibers])
+            self.focal_y = np.tile(focal_y, [self.num_fibers])
+            on_sky = True
+            if self.verbose:
+                print('All fibers positioned at config (ra,dec).')
+        else:
+            raise RuntimeError('No fiber positioning info available.')
 
+        if on_sky:
             # Set the observing airmass in the atmosphere model using
             # Eqn.3 of Krisciunas & Schaefer 1991.
             obs_zenith = 90 * u.deg - self.observation.boresight_altaz.alt
             obs_airmass = (1 - 0.96 * np.sin(obs_zenith) ** 2) ** -0.5
             self.atmosphere.airmass = obs_airmass
-        else:
-            self.focal_x, self.focal_y = self.source.focal_xy.T
+            if self.verbose:
+                print('Calculated alt={0:.1f} az={1:.1f} airmass={2:.3f}'
+                      .format(self.observation.boresight_altaz.alt,
+                              self.observation.boresight_altaz.az, obs_airmass))
 
-        # Check that the source is within the field of view.
+        # Check that all sources are within the field of view.
         focal_r = np.sqrt(self.focal_x ** 2 + self.focal_y ** 2)
         if np.any(focal_r > self.instrument.field_radius):
             raise RuntimeError(
-                'Source is located outside the field of view: r < {0:.1f}'
+                'A source is located outside the field of view: r > {0:.1f}'
                 .format(self.instrument.field_radius))
 
-        # Calculate the on-sky fiber area at this focal-plane location.
+        # Calculate the on-sky fiber areas at each focal-plane location.
         radial_fiber_size = (
             0.5 * self.instrument.fiber_diameter /
             self.instrument.radial_scale(focal_r))
@@ -200,8 +325,16 @@ class Simulator(object):
             self.instrument.azimuthal_scale(focal_r))
         self.fiber_area = np.pi * radial_fiber_size * azimuthal_fiber_size
 
-        # Get the source flux incident on the atmosphere.
-        source_flux[:] = self.source.flux_out.to(source_flux.unit)
+        # Get the source fluxes incident on the atmosphere.
+        if source_fluxes is None:
+            source_fluxes = self.source.flux_out.to(
+                source_flux.unit)[np.newaxis, :]
+        elif source_fluxes.shape != (self.num_fibers, nwlen):
+            raise ValueError('Invalid shape for source_fluxes.')
+        try:
+            source_flux[:] = source_fluxes.to(source_flux.unit).T
+        except u.UnitConversionError as e:
+            raise ValueError('Invalid units for source_fluxes.')
 
         # Calculate fraction of source illumination entering the fiber.
         if save_fiberloss is not None:
@@ -209,23 +342,34 @@ class Simulator(object):
             saved_table_file = save_fiberloss + '.ecsv'
         else:
             saved_images_file, saved_table_file = None, None
-        fiber_acceptance_fraction =\
-            specsim.fiberloss.calculate_fiber_acceptance_fraction(
-                self.focal_x, self.focal_y, wavelength, self.source,
-                self.atmosphere, self.instrument,
-                saved_images_file=saved_images_file,
-                saved_table_file=saved_table_file)
+
+        if fiber_acceptance_fraction is None:
+            # Calculate fiberloss using the method specified in
+            # instrument.fiberloss_method.
+            fiber_acceptance_fraction =\
+                specsim.fiberloss.calculate_fiber_acceptance_fraction(
+                    self.focal_x, self.focal_y, wavelength.quantity,
+                    self.source, self.atmosphere, self.instrument, source_types,
+                    source_fraction, source_half_light_radius,
+                    source_minor_major_axis_ratio, source_position_angle,
+                    saved_images_file=saved_images_file,
+                    saved_table_file=saved_table_file)
+        else:
+            fiber_acceptance_fraction = np.asarray(fiber_acceptance_fraction)
+            if fiber_acceptance_fraction.shape != (self.num_fibers, nwlen):
+                raise ValueError('Invalid shape for fiber_acceptance_fraction.')
+        fiberloss[:] = fiber_acceptance_fraction.T
 
         # Calculate the source flux entering a fiber.
         source_fiber_flux[:] = (
             source_flux *
-            self.atmosphere.extinction *
-            fiber_acceptance_fraction
+            self.atmosphere.extinction[:, np.newaxis] *
+            fiberloss
             ).to(source_fiber_flux.unit)
 
         # Calculate the sky flux entering a fiber.
         sky_fiber_flux[:] = (
-            self.atmosphere.surface_brightness *
+            self.atmosphere.surface_brightness[:, np.newaxis] *
             self.fiber_area
             ).to(sky_fiber_flux.unit)
 
@@ -233,7 +377,7 @@ class Simulator(object):
         # per simulation bin.
         num_source_photons[:] = (
             source_fiber_flux *
-            self.instrument.photons_per_bin *
+            self.instrument.photons_per_bin[:, np.newaxis] *
             self.observation.exposure_time
             ).to(1).value
 
@@ -241,7 +385,7 @@ class Simulator(object):
         # per simulation bin.
         num_sky_photons[:] = (
             sky_fiber_flux *
-            self.instrument.photons_per_bin *
+            self.instrument.photons_per_bin[:, np.newaxis] *
             self.observation.exposure_time
             ).to(1).value
 
@@ -250,10 +394,11 @@ class Simulator(object):
         # We use this below to calculate the flux inverse variance in
         # each camera.
         source_flux_to_photons = (
-            self.atmosphere.extinction *
-            fiber_acceptance_fraction *
-            self.instrument.photons_per_bin *
-            self.observation.exposure_time).to(source_flux.unit ** -1).value
+            self.atmosphere.extinction[:, np.newaxis] *
+            fiberloss *
+            self.instrument.photons_per_bin[:, np.newaxis] *
+            self.observation.exposure_time
+            ).to(source_flux.unit ** -1).value
 
         # Loop over cameras to calculate their individual responses.
         for output, camera in zip(self.camera_output, self.instrument.cameras):
@@ -270,30 +415,30 @@ class Simulator(object):
 
             # Calculate the mean number of source electrons detected in the CCD.
             num_source_electrons[:] = camera.apply_resolution(
-                num_source_photons * camera.throughput)
+                num_source_photons.T * camera.throughput).T
 
             # Calculate the mean number of sky electrons detected in the CCD.
             num_sky_electrons[:] = camera.apply_resolution(
-                num_sky_photons * camera.throughput)
+                num_sky_photons.T * camera.throughput).T
 
             # Calculate the mean number of dark current electrons in the CCD.
             num_dark_electrons[:] = (
-                camera.dark_current_per_bin *
+                camera.dark_current_per_bin[:, np.newaxis] *
                 self.observation.exposure_time).to(u.electron).value
 
             # Copy the read noise in units of electrons.
             read_noise_electrons[:] = (
-                camera.read_noise_per_bin.to(u.electron).value)
+                camera.read_noise_per_bin[:, np.newaxis].to(u.electron).value)
 
             # Calculate the corresponding downsampled output quantities.
             output['num_source_electrons'] = (
-                camera.downsample(num_source_electrons))
+                camera.downsample(num_source_electrons.T)).T
             output['num_sky_electrons'] = (
-                camera.downsample(num_sky_electrons))
+                camera.downsample(num_sky_electrons.T)).T
             output['num_dark_electrons'] = (
-                camera.downsample(num_dark_electrons))
+                camera.downsample(num_dark_electrons.T)).T
             output['read_noise_electrons'] = np.sqrt(
-                camera.downsample(read_noise_electrons ** 2))
+                camera.downsample(read_noise_electrons.T ** 2)).T
             output['variance_electrons'] = (
                 output['num_source_electrons'] +
                 output['num_sky_electrons'] +
@@ -304,7 +449,7 @@ class Simulator(object):
             # source flux above the atmosphere, downsampled to output pixels.
             output['flux_calibration'] = 1.0 / camera.downsample(
                 camera.apply_resolution(
-                    camera.throughput * source_flux_to_photons))
+                    source_flux_to_photons.T * camera.throughput)).T
 
             # Calculate the calibrated flux in this camera.
             output['observed_flux'] = (
@@ -352,12 +497,41 @@ class Simulator(object):
                 output['num_sky_electrons'] + output['num_dark_electrons'])
             output['random_noise_electrons'] = (
                 random_state.poisson(mean_electrons) - mean_electrons +
-                random_state.normal(
-                    scale=output['read_noise_electrons'], size=len(output)))
+                random_state.normal(scale=output['read_noise_electrons']))
 
 
-    def plot(self, title=None):
-        """Plot results of the last simulation.
+    def save(self, filename, clobber=True):
+        """Save results of the last simulation to a FITS file.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the file where results should be saved.  Must use the
+            .fits extension.
+        clobber : bool
+            Any existing file will be silently overwritten when clobber is True.
+        """
+        base, ext = os.path.splitext(filename)
+        if ext != '.fits':
+            raise ValueError('Filename must have the .fits extension.')
+        # Create an empty primary HDU for header keywords
+        primary = astropy.io.fits.PrimaryHDU()
+        hdr = primary.header
+        hdr['name'] = self.instrument.name
+        # Save each table to its own HDU.
+        simulated = astropy.io.fits.BinTableHDU(
+            name='simulated', data=self.simulated.as_array())
+        hdus = astropy.io.fits.HDUList([primary, simulated])
+        for output in self.camera_output:
+            hdus.append(astropy.io.fits.BinTableHDU(
+                name=output.meta['name'], data=output.as_array()))
+        # Write the file.
+        hdus.writeto(filename, clobber=clobber)
+        hdus.close()
+
+
+    def plot(self, fiber=0, title=None):
+        """Plot results of the last simulation for a single fiber.
 
         Uses the contents of the :attr:`simulated` and :attr:`camera_output`
         astropy tables to plot the results of the last call to :meth:`simulate`.
@@ -365,22 +539,26 @@ class Simulator(object):
 
         Parameters
         ----------
+        fiber : int
+            Fiber index to plot.  Must be less than `self.num_fibers`.
         title : str or None
             Plot title to use.  If None is specified, a title will be
             automatically generated using the source name, airmass and
             exposure time.
         """
+        if fiber < 0 or fiber >= self.num_fibers:
+            raise ValueError('Requested fiber is out of range.')
         if title is None:
             title = (
-                '{0}, X={1}, t={2}'
-                .format(self.source.name, self.atmosphere.airmass,
+                'Fiber={0}, X={1}, t={2}'
+                .format(fiber, self.atmosphere.airmass,
                         self.observation.exposure_time))
-        plot_simulation(self.simulated, self.camera_output, title)
+        plot_simulation(self.simulated, self.camera_output, fiber, title)
 
 
-def plot_simulation(simulated, camera_output, title=None,
+def plot_simulation(simulated, camera_output, fiber=0, title=None,
                     min_electrons=2.5, figsize=(11, 8.5), label_size='medium'):
-    """Plot simulation output tables.
+    """Plot simulation output tables for a single fiber.
 
     This function is normally called via :meth:`Simulator.plot` but is provided
     separately so that plots can be generated from results saved to a file.
@@ -399,6 +577,8 @@ def plot_simulation(simulated, camera_output, title=None,
     camera_output : list
         Lists of tables of per-camera simulation results tabulated on each
         camera's output pixel grid.
+    fiber : int
+        Fiber index to plot.
     title : str or None
         Descriptive title to use for the plot.
     min_electrons : float
@@ -421,9 +601,9 @@ def plot_simulation(simulated, camera_output, title=None,
 
     # Plot fluxes above the atmosphere and into the fiber.
 
-    src_flux = simulated['source_flux']
-    src_fiber_flux = simulated['source_fiber_flux']
-    sky_fiber_flux = simulated['sky_fiber_flux']
+    src_flux = simulated['source_flux'][:, fiber]
+    src_fiber_flux = simulated['source_fiber_flux'][:, fiber]
+    sky_fiber_flux = simulated['sky_fiber_flux'][:, fiber]
 
     ymin, ymax = 0.1 * np.min(src_flux), 10. * np.max(src_flux)
 
@@ -447,8 +627,8 @@ def plot_simulation(simulated, camera_output, title=None,
 
     # Plot numbers of photons into the fiber.
 
-    nsky = simulated['num_sky_photons'] / dwave
-    nsrc = simulated['num_source_photons'] / dwave
+    nsky = simulated['num_sky_photons'][:, fiber] / dwave
+    nsrc = simulated['num_source_photons'][:, fiber] / dwave
     nmax = np.max(nsrc)
 
     ax2.fill_between(wave, nsky + nsrc, 1e-1 * nmax, color='b', alpha=0.2, lw=0)
@@ -470,11 +650,11 @@ def plot_simulation(simulated, camera_output, title=None,
 
         cwave = output['wavelength']
         dwave = np.gradient(cwave)
-        nsky = output['num_sky_electrons'] / dwave
-        nsrc = output['num_source_electrons'] / dwave
-        ndark = output['num_dark_electrons'] / dwave
-        read_noise = output['read_noise_electrons'] / np.sqrt(dwave)
-        total_noise = np.sqrt(output['variance_electrons'] / dwave)
+        nsky = output['num_sky_electrons'][:, fiber] / dwave
+        nsrc = output['num_source_electrons'][:, fiber] / dwave
+        ndark = output['num_dark_electrons'][:, fiber] / dwave
+        read_noise = output['read_noise_electrons'][:, fiber] / np.sqrt(dwave)
+        total_noise = np.sqrt(output['variance_electrons'][:, fiber] / dwave)
         nmax = max(nmax, np.max(nsrc))
 
         ax3.fill_between(

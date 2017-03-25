@@ -3,7 +3,7 @@ Installation
 
 The specsim package is compatible with python versions 2.6, 2.7, 3.3 and 3.4.
 
-For see what version, if any, you already have installed use::
+To see what version, if any, you already have installed use::
 
     pip show specsim
 
@@ -85,3 +85,10 @@ Optional Dependency: matplotlib
 The `matplotlib <http://matplotlib.org>`__ package enables optional plotting
 capabilities and should already be installed if you are using a scientific
 python distribution.
+
+Optional Dependency: galsim
+---------------------------
+
+The `galsim <https://github.com/GalSim-developers/GalSim/wiki>`__ package
+enables the most flexible calculations of
+:doc:`fiber acceptance fractions <fiberloss>`.

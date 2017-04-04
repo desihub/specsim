@@ -232,7 +232,6 @@ class Camera(object):
         sim_edges = (
             self._wavelength[self.ccd_slice][::self._downsampling] -
              0.5 * wavelength_step)
-
         if not np.allclose(
             pixel_edges, sim_edges, rtol=0., atol=1e-6 * wavelength_step):
             raise ValueError(

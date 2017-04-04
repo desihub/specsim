@@ -20,6 +20,24 @@ def test_ctor():
     sim2 = Simulator('test')
     assert sim1.atmosphere.airmass == sim2.atmosphere.airmass
 
+def test_alt_wavelengths():
+    import yaml
+    import pkg_resources
+    configfile = pkg_resources.resource_filename(
+        'specsim', 'data/config/test.yaml')
+    configdata = yaml.load(open(configfile))
+
+    # Create simulator with a 0.1 Angstrom simulation grid
+    configdata['wavelength_grid']['step'] = 0.1
+    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.1 Angstrom'
+    config1 = specsim.config.Configuration(configdata)
+    sim1 = Simulator(config1)
+
+    # Update to a 0.2 Angstrom step size and repeat
+    configdata['wavelength_grid']['step'] = 0.2
+    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.2 Angstrom'
+    config2 = specsim.config.Configuration(configdata)
+    sim2 = Simulator(config2)
 
 def test_end_to_end():
     sim = Simulator('test')

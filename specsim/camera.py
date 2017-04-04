@@ -224,14 +224,15 @@ class Camera(object):
         self._downsampling = int(round(
             self._output_pixel_size / wavelength_step))
         num_downsampled = int(
-            (self._wavelength_max - self._wavelength_min) //
-            self._output_pixel_size)
+            round((self._wavelength_max - self._wavelength_min) /
+            self._output_pixel_size))
         pixel_edges = (
             self._wavelength_min - 0.5 * wavelength_step +
             np.arange(num_downsampled + 1) * self._output_pixel_size)
         sim_edges = (
             self._wavelength[self.ccd_slice][::self._downsampling] -
              0.5 * wavelength_step)
+
         if not np.allclose(
             pixel_edges, sim_edges, rtol=0., atol=1e-6 * wavelength_step):
             raise ValueError(

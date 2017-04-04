@@ -27,17 +27,35 @@ def test_alt_wavelengths():
         'specsim', 'data/config/test.yaml')
     configdata = yaml.load(open(configfile))
 
-    # Create simulator with a 0.1 Angstrom simulation grid
+    # Test input 0.1 -> output 1.2 Angstrom wavelength grid
     configdata['wavelength_grid']['step'] = 0.1
-    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.1 Angstrom'
-    config1 = specsim.config.Configuration(configdata)
-    sim1 = Simulator(config1)
+    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '1.2 Angstrom'
+    config = specsim.config.Configuration(configdata)
+    sim = Simulator(config)
 
-    # Update to a 0.2 Angstrom step size and repeat
+    # Test input 0.1 -> output 0.6 Angstrom wavelength grid
+    configdata['wavelength_grid']['step'] = 0.1
+    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.6 Angstrom'
+    config = specsim.config.Configuration(configdata)
+    sim = Simulator(config)
+
+    # Test input 0.1 -> output 0.4 Angstrom wavelength grid
+    configdata['wavelength_grid']['step'] = 0.1
+    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.4 Angstrom'
+    config = specsim.config.Configuration(configdata)
+    sim = Simulator(config)
+
+    # Test input 0.1 -> output 0.3 Angstrom wavelength grid
+    configdata['wavelength_grid']['step'] = 0.1
+    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.3 Angstrom'
+    config = specsim.config.Configuration(configdata)
+    sim = Simulator(config)
+
+    # Test input 0.2 -> output 0.2 Angstrom wavelength grid
     configdata['wavelength_grid']['step'] = 0.2
     configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.2 Angstrom'
-    config2 = specsim.config.Configuration(configdata)
-    sim2 = Simulator(config2)
+    config = specsim.config.Configuration(configdata)
+    sim = Simulator(config)
 
 def test_end_to_end():
     sim = Simulator('test')

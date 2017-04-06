@@ -20,42 +20,30 @@ def test_ctor():
     sim2 = Simulator('test')
     assert sim1.atmosphere.airmass == sim2.atmosphere.airmass
 
+
 def test_alt_wavelengths():
-    import yaml
-    import pkg_resources
-    configfile = pkg_resources.resource_filename(
-        'specsim', 'data/config/test.yaml')
-    configdata = yaml.load(open(configfile))
-
-    # Test input 0.1 -> output 1.2 Angstrom wavelength grid
-    configdata['wavelength_grid']['step'] = 0.1
-    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '1.2 Angstrom'
-    config = specsim.config.Configuration(configdata)
+    config = specsim.config.load_config('test')
+    config.wavelength_grid.step = 0.1
+    config.instrument.cameras.r.constants.output_pixel_size = "1.2 Angstrom"
     sim = Simulator(config)
+    sim.simulate()
+    assert np.allclose(np.diff(sim.camera_output[0]['wavelength']), 1.2)
 
-    # Test input 0.1 -> output 0.6 Angstrom wavelength grid
-    configdata['wavelength_grid']['step'] = 0.1
-    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.6 Angstrom'
-    config = specsim.config.Configuration(configdata)
+    config.instrument.cameras.r.constants.output_pixel_size = "0.4 Angstrom"
     sim = Simulator(config)
+    sim.simulate()
+    assert np.allclose(np.diff(sim.camera_output[0]['wavelength']), 0.4)
 
-    # Test input 0.1 -> output 0.4 Angstrom wavelength grid
-    configdata['wavelength_grid']['step'] = 0.1
-    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.4 Angstrom'
-    config = specsim.config.Configuration(configdata)
+    config.instrument.cameras.r.constants.output_pixel_size = "0.3 Angstrom"
     sim = Simulator(config)
+    sim.simulate()
+    assert np.allclose(np.diff(sim.camera_output[0]['wavelength']), 0.3)
 
-    # Test input 0.1 -> output 0.3 Angstrom wavelength grid
-    configdata['wavelength_grid']['step'] = 0.1
-    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.3 Angstrom'
-    config = specsim.config.Configuration(configdata)
+    config.wavelength_grid.step = 0.2
+    config.instrument.cameras.r.constants.output_pixel_size = "0.2 Angstrom"
     sim = Simulator(config)
-
-    # Test input 0.2 -> output 0.2 Angstrom wavelength grid
-    configdata['wavelength_grid']['step'] = 0.2
-    configdata['instrument']['cameras']['r']['constants']['output_pixel_size'] = '0.2 Angstrom'
-    config = specsim.config.Configuration(configdata)
-    sim = Simulator(config)
+    sim.simulate()
+    assert np.allclose(np.diff(sim.camera_output[0]['wavelength']), 0.2)
 
 def test_end_to_end():
     sim = Simulator('test')

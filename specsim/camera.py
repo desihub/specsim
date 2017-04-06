@@ -224,8 +224,8 @@ class Camera(object):
         self._downsampling = int(round(
             self._output_pixel_size / wavelength_step))
         num_downsampled = int(
-            (self._wavelength_max - self._wavelength_min) //
-            self._output_pixel_size)
+            round((self._wavelength_max - self._wavelength_min) /
+            self._output_pixel_size))
         pixel_edges = (
             self._wavelength_min - 0.5 * wavelength_step +
             np.arange(num_downsampled + 1) * self._output_pixel_size)

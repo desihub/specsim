@@ -21,6 +21,30 @@ def test_ctor():
     assert sim1.atmosphere.airmass == sim2.atmosphere.airmass
 
 
+def test_alt_wavelengths():
+    config = specsim.config.load_config('test')
+    config.wavelength_grid.step = 0.1
+    config.instrument.cameras.r.constants.output_pixel_size = "1.2 Angstrom"
+    sim = Simulator(config)
+    sim.simulate()
+    assert np.allclose(np.diff(sim.camera_output[0]['wavelength']), 1.2)
+
+    config.instrument.cameras.r.constants.output_pixel_size = "0.4 Angstrom"
+    sim = Simulator(config)
+    sim.simulate()
+    assert np.allclose(np.diff(sim.camera_output[0]['wavelength']), 0.4)
+
+    config.instrument.cameras.r.constants.output_pixel_size = "0.3 Angstrom"
+    sim = Simulator(config)
+    sim.simulate()
+    assert np.allclose(np.diff(sim.camera_output[0]['wavelength']), 0.3)
+
+    config.wavelength_grid.step = 0.2
+    config.instrument.cameras.r.constants.output_pixel_size = "0.2 Angstrom"
+    sim = Simulator(config)
+    sim.simulate()
+    assert np.allclose(np.diff(sim.camera_output[0]['wavelength']), 0.2)
+
 def test_end_to_end():
     sim = Simulator('test')
     sim.simulate()

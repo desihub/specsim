@@ -1,7 +1,7 @@
 0.8 (unreleased)
 ----------------
 
-- No changes yet.
+- Better support for alternate simulation wavelength grids (PR #60).
 
 0.8 (2017-03-25)
 ----------------

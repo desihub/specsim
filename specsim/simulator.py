@@ -176,7 +176,7 @@ class Simulator(object):
                  source_fluxes=None, source_types=None, source_fraction=None,
                  source_half_light_radius=None,
                  source_minor_major_axis_ratio=None, source_position_angle=None,
-                 save_fiberloss=None):
+                 calibration_surface_brightness=None, save_fiberloss=None):
         """Simulate a single exposure.
 
         Simulation results are written to internal tables that are overwritten
@@ -199,6 +199,11 @@ class Simulator(object):
         verbose mode to see details on how fibers are being positioned. Note
         that the observing airmass will be calculated when positioning with
         sky coordinates, and then available via ``self.observation.airmass``.
+
+        Calibration exposures can be simulated by providing an array of
+        ``calibration_surface_brightness`` values to use.  In this case,
+        the source and fiberloss inputs are ignored, and no atmospheric
+        emission or extinction are applied.
 
         Parameters
         ----------
@@ -240,6 +245,12 @@ class Simulator(object):
             axis alignments, expressed as a clockwise rotation from the +x
             axis, with angular units. Defaults to values in
             ``source.profile.disk,bulge_shape`` when None.
+        calibration_surface_brightness : array or None
+            Array of shape (num_fibers, num_wlen) giving the calibration
+            source surface brightness illuminating each fiber. When this is
+            set, all source parameters (those beginning with ``source_``)
+            and ``fiber_acceptance_fraction`` are ignored and this is assumed
+            to be a calibration exposure.
         save_fiberloss : str or None
             Basename for saving FITS images and tabulated fiberloss.
             Ignored unless instrument.fiberloss.method is galsim.
@@ -258,6 +269,9 @@ class Simulator(object):
         num_source_photons = self.simulated['num_source_photons']
         num_sky_photons = self.simulated['num_sky_photons']
         nwlen = len(wavelength)
+
+        # Is this a calibration exposure?
+        calibrating = calibration_surface_brightness is not None
 
         # Position each fiber.
         if focal_positions is not None:
@@ -298,7 +312,7 @@ class Simulator(object):
         else:
             raise RuntimeError('No fiber positioning info available.')
 
-        if on_sky:
+        if not calibrating and on_sky:
             # Set the observing airmass in the atmosphere model using
             # Eqn.3 of Krisciunas & Schaefer 1991.
             obs_zenith = 90 * u.deg - self.observation.boresight_altaz.alt
@@ -325,53 +339,96 @@ class Simulator(object):
             self.instrument.azimuthal_scale(focal_r))
         self.fiber_area = np.pi * radial_fiber_size * azimuthal_fiber_size
 
-        # Get the source fluxes incident on the atmosphere.
-        if source_fluxes is None:
-            source_fluxes = self.source.flux_out.to(
-                source_flux.unit)[np.newaxis, :]
-        elif source_fluxes.shape != (self.num_fibers, nwlen):
-            raise ValueError('Invalid shape for source_fluxes.')
-        try:
-            source_flux[:] = source_fluxes.to(source_flux.unit).T
-        except u.UnitConversionError as e:
-            raise ValueError('Invalid units for source_fluxes.')
-
-        # Calculate fraction of source illumination entering the fiber.
-        if save_fiberloss is not None:
-            saved_images_file = save_fiberloss + '.fits'
-            saved_table_file = save_fiberloss + '.ecsv'
+        if calibrating:
+            # Convert surface brightness to flux entering each fiber.
+            if calibration_surface_brightness.shape != (self.num_fibers, nwlen):
+                raise ValueError(
+                    'Invalid shape for calibration_surface_brightness.')
+            try:
+                source_flux[:] = (
+                    calibration_surface_brightness.T * self.fiber_area).to(
+                        source_flux.unit)
+            except AttributeError:
+                raise ValueError(
+                    'Missing units for calibration_surface_brightness.')
+            except u.UnitConversionError:
+                raise ValueError(
+                    'Invalid units for calibration_surface_brightness.')
+            # Fiberloss is one.
+            fiberloss[:] = 1.
+            # No atmospheric extinction of calibration sources.
+            source_fiber_flux[:] = source_flux.to(source_fiber_flux.unit)
+            # No sky emission added to calibration sources.
+            sky_fiber_flux[:] = 0.
+            # Calibration from constant source flux entering the fiber to
+            # number of source photons entering the fiber.
+            source_flux_to_photons = (
+                self.instrument.photons_per_bin[:, np.newaxis] *
+                self.observation.exposure_time
+                ).to(source_flux.unit ** -1).value
         else:
-            saved_images_file, saved_table_file = None, None
+            # Get the source fluxes incident on the atmosphere.
+            if source_fluxes is None:
+                source_fluxes = self.source.flux_out.to(
+                    source_flux.unit)[np.newaxis, :]
+            elif source_fluxes.shape != (self.num_fibers, nwlen):
+                raise ValueError('Invalid shape for source_fluxes.')
+            try:
+                source_flux[:] = source_fluxes.to(source_flux.unit).T
+            except AttributeError:
+                raise ValueError('Missing units for source_fluxes.')
+            except u.UnitConversionError:
+                raise ValueError('Invalid units for source_fluxes.')
 
-        if fiber_acceptance_fraction is None:
-            # Calculate fiberloss using the method specified in
-            # instrument.fiberloss_method.
-            fiber_acceptance_fraction =\
-                specsim.fiberloss.calculate_fiber_acceptance_fraction(
-                    self.focal_x, self.focal_y, wavelength.quantity,
-                    self.source, self.atmosphere, self.instrument, source_types,
-                    source_fraction, source_half_light_radius,
-                    source_minor_major_axis_ratio, source_position_angle,
-                    saved_images_file=saved_images_file,
-                    saved_table_file=saved_table_file)
-        else:
-            fiber_acceptance_fraction = np.asarray(fiber_acceptance_fraction)
-            if fiber_acceptance_fraction.shape != (self.num_fibers, nwlen):
-                raise ValueError('Invalid shape for fiber_acceptance_fraction.')
-        fiberloss[:] = fiber_acceptance_fraction.T
+            # Calculate fraction of source illumination entering the fiber.
+            if save_fiberloss is not None:
+                saved_images_file = save_fiberloss + '.fits'
+                saved_table_file = save_fiberloss + '.ecsv'
+            else:
+                saved_images_file, saved_table_file = None, None
 
-        # Calculate the source flux entering a fiber.
-        source_fiber_flux[:] = (
-            source_flux *
-            self.atmosphere.extinction[:, np.newaxis] *
-            fiberloss
-            ).to(source_fiber_flux.unit)
+            if fiber_acceptance_fraction is None:
+                # Calculate fiberloss using the method specified in
+                # instrument.fiberloss_method.
+                fiber_acceptance_fraction =\
+                    specsim.fiberloss.calculate_fiber_acceptance_fraction(
+                        self.focal_x, self.focal_y, wavelength.quantity,
+                        self.source, self.atmosphere, self.instrument,
+                        source_types, source_fraction, source_half_light_radius,
+                        source_minor_major_axis_ratio, source_position_angle,
+                        saved_images_file=saved_images_file,
+                        saved_table_file=saved_table_file)
+            else:
+                fiber_acceptance_fraction = np.asarray(
+                    fiber_acceptance_fraction)
+                if fiber_acceptance_fraction.shape != (self.num_fibers, nwlen):
+                    raise ValueError(
+                        'Invalid shape for fiber_acceptance_fraction.')
+            fiberloss[:] = fiber_acceptance_fraction.T
 
-        # Calculate the sky flux entering a fiber.
-        sky_fiber_flux[:] = (
-            self.atmosphere.surface_brightness[:, np.newaxis] *
-            self.fiber_area
-            ).to(sky_fiber_flux.unit)
+            # Calculate the source flux entering a fiber.
+            source_fiber_flux[:] = (
+                source_flux *
+                self.atmosphere.extinction[:, np.newaxis] *
+                fiberloss
+                ).to(source_fiber_flux.unit)
+
+            # Calculate the sky flux entering a fiber.
+            sky_fiber_flux[:] = (
+                self.atmosphere.surface_brightness[:, np.newaxis] *
+                self.fiber_area
+                ).to(sky_fiber_flux.unit)
+
+            # Calculate the calibration from constant unit source flux above
+            # the atmosphere to number of source photons entering the fiber.
+            # We use this below to calculate the flux inverse variance in
+            # each camera.
+            source_flux_to_photons = (
+                self.atmosphere.extinction[:, np.newaxis] *
+                fiberloss *
+                self.instrument.photons_per_bin[:, np.newaxis] *
+                self.observation.exposure_time
+                ).to(source_flux.unit ** -1).value
 
         # Calculate the mean number of source photons entering the fiber
         # per simulation bin.
@@ -388,17 +445,6 @@ class Simulator(object):
             self.instrument.photons_per_bin[:, np.newaxis] *
             self.observation.exposure_time
             ).to(1).value
-
-        # Calculate the calibration from constant unit source flux above
-        # the atmosphere to number of source photons entering the fiber.
-        # We use this below to calculate the flux inverse variance in
-        # each camera.
-        source_flux_to_photons = (
-            self.atmosphere.extinction[:, np.newaxis] *
-            fiberloss *
-            self.instrument.photons_per_bin[:, np.newaxis] *
-            self.observation.exposure_time
-            ).to(source_flux.unit ** -1).value
 
         # Loop over cameras to calculate their individual responses.
         for output, camera in zip(self.camera_output, self.instrument.cameras):

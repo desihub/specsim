@@ -576,7 +576,8 @@ class Simulator(object):
         hdus.close()
 
 
-    def plot(self, fiber=0, title=None):
+    def plot(self, fiber=0, wavelength_min=None, wavelength_max=None,
+             title=None, min_electrons=2.5):
         """Plot results of the last simulation for a single fiber.
 
         Uses the contents of the :attr:`simulated` and :attr:`camera_output`
@@ -587,6 +588,10 @@ class Simulator(object):
         ----------
         fiber : int
             Fiber index to plot.  Must be less than `self.num_fibers`.
+        wavelength_min : quantity or None
+            Clip the plot below this wavelength, or show the full extent.
+        wavelength_max : quantity or None
+            Clip the plot above this wavelength, or show the full extent.
         title : str or None
             Plot title to use.  If None is specified, a title will be
             automatically generated using the source name, airmass and
@@ -599,11 +604,13 @@ class Simulator(object):
                 'Fiber={0}, X={1}, t={2}'
                 .format(fiber, self.atmosphere.airmass,
                         self.observation.exposure_time))
-        plot_simulation(self.simulated, self.camera_output, fiber, title)
+        plot_simulation(self.simulated, self.camera_output, fiber,
+                        wavelength_min, wavelength_max, title, min_electrons)
 
 
-def plot_simulation(simulated, camera_output, fiber=0, title=None,
-                    min_electrons=2.5, figsize=(11, 8.5), label_size='medium'):
+def plot_simulation(simulated, camera_output, fiber=0, wavelength_min=None,
+                    wavelength_max=None, title=None, min_electrons=2.5,
+                    figsize=(11, 8.5), label_size='medium'):
     """Plot simulation output tables for a single fiber.
 
     This function is normally called via :meth:`Simulator.plot` but is provided
@@ -625,6 +632,10 @@ def plot_simulation(simulated, camera_output, fiber=0, title=None,
         camera's output pixel grid.
     fiber : int
         Fiber index to plot.
+    wavelength_min : quantity or None
+        Clip the plot below this wavelength, or show the full extent.
+    wavelength_max : quantity or None
+        Clip the plot above this wavelength, or show the full extent.
     title : str or None
         Descriptive title to use for the plot.
     min_electrons : float
@@ -640,18 +651,62 @@ def plot_simulation(simulated, camera_output, fiber=0, title=None,
     if title is not None:
         ax1.set_title(title)
 
-    wave = simulated['wavelength']
-    dwave = np.gradient(wave)
-    waveunit = '{0:Generic}'.format(wave.unit)
+    waveunit = '{0:Generic}'.format(simulated['wavelength'].unit)
     fluxunit = '{0:Generic}'.format(simulated['source_flux'].unit)
+    wave = simulated['wavelength'].data
+    dwave = np.gradient(wave)
+
+    # Validate the optional wavelength limits and convert to waveunit.
+    def validate(name, limit):
+        if limit is None:
+            return limit
+        try:
+            return limit.to(waveunit).value
+        except AttributeError:
+            raise ValueError('Missing unit for {0}.'.format(name))
+        except u.UnitConversionError:
+            raise ValueError('Invalid unit for {0}.'.format(name))
+    wavelength_min = validate('wavelength_min', wavelength_min)
+    wavelength_max = validate('wavelength_max', wavelength_max)
+    if wavelength_min and wavelength_max and wavelength_min >= wavelength_max:
+        raise ValueError('Expected wavelength_min < wavelength_max.')
+
+    # Create a helper function that returns a slice that limits the
+    # wavelength array w (with units) to wavelenth_min <= w <= wavelength_max.
+    # Returns None if all w < wavelength_min or all w > wavelength_max.
+    def get_slice(w):
+        assert np.all(np.diff(w) > 0)
+        if wavelength_min is None:
+            start = 0
+        elif wavelength_min > w[-1]:
+            return None
+        else:
+            start = np.where(w >= wavelength_min)[0][0]
+        if wavelength_max is None:
+            stop = len(w)
+        elif wavelength_max < w[0]:
+            return None
+        else:
+            stop = np.where(w <= wavelength_max)[0][-1] + 1
+        return slice(start, stop)
+
+    # Trim the full wavelength grid.
+    waves = get_slice(wave)
+    if waves is None:
+        raise ValueError('Wavelength limits do not overlap simulation grid.')
+    wave = wave[waves]
+    dwave = dwave[waves]
 
     # Plot fluxes above the atmosphere and into the fiber.
 
-    src_flux = simulated['source_flux'][:, fiber]
-    src_fiber_flux = simulated['source_fiber_flux'][:, fiber]
-    sky_fiber_flux = simulated['sky_fiber_flux'][:, fiber]
+    src_flux = simulated['source_flux'][waves, fiber]
+    src_fiber_flux = simulated['source_fiber_flux'][waves, fiber]
+    sky_fiber_flux = simulated['sky_fiber_flux'][waves, fiber]
 
     ymin, ymax = 0.1 * np.min(src_flux), 10. * np.max(src_flux)
+    if ymin <= 0:
+        # Need ymin > 0 for log scale.
+        ymin = 1e-3 * ymax
 
     line, = ax1.plot(wave, src_flux, 'r-')
     ax1.fill_between(wave, src_fiber_flux + sky_fiber_flux,
@@ -673,8 +728,8 @@ def plot_simulation(simulated, camera_output, fiber=0, title=None,
 
     # Plot numbers of photons into the fiber.
 
-    nsky = simulated['num_sky_photons'][:, fiber] / dwave
-    nsrc = simulated['num_source_photons'][:, fiber] / dwave
+    nsky = simulated['num_sky_photons'][waves, fiber] / dwave
+    nsrc = simulated['num_source_photons'][waves, fiber] / dwave
     nmax = np.max(nsrc)
 
     ax2.fill_between(wave, nsky + nsrc, 1e-1 * nmax, color='b', alpha=0.2, lw=0)
@@ -694,13 +749,22 @@ def plot_simulation(simulated, camera_output, fiber=0, title=None,
 
     for output in camera_output:
 
-        cwave = output['wavelength']
+        cwave = output['wavelength'].data
         dwave = np.gradient(cwave)
-        nsky = output['num_sky_electrons'][:, fiber] / dwave
-        nsrc = output['num_source_electrons'][:, fiber] / dwave
-        ndark = output['num_dark_electrons'][:, fiber] / dwave
-        read_noise = output['read_noise_electrons'][:, fiber] / np.sqrt(dwave)
-        total_noise = np.sqrt(output['variance_electrons'][:, fiber] / dwave)
+        # Trim to requested wavelength range.
+        waves = get_slice(cwave)
+        if waves is None:
+            # Skip any cameras outside the requested wavelength range.
+            continue
+        cwave = cwave[waves]
+        dwave = dwave[waves]
+        nsky = output['num_sky_electrons'][waves, fiber] / dwave
+        nsrc = output['num_source_electrons'][waves, fiber] / dwave
+        ndark = output['num_dark_electrons'][waves, fiber] / dwave
+        read_noise = (
+            output['read_noise_electrons'][waves, fiber] / np.sqrt(dwave))
+        total_noise = (
+            np.sqrt(output['variance_electrons'][waves, fiber] / dwave))
         nmax = max(nmax, np.max(nsrc))
 
         ax3.fill_between(

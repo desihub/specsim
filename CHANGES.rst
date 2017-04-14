@@ -1,7 +1,8 @@
-0.8 (unreleased)
+0.9 (unreleased)
 ----------------
 
-- No changes yet.
+- Add support for simulating calibration exposures (#54).
+- Add wavelength min/max options to Simulator.plot().
 
 0.8 (2017-03-25)
 ----------------

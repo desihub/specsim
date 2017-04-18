@@ -1,6 +1,7 @@
 0.9 (unreleased)
 ----------------
 
+- Fix Simulator output table units with astropy 1.3.2 (#62).
 - Add support for simulating calibration exposures (#54).
 - Add wavelength min/max options to Simulator.plot().
 - Better support for alternate simulation wavelength grids (PR #60).

@@ -477,15 +477,15 @@ class Simulator(object):
                 camera.read_noise_per_bin[:, np.newaxis].to(u.electron).value)
 
             # Calculate the corresponding downsampled output quantities.
-            output['num_source_electrons'] = (
+            output['num_source_electrons'][:] = (
                 camera.downsample(num_source_electrons.T)).T
-            output['num_sky_electrons'] = (
+            output['num_sky_electrons'][:] = (
                 camera.downsample(num_sky_electrons.T)).T
-            output['num_dark_electrons'] = (
+            output['num_dark_electrons'][:] = (
                 camera.downsample(num_dark_electrons.T)).T
-            output['read_noise_electrons'] = np.sqrt(
+            output['read_noise_electrons'][:] = np.sqrt(
                 camera.downsample(read_noise_electrons.T ** 2)).T
-            output['variance_electrons'] = (
+            output['variance_electrons'][:] = (
                 output['num_source_electrons'] +
                 output['num_sky_electrons'] +
                 output['num_dark_electrons'] +
@@ -493,16 +493,16 @@ class Simulator(object):
 
             # Calculate the effective calibration from detected electrons to
             # source flux above the atmosphere, downsampled to output pixels.
-            output['flux_calibration'] = 1.0 / camera.downsample(
+            output['flux_calibration'][:] = 1.0 / camera.downsample(
                 camera.apply_resolution(
                     source_flux_to_photons.T * camera.throughput)).T
 
             # Calculate the calibrated flux in this camera.
-            output['observed_flux'] = (
+            output['observed_flux'][:] = (
                 output['flux_calibration'] * output['num_source_electrons'])
 
             # Calculate the corresponding flux inverse variance.
-            output['flux_inverse_variance'] = (
+            output['flux_inverse_variance'][:] = (
                 output['flux_calibration'] ** -2 *
                 output['variance_electrons'] ** -1)
 

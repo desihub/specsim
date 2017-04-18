@@ -116,11 +116,12 @@ def test_output_table_units():
     This test was added in response to issue #62
     """
     sim = specsim.simulator.Simulator('test', num_fibers=1)
+    units_before = {}
     for table in (sim.simulated, sim.camera_output[0]):
-        units_before = {}
         for name in table.colnames:
             units_before[name] = table[name].unit
-        sim.simulate()
+    sim.simulate()
+    for table in (sim.simulated, sim.camera_output[0]):
         for name in table.colnames:
             assert units_before[name] == table[name].unit
 

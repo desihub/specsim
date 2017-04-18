@@ -110,6 +110,21 @@ def test_fiber_positioning():
     assert np.allclose(sim.focal_y.to(u.mm).value, 0.)
 
 
+def test_output_table_units():
+    """Test that units are preserved after calling simulate().
+
+    This test was added in response to issue #62
+    """
+    sim = specsim.simulator.Simulator('test', num_fibers=1)
+    for table in (sim.simulated, sim.camera_output[0]):
+        units_before = {}
+        for name in table.colnames:
+            units_before[name] = table[name].unit
+        sim.simulate()
+        for name in table.colnames:
+            assert units_before[name] == table[name].unit
+
+
 def test_plot():
     s = Simulator('test')
     s.simulate()

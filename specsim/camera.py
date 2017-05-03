@@ -221,23 +221,28 @@ class Camera(object):
         # grid is equally spaced, but no other part of the Camera class
         # class currently requires this.
         wavelength_step = self._wavelength[1] - self._wavelength[0]
+        if not np.allclose(np.diff(self._wavelength), wavelength_step):
+            raise RuntimeError(
+                'Non-uniform simulation wavelength grid not supported yet.')
         self._downsampling = int(round(
             self._output_pixel_size / wavelength_step))
-        num_downsampled = int(
-            round((self._wavelength_max - self._wavelength_min) /
-            self._output_pixel_size))
-        pixel_edges = (
-            self._wavelength_min - 0.5 * wavelength_step +
-            np.arange(num_downsampled + 1) * self._output_pixel_size)
-        sim_edges = (
-            self._wavelength[self.ccd_slice][::self._downsampling] -
-             0.5 * wavelength_step)
-        if not np.allclose(
-            pixel_edges, sim_edges, rtol=0., atol=1e-6 * wavelength_step):
+        if not np.allclose(self._downsampling * wavelength_step,
+                           self._output_pixel_size):
             raise ValueError(
-                'Cannot downsample {0}-camera pixels from {1:f} to {2} {3}.'
-                .format(self.name, wavelength_step, self._output_pixel_size,
-                        self._wavelength_unit))
+                'Invalid output_pixel_size {0} for {1} camera: '
+                .format(output_pixel_size, self.name) +
+                'must be multiple of {1} {2}.'
+                .format(wavelength_step, self._wave))
+        # The self._wavelength array stores the centers of fixed-width bins.
+        # Calculate the edges of the downsampled output pixels. Trim
+        # any partial output pixel on the high end.
+        output_min = self._wavelength_min - 0.5 * wavelength_step
+        output_max = self._wavelength_max + 0.5 * wavelength_step
+        num_downsampled = int(np.floor(
+            (output_max - output_min) / self._output_pixel_size))
+        pixel_edges = (
+            output_min +
+            np.arange(num_downsampled + 1) * self._output_pixel_size)
         # Save the centers of each output pixel.
         self._output_wavelength = 0.5 * (pixel_edges[1:] + pixel_edges[:-1])
         # Initialize the parameters used by the downsample() method.

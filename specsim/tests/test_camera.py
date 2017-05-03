@@ -10,6 +10,7 @@ from ..camera import *
 
 import specsim.instrument
 import specsim.config
+import specsim.simulator
 
 
 def test_resolution():
@@ -37,3 +38,18 @@ def test_downsampling():
     R2 = camera.get_output_resolution_matrix()
 
     assert np.allclose(R1, R2.toarray())
+
+
+def test_user_grid():
+    # Reproduce the crash in https://github.com/desihub/specsim/issues/64
+    config = specsim.config.load_config('desi')
+    dwave = 0.2
+    config.wavelength_grid.min = 3554.05
+    config.wavelength_grid.max = 9912.85
+    config.wavelength_grid.step = dwave
+    config.instrument.cameras.b.constants.output_pixel_size = "1.0 Angstrom"
+    config.instrument.cameras.r.constants.output_pixel_size = "1.0 Angstrom"
+    config.instrument.cameras.z.constants.output_pixel_size = "1.0 Angstrom"
+    config.update()
+
+    desi = specsim.simulator.Simulator(config)

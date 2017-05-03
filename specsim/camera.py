@@ -231,8 +231,8 @@ class Camera(object):
             raise ValueError(
                 'Invalid output_pixel_size {0} for {1} camera: '
                 .format(output_pixel_size, self.name) +
-                'must be multiple of {1} {2}.'
-                .format(wavelength_step, self._wave))
+                'must be multiple of {0} {1}.'
+                .format(wavelength_step, self._wavelength_unit))
         # The self._wavelength array stores the centers of fixed-width bins.
         # Calculate the edges of the downsampled output pixels. Trim
         # any partial output pixel on the high end.

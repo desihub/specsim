@@ -55,6 +55,9 @@ class Simulator(object):
         Number of fibers to simulate.
     camera_output : bool
         Include per-camera output tables in simulation results when True.
+        When this is False, our ``camera_output`` attribute will return an
+        empty list and the ``num_source_electrons_*`` columns in our
+        ``simulated`` table will not be resolution convolved.
         Setting this parameter to False will save memory and time when
         per-camera outputs are not needed.
     verbose : bool
@@ -455,11 +458,43 @@ class Simulator(object):
             self.observation.exposure_time
             ).to(1).value
 
+        # Calculate the high-resolution inputs to each camera.
+        for camera in self.instrument.cameras:
+            # Get references to this camera's columns.
+            num_source_electrons = self.simulated[
+                'num_source_electrons_{0}'.format(camera.name)]
+            num_sky_electrons = self.simulated[
+                'num_sky_electrons_{0}'.format(camera.name)]
+            num_dark_electrons = self.simulated[
+                'num_dark_electrons_{0}'.format(camera.name)]
+            read_noise_electrons = self.simulated[
+                'read_noise_electrons_{0}'.format(camera.name)]
+
+            # Calculate the mean number of source electrons detected in the CCD
+            # without any resolution applied.
+            num_source_electrons[:] = (
+                num_source_photons * camera.throughput[:, np.newaxis])
+
+            # Calculate the mean number of sky electrons detected in the CCD
+            # without any resolution applied.
+            num_sky_electrons[:] = (
+                num_sky_photons * camera.throughput[:, np.newaxis])
+
+            # Calculate the mean number of dark current electrons in the CCD.
+            num_dark_electrons[:] = (
+                camera.dark_current_per_bin[:, np.newaxis] *
+                self.observation.exposure_time).to(u.electron).value
+
+            # Copy the read noise in units of electrons.
+            read_noise_electrons[:] = (
+                camera.read_noise_per_bin[:, np.newaxis].to(u.electron).value)
+
         if not self.camera_output:
             # All done since no camera output was requested.
             return
 
-        # Loop over cameras to calculate their individual responses.
+        # Loop over cameras to calculate their individual responses
+        # with resolution applied and downsampling to output pixels.
         for output, camera in zip(self.camera_output, self.instrument.cameras):
 
             # Get references to this camera's columns.
@@ -472,22 +507,12 @@ class Simulator(object):
             read_noise_electrons = self.simulated[
                 'read_noise_electrons_{0}'.format(camera.name)]
 
-            # Calculate the mean number of source electrons detected in the CCD.
+            # Apply resolution to the source and sky detected electrons on
+            # the high-resolution grid.
             num_source_electrons[:] = camera.apply_resolution(
-                num_source_photons.T * camera.throughput).T
-
-            # Calculate the mean number of sky electrons detected in the CCD.
+                num_source_electrons.T).T
             num_sky_electrons[:] = camera.apply_resolution(
-                num_sky_photons.T * camera.throughput).T
-
-            # Calculate the mean number of dark current electrons in the CCD.
-            num_dark_electrons[:] = (
-                camera.dark_current_per_bin[:, np.newaxis] *
-                self.observation.exposure_time).to(u.electron).value
-
-            # Copy the read noise in units of electrons.
-            read_noise_electrons[:] = (
-                camera.read_noise_per_bin[:, np.newaxis].to(u.electron).value)
+                num_sky_electrons.T).T
 
             # Calculate the corresponding downsampled output quantities.
             output['num_source_electrons'][:] = (

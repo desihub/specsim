@@ -114,36 +114,39 @@ class Simulator(object):
                 name='read_noise_electrons_{0}'.format(name), **column_args))
 
         # Initialize each camera's table of results downsampled to
-        # output pixels.
-        self._camera_output = []
-        for camera in self.instrument.cameras:
-            meta = dict(
-                name=camera.name, num_fibers=self.num_fibers,
-                pixel_size=camera.output_pixel_size)
-            table = astropy.table.Table(meta=meta)
-            column_args['length'] = len(camera.output_wavelength)
-            table.add_column(astropy.table.Column(
-                name='wavelength', data=camera.output_wavelength))
-            table.add_column(astropy.table.Column(
-                name='num_source_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='num_sky_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='num_dark_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='read_noise_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='random_noise_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='variance_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='flux_calibration', **column_args))
-            table.add_column(astropy.table.Column(
-                name='observed_flux', unit=flux_unit, **column_args))
-            table.add_column(astropy.table.Column(
-                name='flux_inverse_variance', unit=flux_unit ** -2,
-                **column_args))
-            self._camera_output.append(table)
+        # output pixels, if requested.
+        if camera_output:
+            self._camera_output = []
+            for camera in self.instrument.cameras:
+                meta = dict(
+                    name=camera.name, num_fibers=self.num_fibers,
+                    pixel_size=camera.output_pixel_size)
+                table = astropy.table.Table(meta=meta)
+                column_args['length'] = len(camera.output_wavelength)
+                table.add_column(astropy.table.Column(
+                    name='wavelength', data=camera.output_wavelength))
+                table.add_column(astropy.table.Column(
+                    name='num_source_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='num_sky_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='num_dark_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='read_noise_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='random_noise_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='variance_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='flux_calibration', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='observed_flux', unit=flux_unit, **column_args))
+                table.add_column(astropy.table.Column(
+                    name='flux_inverse_variance', unit=flux_unit ** -2,
+                    **column_args))
+                self._camera_output.append(table)
+        else:
+            self._camera_output = None
 
     @property
     def num_fibers(self):
@@ -170,6 +173,9 @@ class Simulator(object):
         using the output pixels defined for each camera.  Tables are overwritten
         during each call to :meth:`simulate`.  See :doc:`/output` for details
         of the contents of each table in this list.
+
+        Returns None if this Simulator was initialized with ``camera_output``
+        False.
         """
         return self._camera_output
 
@@ -206,6 +212,9 @@ class Simulator(object):
         ``calibration_surface_brightness`` values to use.  In this case,
         the source and fiberloss inputs are ignored, and no atmospheric
         emission or extinction are applied.
+
+        Per-camera output tables will not be filled if this Simulator was
+        initialized with ``camera_output`` False.
 
         Parameters
         ----------
@@ -448,6 +457,10 @@ class Simulator(object):
             self.observation.exposure_time
             ).to(1).value
 
+        if self._camera_output is None:
+            # All done since no camera output was requested.
+            return
+
         # Loop over cameras to calculate their individual responses.
         for output, camera in zip(self.camera_output, self.instrument.cameras):
 
@@ -535,6 +548,9 @@ class Simulator(object):
             realizations. A new state will be created with a randomized seed
             if None is specified.
         """
+        if self.camera_output is None:
+            raise RuntimeError('Simulator initialized with no camera output.')
+
         if random_state is None:
             random_state = np.random.RandomState()
 
@@ -568,9 +584,10 @@ class Simulator(object):
         simulated = astropy.io.fits.BinTableHDU(
             name='simulated', data=self.simulated.as_array())
         hdus = astropy.io.fits.HDUList([primary, simulated])
-        for output in self.camera_output:
-            hdus.append(astropy.io.fits.BinTableHDU(
-                name=output.meta['name'], data=output.as_array()))
+        if self.camera_output:
+            for output in self.camera_output:
+                hdus.append(astropy.io.fits.BinTableHDU(
+                    name=output.meta['name'], data=output.as_array()))
         # Write the file.
         hdus.writeto(filename, clobber=clobber)
         hdus.close()
@@ -603,7 +620,7 @@ class Simulator(object):
                 'Fiber={0}, X={1}, t={2}'
                 .format(fiber, self.atmosphere.airmass,
                         self.observation.exposure_time))
-        plot_simulation(self.simulated, self.camera_output, fiber,
+        plot_simulation(self.simulated, self.camera_output or [], fiber,
                         wavelength_min, wavelength_max, title, min_electrons)
 
 

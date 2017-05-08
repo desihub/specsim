@@ -130,3 +130,9 @@ def test_plot():
     s = Simulator('test')
     s.simulate()
     s.plot()
+
+
+def test_no_cameras():
+    s = Simulator('test', camera_output=False)
+    s.simulate()
+    s.plot()

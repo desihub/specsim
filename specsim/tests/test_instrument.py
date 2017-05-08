@@ -24,3 +24,9 @@ def test_distortion_plot():
     c = specsim.config.load_config('test')
     i = initialize(c)
     i.plot_field_distortion()
+
+
+def test_no_cameras():
+    c = specsim.config.load_config('test')
+    i = initialize(c, camera_output=False)
+    i.plot()

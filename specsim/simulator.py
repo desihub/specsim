@@ -115,8 +115,8 @@ class Simulator(object):
 
         # Initialize each camera's table of results downsampled to
         # output pixels, if requested.
+        self._camera_output = []
         if camera_output:
-            self._camera_output = []
             for camera in self.instrument.cameras:
                 meta = dict(
                     name=camera.name, num_fibers=self.num_fibers,
@@ -145,8 +145,6 @@ class Simulator(object):
                     name='flux_inverse_variance', unit=flux_unit ** -2,
                     **column_args))
                 self._camera_output.append(table)
-        else:
-            self._camera_output = None
 
     @property
     def num_fibers(self):
@@ -174,8 +172,8 @@ class Simulator(object):
         during each call to :meth:`simulate`.  See :doc:`/output` for details
         of the contents of each table in this list.
 
-        Returns None if this Simulator was initialized with ``camera_output``
-        False.
+        Returns an empty list if this Simulator was initialized with
+        ``camera_output`` False.
         """
         return self._camera_output
 
@@ -457,7 +455,7 @@ class Simulator(object):
             self.observation.exposure_time
             ).to(1).value
 
-        if self._camera_output is None:
+        if not self.camera_output:
             # All done since no camera output was requested.
             return
 
@@ -548,7 +546,7 @@ class Simulator(object):
             realizations. A new state will be created with a randomized seed
             if None is specified.
         """
-        if self.camera_output is None:
+        if not self.camera_output:
             raise RuntimeError('Simulator initialized with no camera output.')
 
         if random_state is None:
@@ -584,10 +582,9 @@ class Simulator(object):
         simulated = astropy.io.fits.BinTableHDU(
             name='simulated', data=self.simulated.as_array())
         hdus = astropy.io.fits.HDUList([primary, simulated])
-        if self.camera_output:
-            for output in self.camera_output:
-                hdus.append(astropy.io.fits.BinTableHDU(
-                    name=output.meta['name'], data=output.as_array()))
+        for output in self.camera_output:
+            hdus.append(astropy.io.fits.BinTableHDU(
+                name=output.meta['name'], data=output.as_array()))
         # Write the file.
         hdus.writeto(filename, clobber=clobber)
         hdus.close()
@@ -620,7 +617,7 @@ class Simulator(object):
                 'Fiber={0}, X={1}, t={2}'
                 .format(fiber, self.atmosphere.airmass,
                         self.observation.exposure_time))
-        plot_simulation(self.simulated, self.camera_output or [], fiber,
+        plot_simulation(self.simulated, self.camera_output, fiber,
                         wavelength_min, wavelength_max, title, min_electrons)
 
 
@@ -793,21 +790,23 @@ def plot_simulation(simulated, camera_output, fiber=0, wavelength_min=None,
         ax3.scatter(cwave, total_noise, color='k', lw=0., s=0.5, alpha=0.5)
         line2, = ax3.plot(cwave, read_noise, color='k', ls='--', alpha=0.5)
 
-    # This kludge is because the label arg to fill_between() does not
-    # propagate to legend() in matplotlib < 1.5.
-    line1, = ax3.plot([], [], 'k-')
-    dark_fill = Rectangle((0, 0), 1, 1, fc='k', alpha=0.2)
-    ax3.legend(
-        (sky_fill, src_fill, dark_fill, line1, line2),
-        ('Sky detected', 'Source detected', 'Dark current',
-         'RMS total noise', 'RMS read noise'),
-        loc='best', fancybox=True, framealpha=0.5, ncol=5, fontsize=label_size)
+    if camera_output:
+        # This kludge is because the label arg to fill_between() does not
+        # propagate to legend() in matplotlib < 1.5.
+        line1, = ax3.plot([], [], 'k-')
+        dark_fill = Rectangle((0, 0), 1, 1, fc='k', alpha=0.2)
+        ax3.legend(
+            (sky_fill, src_fill, dark_fill, line1, line2),
+            ('Sky detected', 'Source detected', 'Dark current',
+             'RMS total noise', 'RMS read noise'),
+            loc='best', fancybox=True, framealpha=0.5, ncol=5,
+            fontsize=label_size)
 
-    ax3.set_ylim(min_electrons, 2e2 * min_electrons)
-    ax3.set_yscale('log')
-    ax3.set_ylabel('Mean electrons / {0}'.format(waveunit))
-    ax3.set_xlim(wave[0], wave[-1])
-    ax3.set_xlabel('Wavelength [{0}]'.format(waveunit))
+        ax3.set_ylim(min_electrons, 2e2 * min_electrons)
+        ax3.set_yscale('log')
+        ax3.set_ylabel('Mean electrons / {0}'.format(waveunit))
+        ax3.set_xlim(wave[0], wave[-1])
+        ax3.set_xlabel('Wavelength [{0}]'.format(waveunit))
 
     # Remove x-axis ticks on the upper panels.
     plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)

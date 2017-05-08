@@ -409,4 +409,6 @@ class Camera(object):
     def output_wavelength(self):
         """Output pixel central wavelengths.
         """
+        if not self.allow_convolution:
+            raise RuntimeError('Camera created with allow_convolution False.')
         return self._output_wavelength * self._wavelength_unit

@@ -5,6 +5,7 @@
 - Add support for simulating calibration exposures (#54).
 - Add wavelength min/max options to Simulator.plot().
 - Better support for alternate simulation wavelength grids (PR #60).
+- Add Simulator option to not create and fill per-camera output tables (PR #67).
 
 0.8 (2017-03-25)
 ----------------

@@ -61,3 +61,17 @@ def test_output_pixel_size():
     config.wavelength[10] += 0.001 * u.Angstrom
     with pytest.raises(RuntimeError):
         specsim.simulator.Simulator(config)
+
+
+def test_allow_convolution():
+    c = specsim.config.load_config('test')
+    i = specsim.instrument.initialize(c, camera_output=False)
+    camera = i.cameras[0]
+    with pytest.raises(RuntimeError):
+        camera.get_output_resolution_matrix()
+    with pytest.raises(RuntimeError):
+        camera.downsample(None)
+    with pytest.raises(RuntimeError):
+        camera.apply_resolution(None)
+    with pytest.raises(RuntimeError):
+        s = camera.output_pixel_size

@@ -569,7 +569,7 @@ class Instrument(object):
         ax2.set_xlim(wave[0], wave[-1])
 
 
-def initialize(config):
+def initialize(config, camera_output=True):
     """Initialize the instrument model from configuration parameters.
 
     This method is responsible for creating a new :class:`Instrument` as
@@ -579,6 +579,9 @@ def initialize(config):
     ----------
     config : :class:`specsim.config.Configuration`
         The configuration parameters to use.
+    camera_output : bool
+        Initialize support for resolution convolution and downsampling for
+        each camera when True.
 
     Returns
     -------
@@ -603,7 +606,8 @@ def initialize(config):
             ccd['row_size'], ccd['fwhm_resolution'],
             ccd['neff_spatial'], constants['read_noise'],
             constants['dark_current'], constants['gain'],
-            constants['num_sigmas_clip'], constants['output_pixel_size']))
+            constants['num_sigmas_clip'], constants['output_pixel_size'],
+            allow_convolution=camera_output))
 
     constants = config.get_constants(
         config.instrument,

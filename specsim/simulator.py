@@ -53,8 +53,14 @@ class Simulator(object):
         A configuration object or configuration name.
     num_fibers : int
         Number of fibers to simulate.
+    camera_output : bool
+        Include per-camera output tables in simulation results when True.
+        Setting this parameter to False will save memory and time when
+        per-camera outputs are not needed.
+    verbose : bool
+        Print information about the simulation progress.
     """
-    def __init__(self, config, num_fibers=2, verbose=False):
+    def __init__(self, config, num_fibers=2, camera_output=True, verbose=False):
 
         if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
@@ -63,7 +69,7 @@ class Simulator(object):
 
         # Initalize our component models.
         self.atmosphere = specsim.atmosphere.initialize(config)
-        self.instrument = specsim.instrument.initialize(config)
+        self.instrument = specsim.instrument.initialize(config, camera_output)
         self.source = specsim.source.initialize(config)
         self.observation = specsim.observation.initialize(config)
 
@@ -139,13 +145,11 @@ class Simulator(object):
                 **column_args))
             self._camera_output.append(table)
 
-
     @property
     def num_fibers(self):
         """Number of fibers being simulated.
         """
         return self._num_fibers
-
 
     @property
     def simulated(self):
@@ -158,7 +162,6 @@ class Simulator(object):
         """
         return self._simulated
 
-
     @property
     def camera_output(self):
         """list: List of per-camera simulation output tables.
@@ -169,7 +172,6 @@ class Simulator(object):
         of the contents of each table in this list.
         """
         return self._camera_output
-
 
     def simulate(self, sky_positions=None, focal_positions=None,
                  fiber_acceptance_fraction=None,
@@ -509,7 +511,6 @@ class Simulator(object):
             # Zero our random noise realization column.
             output['random_noise_electrons'][:] = 0.
 
-
     def generate_random_noise(self, random_state=None):
         """Generate a random noise realization for the most recent simulation.
 
@@ -545,7 +546,6 @@ class Simulator(object):
                 random_state.poisson(mean_electrons) - mean_electrons +
                 random_state.normal(scale=output['read_noise_electrons']))
 
-
     def save(self, filename, clobber=True):
         """Save results of the last simulation to a FITS file.
 
@@ -574,7 +574,6 @@ class Simulator(object):
         # Write the file.
         hdus.writeto(filename, clobber=clobber)
         hdus.close()
-
 
     def plot(self, fiber=0, wavelength_min=None, wavelength_max=None,
              title=None, min_electrons=2.5):

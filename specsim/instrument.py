@@ -32,10 +32,12 @@ class Instrument(object):
     """Model the instrument response of a fiber spectrograph.
 
     A spectrograph can have multiple :mod:`cameras <specsim.camera>` with
-    different wavelength coverages.
+    different wavelength coverages. Objects representing each camera are
+    contained in a list accessible from our ``cameras`` attribute, which will
+    be in order of increasing effective wavelength.
 
     No instrument attributes can be changed after an instrument has been
-    created. File a github issue if you would like to change this.
+    created. Create a github issue if you would like to change this.
 
     Parameters
     ----------

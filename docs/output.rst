@@ -57,6 +57,12 @@ column has shape (nwlen) and the remaining columns all have shape
 | ``read_noise_electrons_*`` | RMS read noise in electrons for the CCD        |
 +----------------------------+------------------------------------------------+
 
+Note that the ``num_source_electrons_*`` and ``num_sky_electrons_*`` arrays are
+normally convolved with the appropriate camera resolution, but this convolution
+is not performed by a :class:`specsim.simulator.Simulator` initialized using the
+option ``camera_output = False``.  This can be useful when specsim is
+being used to calculate inputs to a more detailed pixel-level simulation.
+
 Camera Output Tables
 --------------------
 
@@ -65,6 +71,10 @@ The table below defines the columns of each table listed in
 The initial ``wavelength``
 column has shape (nwlen_out) and the remaining columns all have shape
 (nwlen_out, nfibers).
+
+These tables can require a lot of memory so, if they are not needed,
+initialize your :class:`specsim.simulator.Simulator` using the option
+``camera_output = False`` to save space and speed up simulations.
 
 +----------------------------+------------------------------------------------+
 | Column Name                | Description                                    |

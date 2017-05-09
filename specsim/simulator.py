@@ -53,8 +53,17 @@ class Simulator(object):
         A configuration object or configuration name.
     num_fibers : int
         Number of fibers to simulate.
+    camera_output : bool
+        Include per-camera output tables in simulation results when True.
+        When this is False, our ``camera_output`` attribute will return an
+        empty list and the ``num_source_electrons_*`` columns in our
+        ``simulated`` table will not be resolution convolved.
+        Setting this parameter to False will save memory and time when
+        per-camera outputs are not needed.
+    verbose : bool
+        Print information about the simulation progress.
     """
-    def __init__(self, config, num_fibers=2, verbose=False):
+    def __init__(self, config, num_fibers=2, camera_output=True, verbose=False):
 
         if specsim.config.is_string(config):
             config = specsim.config.load_config(config)
@@ -63,7 +72,7 @@ class Simulator(object):
 
         # Initalize our component models.
         self.atmosphere = specsim.atmosphere.initialize(config)
-        self.instrument = specsim.instrument.initialize(config)
+        self.instrument = specsim.instrument.initialize(config, camera_output)
         self.source = specsim.source.initialize(config)
         self.observation = specsim.observation.initialize(config)
 
@@ -107,45 +116,59 @@ class Simulator(object):
             self._simulated.add_column(astropy.table.Column(
                 name='read_noise_electrons_{0}'.format(name), **column_args))
 
-        # Initialize each camera's table of results downsampled to
-        # output pixels.
-        self._camera_output = []
-        for camera in self.instrument.cameras:
-            meta = dict(
-                name=camera.name, num_fibers=self.num_fibers,
-                pixel_size=camera.output_pixel_size)
-            table = astropy.table.Table(meta=meta)
-            column_args['length'] = len(camera.output_wavelength)
-            table.add_column(astropy.table.Column(
-                name='wavelength', data=camera.output_wavelength))
-            table.add_column(astropy.table.Column(
-                name='num_source_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='num_sky_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='num_dark_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='read_noise_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='random_noise_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='variance_electrons', **column_args))
-            table.add_column(astropy.table.Column(
-                name='flux_calibration', **column_args))
-            table.add_column(astropy.table.Column(
-                name='observed_flux', unit=flux_unit, **column_args))
-            table.add_column(astropy.table.Column(
-                name='flux_inverse_variance', unit=flux_unit ** -2,
-                **column_args))
-            self._camera_output.append(table)
+        # Count the number of bytes used in the simulated table.
+        self.table_bytes = 0
+        for name in self._simulated.colnames:
+            d = self._simulated[name].data
+            self.table_bytes += np.prod(d.shape) * d.dtype.itemsize
 
+        # Initialize each camera's table of results downsampled to
+        # output pixels, if requested.
+        self._camera_output = []
+        if camera_output:
+            for camera in self.instrument.cameras:
+                meta = dict(
+                    name=camera.name, num_fibers=self.num_fibers,
+                    pixel_size=camera.output_pixel_size)
+                table = astropy.table.Table(meta=meta)
+                column_args['length'] = len(camera.output_wavelength)
+                table.add_column(astropy.table.Column(
+                    name='wavelength', data=camera.output_wavelength))
+                table.add_column(astropy.table.Column(
+                    name='num_source_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='num_sky_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='num_dark_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='read_noise_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='random_noise_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='variance_electrons', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='flux_calibration', **column_args))
+                table.add_column(astropy.table.Column(
+                    name='observed_flux', unit=flux_unit, **column_args))
+                table.add_column(astropy.table.Column(
+                    name='flux_inverse_variance', unit=flux_unit ** -2,
+                    **column_args))
+                # Add bytes used in this table to our running total.
+                for name in table.colnames:
+                    d = table[name].data
+                    self.table_bytes += np.prod(d.shape) * d.dtype.itemsize
+
+                self._camera_output.append(table)
+
+        if self.verbose:
+            print('Allocated {0:.1f}Mb of table data.'
+                  .format(self.table_bytes / (2. ** 20)))
 
     @property
     def num_fibers(self):
         """Number of fibers being simulated.
         """
         return self._num_fibers
-
 
     @property
     def simulated(self):
@@ -158,7 +181,6 @@ class Simulator(object):
         """
         return self._simulated
 
-
     @property
     def camera_output(self):
         """list: List of per-camera simulation output tables.
@@ -167,9 +189,11 @@ class Simulator(object):
         using the output pixels defined for each camera.  Tables are overwritten
         during each call to :meth:`simulate`.  See :doc:`/output` for details
         of the contents of each table in this list.
+
+        Returns an empty list if this Simulator was initialized with
+        ``camera_output`` False.
         """
         return self._camera_output
-
 
     def simulate(self, sky_positions=None, focal_positions=None,
                  fiber_acceptance_fraction=None,
@@ -204,6 +228,9 @@ class Simulator(object):
         ``calibration_surface_brightness`` values to use.  In this case,
         the source and fiberloss inputs are ignored, and no atmospheric
         emission or extinction are applied.
+
+        Per-camera output tables will not be filled if this Simulator was
+        initialized with ``camera_output`` False.
 
         Parameters
         ----------
@@ -446,7 +473,43 @@ class Simulator(object):
             self.observation.exposure_time
             ).to(1).value
 
-        # Loop over cameras to calculate their individual responses.
+        # Calculate the high-resolution inputs to each camera.
+        for camera in self.instrument.cameras:
+            # Get references to this camera's columns.
+            num_source_electrons = self.simulated[
+                'num_source_electrons_{0}'.format(camera.name)]
+            num_sky_electrons = self.simulated[
+                'num_sky_electrons_{0}'.format(camera.name)]
+            num_dark_electrons = self.simulated[
+                'num_dark_electrons_{0}'.format(camera.name)]
+            read_noise_electrons = self.simulated[
+                'read_noise_electrons_{0}'.format(camera.name)]
+
+            # Calculate the mean number of source electrons detected in the CCD
+            # without any resolution applied.
+            num_source_electrons[:] = (
+                num_source_photons * camera.throughput[:, np.newaxis])
+
+            # Calculate the mean number of sky electrons detected in the CCD
+            # without any resolution applied.
+            num_sky_electrons[:] = (
+                num_sky_photons * camera.throughput[:, np.newaxis])
+
+            # Calculate the mean number of dark current electrons in the CCD.
+            num_dark_electrons[:] = (
+                camera.dark_current_per_bin[:, np.newaxis] *
+                self.observation.exposure_time).to(u.electron).value
+
+            # Copy the read noise in units of electrons.
+            read_noise_electrons[:] = (
+                camera.read_noise_per_bin[:, np.newaxis].to(u.electron).value)
+
+        if not self.camera_output:
+            # All done since no camera output was requested.
+            return
+
+        # Loop over cameras to calculate their individual responses
+        # with resolution applied and downsampling to output pixels.
         for output, camera in zip(self.camera_output, self.instrument.cameras):
 
             # Get references to this camera's columns.
@@ -459,22 +522,12 @@ class Simulator(object):
             read_noise_electrons = self.simulated[
                 'read_noise_electrons_{0}'.format(camera.name)]
 
-            # Calculate the mean number of source electrons detected in the CCD.
+            # Apply resolution to the source and sky detected electrons on
+            # the high-resolution grid.
             num_source_electrons[:] = camera.apply_resolution(
-                num_source_photons.T * camera.throughput).T
-
-            # Calculate the mean number of sky electrons detected in the CCD.
+                num_source_electrons.T).T
             num_sky_electrons[:] = camera.apply_resolution(
-                num_sky_photons.T * camera.throughput).T
-
-            # Calculate the mean number of dark current electrons in the CCD.
-            num_dark_electrons[:] = (
-                camera.dark_current_per_bin[:, np.newaxis] *
-                self.observation.exposure_time).to(u.electron).value
-
-            # Copy the read noise in units of electrons.
-            read_noise_electrons[:] = (
-                camera.read_noise_per_bin[:, np.newaxis].to(u.electron).value)
+                num_sky_electrons.T).T
 
             # Calculate the corresponding downsampled output quantities.
             output['num_source_electrons'][:] = (
@@ -509,7 +562,6 @@ class Simulator(object):
             # Zero our random noise realization column.
             output['random_noise_electrons'][:] = 0.
 
-
     def generate_random_noise(self, random_state=None):
         """Generate a random noise realization for the most recent simulation.
 
@@ -534,6 +586,9 @@ class Simulator(object):
             realizations. A new state will be created with a randomized seed
             if None is specified.
         """
+        if not self.camera_output:
+            raise RuntimeError('Simulator initialized with no camera output.')
+
         if random_state is None:
             random_state = np.random.RandomState()
 
@@ -544,7 +599,6 @@ class Simulator(object):
             output['random_noise_electrons'] = (
                 random_state.poisson(mean_electrons) - mean_electrons +
                 random_state.normal(scale=output['read_noise_electrons']))
-
 
     def save(self, filename, clobber=True):
         """Save results of the last simulation to a FITS file.
@@ -574,7 +628,6 @@ class Simulator(object):
         # Write the file.
         hdus.writeto(filename, clobber=clobber)
         hdus.close()
-
 
     def plot(self, fiber=0, wavelength_min=None, wavelength_max=None,
              title=None, min_electrons=2.5):
@@ -777,21 +830,23 @@ def plot_simulation(simulated, camera_output, fiber=0, wavelength_min=None,
         ax3.scatter(cwave, total_noise, color='k', lw=0., s=0.5, alpha=0.5)
         line2, = ax3.plot(cwave, read_noise, color='k', ls='--', alpha=0.5)
 
-    # This kludge is because the label arg to fill_between() does not
-    # propagate to legend() in matplotlib < 1.5.
-    line1, = ax3.plot([], [], 'k-')
-    dark_fill = Rectangle((0, 0), 1, 1, fc='k', alpha=0.2)
-    ax3.legend(
-        (sky_fill, src_fill, dark_fill, line1, line2),
-        ('Sky detected', 'Source detected', 'Dark current',
-         'RMS total noise', 'RMS read noise'),
-        loc='best', fancybox=True, framealpha=0.5, ncol=5, fontsize=label_size)
+    if camera_output:
+        # This kludge is because the label arg to fill_between() does not
+        # propagate to legend() in matplotlib < 1.5.
+        line1, = ax3.plot([], [], 'k-')
+        dark_fill = Rectangle((0, 0), 1, 1, fc='k', alpha=0.2)
+        ax3.legend(
+            (sky_fill, src_fill, dark_fill, line1, line2),
+            ('Sky detected', 'Source detected', 'Dark current',
+             'RMS total noise', 'RMS read noise'),
+            loc='best', fancybox=True, framealpha=0.5, ncol=5,
+            fontsize=label_size)
 
-    ax3.set_ylim(min_electrons, 2e2 * min_electrons)
-    ax3.set_yscale('log')
-    ax3.set_ylabel('Mean electrons / {0}'.format(waveunit))
-    ax3.set_xlim(wave[0], wave[-1])
-    ax3.set_xlabel('Wavelength [{0}]'.format(waveunit))
+        ax3.set_ylim(min_electrons, 2e2 * min_electrons)
+        ax3.set_yscale('log')
+        ax3.set_ylabel('Mean electrons / {0}'.format(waveunit))
+        ax3.set_xlim(wave[0], wave[-1])
+        ax3.set_xlabel('Wavelength [{0}]'.format(waveunit))
 
     # Remove x-axis ticks on the upper panels.
     plt.setp([a.get_xticklabels() for a in fig.axes[:-1]], visible=False)

@@ -64,10 +64,15 @@ class Camera(object):
         Size of output pixels for this camera.  Units are required, e.g.
         Angstrom. Must be a multiple of the the spacing of the wavelength
         input parameter.
+    allow_convolution : bool
+        Set True to precompute the sparse resolution matrix needed by
+        :meth:`get_output_resolution_matrix`, :meth:`apply_resolution` and
+        :meth:`downsample`.
     """
     def __init__(self, name, wavelength, throughput, row_size,
                  fwhm_resolution, neff_spatial, read_noise, dark_current,
-                 gain, num_sigmas_clip, output_pixel_size):
+                 gain, num_sigmas_clip, output_pixel_size,
+                 allow_convolution=True):
         self.name = name
         self._wavelength = wavelength.to(self._wavelength_unit).value
         self.throughput = throughput
@@ -78,6 +83,7 @@ class Camera(object):
         self.dark_current = dark_current
         self.gain = gain
         self.num_sigmas_clip = num_sigmas_clip
+        self.allow_convolution = allow_convolution
 
         # The arrays defining the CCD properties must all have identical
         # wavelength coverage.
@@ -175,6 +181,11 @@ class Camera(object):
         column_size = column_stop - column_start
         assert np.all(column_size > 0)
 
+        # The remaining steps are only necessary to support convolution
+        # and downsampling.
+        if not self.allow_convolution:
+            return
+
         # Prepare start, stop values for slicing eval -> column.
         trim_start = column_start - eval_start
         trim_stop = column_stop - eval_start
@@ -251,7 +262,6 @@ class Camera(object):
             self.ccd_slice.start + num_downsampled * self._downsampling)
         self._downsampled_shape = (num_downsampled, self._downsampling)
 
-
     def get_output_resolution_matrix(self):
         """Return the output resolution matrix in DIA sparse format.
 
@@ -272,6 +282,8 @@ class Camera(object):
             Square array of resolution matrix elements in the DIA
             sparse format.
         """
+        if not self.allow_convolution:
+            raise RuntimeError('Camera created with allow_convolution False.')
         n = len(self._output_wavelength)
         m = self._downsampling
         i0 = self.ccd_slice.start - self.response_slice.start
@@ -320,10 +332,11 @@ class Camera(object):
         # Convert to DIA format and return.
         return R.todia()
 
-
     def downsample(self, data, method=np.sum):
         """Downsample data tabulated on the simulation grid to output pixels.
         """
+        if not self.allow_convolution:
+            raise RuntimeError('Camera created with allow_convolution False.')
         data = np.asanyarray(data)
         if data.shape[-1] != len(self._wavelength):
             raise ValueError(
@@ -333,13 +346,14 @@ class Camera(object):
         new_shape = output.shape[:-1] + self._downsampled_shape
         return method(output.reshape(new_shape), axis=-1)
 
-
     def apply_resolution(self, flux):
         """
         Input should be on the simulation wavelength grid.
 
         Any throughput should already be applied.
         """
+        if not self.allow_convolution:
+            raise RuntimeError('Camera created with allow_convolution False.')
         flux = np.asarray(flux)
         dispersed = np.zeros_like(flux)
 
@@ -348,10 +362,8 @@ class Camera(object):
 
         return dispersed
 
-
     # Canonical wavelength unit used for all internal arrays.
     _wavelength_unit = u.Angstrom
-
 
     @property
     def wavelength_min(self):
@@ -359,13 +371,11 @@ class Camera(object):
         """
         return self._wavelength_min * self._wavelength_unit
 
-
     @property
     def wavelength_max(self):
         """Maximum wavelength covered by this camera's CCD.
         """
         return self._wavelength_max * self._wavelength_unit
-
 
     @property
     def rms_resolution(self):
@@ -373,13 +383,11 @@ class Camera(object):
         """
         return self._rms_resolution * self._wavelength_unit
 
-
     @property
     def row_size(self):
         """Array of row sizes in the dispersion direction.
         """
         return self._row_size * self._wavelength_unit / u.pixel
-
 
     @property
     def neff_spatial(self):
@@ -387,18 +395,20 @@ class Camera(object):
         """
         return self._neff_spatial * u.pixel
 
-
     @property
     def output_pixel_size(self):
         """Size of output pixels.
 
         Must be a multiple of the simulation wavelength grid.
         """
+        if not self.allow_convolution:
+            raise RuntimeError('Camera created with allow_convolution False.')
         return self._output_pixel_size * self._wavelength_unit
-
 
     @property
     def output_wavelength(self):
         """Output pixel central wavelengths.
         """
+        if not self.allow_convolution:
+            raise RuntimeError('Camera created with allow_convolution False.')
         return self._output_wavelength * self._wavelength_unit

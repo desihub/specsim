@@ -92,7 +92,7 @@ def main(args=None):
 
     # Initialize the simulator.
     try:
-        simulator = specsim.simulator.Simulator(config)
+        simulator = specsim.simulator.Simulator(config, verbose=args.verbose)
     except RuntimeError as e:
         print(e)
         return -1

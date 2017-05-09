@@ -116,6 +116,12 @@ class Simulator(object):
             self._simulated.add_column(astropy.table.Column(
                 name='read_noise_electrons_{0}'.format(name), **column_args))
 
+        # Count the number of bytes used in the simulated table.
+        self.table_bytes = 0
+        for name in self._simulated.colnames:
+            d = self._simulated[name].data
+            self.table_bytes += np.prod(d.shape) * d.dtype.itemsize
+
         # Initialize each camera's table of results downsampled to
         # output pixels, if requested.
         self._camera_output = []
@@ -147,7 +153,16 @@ class Simulator(object):
                 table.add_column(astropy.table.Column(
                     name='flux_inverse_variance', unit=flux_unit ** -2,
                     **column_args))
+                # Add bytes used in this table to our running total.
+                for name in table.colnames:
+                    d = table[name].data
+                    self.table_bytes += np.prod(d.shape) * d.dtype.itemsize
+
                 self._camera_output.append(table)
+
+        if self.verbose:
+            print('Allocated {0:.1f}Mb of table data.'
+                  .format(self.table_bytes / (2. ** 20)))
 
     @property
     def num_fibers(self):

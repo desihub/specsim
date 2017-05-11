@@ -1,4 +1,4 @@
-0.9 (unreleased)
+0.9 (2017-05-11)
 ----------------
 
 - Fix Simulator output table units with astropy 1.3.2 (#62).

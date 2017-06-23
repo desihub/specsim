@@ -33,13 +33,17 @@ class GalsimFiberlossCalculator(object):
         Beta parameter value for the atmospheric PSF Moffat profile.
     maximum_fft_size : int
         Maximum size of FFT allowed.
+    fiber_placement: float
+        Fiber placement position in microns. It is needed for dithering
     """
     def __init__(self, fiber_diameter, wlen_grid, num_pixels=16,
-                 oversampling=32, moffat_beta=3.5, maximum_fft_size=32767):
+                 oversampling=32, moffat_beta=3.5, maximum_fft_size=32767,
+                 fiber_placement=[0., 0.]):
 
         self.wlen_grid = np.asarray(wlen_grid)
         self.moffat_beta = moffat_beta
-
+        self.fiber_placement = fiber_placement
+        
         # Defer import to runtime.
         import galsim
 
@@ -48,20 +52,23 @@ class GalsimFiberlossCalculator(object):
         # rather than on-sky angles.
         scale = fiber_diameter / num_pixels
         self.image = galsim.Image(num_pixels, num_pixels, scale=scale)
-
         self.gsparams = galsim.GSParams(maximum_fft_size=32767)
 
         # Prepare an anti-aliased image of the fiber aperture.
         nos = num_pixels * oversampling
-        dxy = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos)
-        rsq = dxy ** 2 + dxy[:, np.newaxis] ** 2
+
+        #dxy = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos)
+        dx = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos) - self.fiber_placement[0]/0.5/fiber_diameter
+        dy = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos) - self.fiber_placement[1]/0.5/fiber_diameter
+        
+        #rsq = dxy ** 2 + dxy[:, np.newaxis] ** 2
+        rsq = dx ** 2 + dy[:, np.newaxis] ** 2
         inside = (rsq <= 1).astype(float)
         s0, s1 = inside.strides
         blocks = numpy.lib.stride_tricks.as_strided(
             inside, shape=(num_pixels, num_pixels, oversampling, oversampling),
             strides=(oversampling * s0, oversampling * s1, s0, s1))
         self.aperture = blocks.sum(axis=(2, 3)) / oversampling ** 2
-
 
     def create_source(self, fractions, half_light_radius,
                       minor_major_axis_ratio, position_angle):

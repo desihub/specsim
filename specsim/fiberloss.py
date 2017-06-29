@@ -33,7 +33,7 @@ class GalsimFiberlossCalculator(object):
         Beta parameter value for the atmospheric PSF Moffat profile.
     maximum_fft_size : int
         Maximum size of FFT allowed.
-    fiber_placement: float
+    fiber_placement: array
         Fiber placement position in microns. It is needed for dithering
     """
     def __init__(self, fiber_diameter, wlen_grid, num_pixels=16,
@@ -248,7 +248,7 @@ class GalsimFiberlossCalculator(object):
                 convolved.drawImage(offset=offsets, **draw_args)
                 # Calculate the fiberloss fraction for this fiber and wlen.
                 fiberloss[j, i] = np.sum(self.image.array * self.aperture)
-
+                
                 if saved_images_file is not None:
                     header['FIBER'] = j
                     header['WLEN'] = wlen
@@ -267,6 +267,7 @@ class GalsimFiberlossCalculator(object):
                     header['COMMENT'] = 'Atmospheric seeing model'
                     hdu_list.append(astropy.io.fits.ImageHDU(
                         data=self.image.array.copy(), header=header))
+                    
                     if wlen == self.wlen_grid[-1]:
                         # Render the source profile without any offset after
                         # all other postage stamps for this fiber.
@@ -287,7 +288,8 @@ def calculate_fiber_acceptance_fraction(
     focal_x, focal_y, wavelength, source, atmosphere, instrument,
     source_types=None, source_fraction=None, source_half_light_radius=None,
     source_minor_major_axis_ratio=None, source_position_angle=None,
-    oversampling=32, saved_images_file=None, saved_table_file=None):
+    oversampling=32, saved_images_file=None, saved_table_file=None,
+    fiber_placement=[0., 0.]):
     """Calculate the acceptance fraction for a single fiber.
 
     The behavior of this function is customized by the instrument.fiberloss
@@ -352,7 +354,9 @@ def calculate_fiber_acceptance_fraction(
         extension determines the file format, and .ecsv is recommended.
         The saved file can then be used as a pre-tabulated input with
         instrument.fiberloss.method = 'table'.
-
+    fiber_placement: array
+        Fiber placement position in microns. It is needed for dithering
+    
     Returns
     -------
     numpy array
@@ -391,7 +395,8 @@ def calculate_fiber_acceptance_fraction(
         wlen_grid.to(u.Angstrom).value,
         instrument.fiberloss_num_pixels,
         oversampling,
-        atmosphere.seeing_moffat_beta)
+        atmosphere.seeing_moffat_beta,
+        fiber_placement=fiber_placement)
 
     # Calculate the focal-plane optics at the fiber locations.
     scale, blur, offset = instrument.get_focal_plane_optics(

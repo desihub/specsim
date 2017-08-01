@@ -310,7 +310,7 @@ def create_observing_model(where, when, wavelength, temperature=15*u.deg_C,
     # See https://en.wikipedia.org/wiki/Vertical_pressure_variation
     if pressure is None:
         h = where.height
-        p0 = astropy.constants.atmosphere
+        p0 = astropy.constants.atm
         g0 = astropy.constants.g0
         R = astropy.constants.R
         air_molar_mass = 0.0289644 * u.kg / u.mol

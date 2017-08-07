@@ -1,6 +1,8 @@
 0.10 (unreleased)
 -----------------
-- No changes yet.
+- Handle non-backwards compatible changes to astropy.constants in astropy 2.0.
+- Handle deprecated longitude, latitude attributes for astropy >= 2.0.
+- Remove tests against python 3.3 (3.4-3.6 are still tested).
 
 0.9 (2017-05-11)
 ----------------

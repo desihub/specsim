@@ -366,15 +366,14 @@ class Instrument(object):
         offset = np.empty((n_xy, n_wlen, 2))
 
         # Convert x, y offsets in length units to field angles.
-        angle_x = (np.sign(focal_x_mm) *
-                   self.field_radius_to_angle(np.abs(focal_x)))
-        angle_y = (np.sign(focal_y_mm) *
-                   self.field_radius_to_angle(np.abs(focal_y)))
-
-        # Calculate radial offsets from the field center.
-        focal_r = np.sqrt(focal_x_mm ** 2 + focal_y_mm ** 2) * u.mm
-        angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
-
+        focal_r = np.sqrt(focal_x**2+focal_y**2)
+        angle_r = self.field_radius_to_angle(focal_r)
+        angle_x = np.zeros(focal_x.shape) * angle_r.unit
+        angle_y = np.zeros(focal_y.shape) * angle_r.unit
+        positive_radius = focal_r>0
+        angle_x[positive_radius] = (angle_r[positive_radius]/focal_r[positive_radius])*focal_x[positive_radius]
+        angle_y[positive_radius] = (angle_r[positive_radius]/focal_r[positive_radius])*focal_y[positive_radius]
+        
         # Calculate the radial and azimuthal plate scales at each location.
         scale[:, 0] = self.radial_scale(focal_r).to(u.um / u.arcsec).value
         scale[:, 1] = self.azimuthal_scale(focal_r).to(u.um / u.arcsec).value

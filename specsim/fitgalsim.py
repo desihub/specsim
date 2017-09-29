@@ -100,9 +100,9 @@ def generate_sources(nsrc, disk_fraction, bulge_fraction, seed , vary=""):
 ########################################################################"
 seed=0
 desi    = specsim.simulator.Simulator('desi') # the only one in package anyway ...
-wave    = np.linspace(3550.,10000,4) # Angstrom
+wave    = np.linspace(3550.,10000,8) # Angstrom
 sources = ["POINT","DISK","BULGE"]
-nfibers = 5000 # random positions in focal plane (and possibly random source orientation)
+nfibers = 20000 # random positions in focal plane (and possibly random source orientation)
 half_light_radii  = np.linspace(0.45,1.,3.) # half light radius in arcsec for disk=exponential and bulge=devaucouleurs profiles
 total_seeing_fwhm = np.linspace(1.,2.,3)  # FWHM in arcsec atmosphere + Mayall blur
 ########################################################################

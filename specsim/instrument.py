@@ -660,6 +660,8 @@ def initialize(config, camera_output=True):
         fiber_acceptance_dict = None
     if hasattr(config.instrument.fiberloss, 'fast_fiber_acceptance_path'):        
         filename = os.path.join(config.abs_base_path,config.instrument.fiberloss.fast_fiber_acceptance_path)
+        if not os.path.isfile(filename) :
+            raise RuntimeError('Cannot find file {}. May need to update desimodel svn ?'.format(filename))
         fast_fiber_acceptance = FastFiberAcceptance(filename)
     else:
         fast_fiber_acceptance = None

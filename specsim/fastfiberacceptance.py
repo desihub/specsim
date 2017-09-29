@@ -32,7 +32,17 @@ class FastFiberAcceptance(object):
     
     def rms(self,source,sigmas,offsets,hlradii=None) :
         """
-        Returns the uncertainty or rms of fiber acceptance for the given source,sigmas,offsets
+        returns fiber acceptance fraction rms for the given source,sigmas,offsets
+        
+        Args:
+            source (string) : POINT, DISK or BULGE for point source, exponential profile or Devaucouleurs profile
+            sigmas (np.array) : arbitrary shape, values of sigmas in um for the PSF due to atmosphere and telescope blur
+            offsets (np.array) : same shape as sigmas, values of offsets on focal surface between fiber and source, in um
+        
+        Optional:
+            hlradii (np.array) : same shape as sigmas, half light radius in arcsec for source
+
+        Returns np.array with same shape as input
         """
 
         assert(sigmas.shape==offsets.shape)
@@ -56,7 +66,17 @@ class FastFiberAcceptance(object):
     
     def value(self,source,sigmas,offsets,hlradii=None) :
         """
-        Returns the fiber acceptance for the given source,sigmas,offsets
+        returns the fiber acceptance for the given source,sigmas,offsets
+        
+        Args:
+            source (string) : POINT, DISK or BULGE for point source, exponential profile or Devaucouleurs profile
+            sigmas (np.array) : arbitrary shape, values of sigmas in um for the PSF due to atmosphere and telescope blur
+            offsets (np.array) : same shape as sigmas, values of offsets on focal surface between fiber and source, in um
+        
+        Optional:
+            hlradii (np.array) : same shape as sigmas, half light radius in arcsec for source
+
+        Returns np.array with same shape as input
         """
         
         assert(sigmas.shape==offsets.shape)

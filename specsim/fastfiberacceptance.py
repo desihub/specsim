@@ -30,13 +30,20 @@ class FastFiberAcceptance(object):
 
         hdulist.close()
     
-    def rms(self,source,sigmas,offsets,hlradii=None,random_variations=False, random_state=None) :
+    def rms(self,source,sigmas,offsets,hlradii=None) :
         """
         Returns the uncertainty or rms of fiber acceptance for the given source,sigmas,offsets
         """
-        if source == "POINT" :
+
+        assert(sigmas.shape==offsets.shape)
+        if hlradii is not None :
+            assert(hlradii.shape==offsets.shape)
         
-            return self.fiber_acceptance_rms_func[source](np.array([sigmas,offsets]).T)
+        original_shape = sigmas.shape
+
+        if source == "POINT" :
+            
+            return self.fiber_acceptance_rms_func[source](np.array([sigmas.ravel(),offsets.ravel()]).T).reshape(original_shape)
         
         else :
             
@@ -45,16 +52,22 @@ class FastFiberAcceptance(object):
                     hlradii = 0.45 * np.ones(sigmas.shape)
                 elif source == "BULGE" :
                     hlradii = 1. * np.ones(sigmas.shape)
-            return self.fiber_acceptance_rms_func[source](np.array([hlradii,sigmas,offsets]).T)
+            return self.fiber_acceptance_rms_func[source](np.array([hlradii.ravel(),sigmas.ravel(),offsets.ravel()]).T).reshape(original_shape)
     
-    def value(self,source,sigmas,offsets,hlradii=None,random_variations=False, random_state=None) :
+    def value(self,source,sigmas,offsets,hlradii=None) :
         """
         Returns the fiber acceptance for the given source,sigmas,offsets
         """
-        values=None
+        
+        assert(sigmas.shape==offsets.shape)
+        if hlradii is not None :
+            assert(hlradii.shape==offsets.shape)
+        
+        original_shape = sigmas.shape
+
         if source == "POINT" :
 
-            values = self.fiber_acceptance_func[source](np.array([sigmas,offsets]).T)
+            return self.fiber_acceptance_func[source](np.array([sigmas.ravel(),offsets.ravel()]).T).reshape(original_shape)
 
         else :
 
@@ -64,12 +77,6 @@ class FastFiberAcceptance(object):
                 elif source == "BULGE" :
                     hlradii = 1. * np.ones(sigmas.shape)
             
-            values = self.fiber_acceptance_func[source](np.array([hlradii,sigmas,offsets]).T)
+            return self.fiber_acceptance_func[source](np.array([hlradii.ravel(),sigmas.ravel(),offsets.ravel()]).T).reshape(original_shape)
         
-        if random_variations :
-            if random_state is None:
-                random_state = np.random.RandomState()
-            values += random_state.normal(size=values.size) * self.rms(source,sigmas,offsets,hlradii)
-        
-        return values
         

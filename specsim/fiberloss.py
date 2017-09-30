@@ -444,13 +444,10 @@ def calculate_fiber_acceptance_fraction(
         
         fiberloss_grid = np.zeros(sigma.shape)
         if np.sum(point_frac)>0 :
-            print("POINT fiber acceptance with mean frac = ",np.mean(point_frac))
             fiberloss_grid += point_frac * instrument.fast_fiber_acceptance.value("POINT",sigma,delta)
         if np.sum(disk_frac)>0 :
-            print("DISK fiber acceptance with mean frac = ",np.mean(disk_frac))
             fiberloss_grid += disk_frac  * instrument.fast_fiber_acceptance.value("DISK",sigma,delta,disk_half_light_radius)
         if np.sum(bulge_frac)>0 :
-            print("BULGE fiber acceptance with mean frac = ",np.mean(bulge_frac))
             fiberloss_grid += bulge_frac * instrument.fast_fiber_acceptance.value("BULGE",sigma,delta,bulge_half_light_radius)
     
     else :

@@ -51,10 +51,11 @@ class FastFiberAcceptance(object):
         
         original_shape = sigmas.shape
 
+        res = None
         if source == "POINT" :
             
-            return self.fiber_acceptance_rms_func[source](np.array([sigmas.ravel(),offsets.ravel()]).T).reshape(original_shape)
-        
+            res = self.fiber_acceptance_rms_func[source](np.array([sigmas.ravel(),offsets.ravel()]).T)
+                    
         else :
             
             if hlradii is None :
@@ -62,7 +63,11 @@ class FastFiberAcceptance(object):
                     hlradii = 0.45 * np.ones(sigmas.shape)
                 elif source == "BULGE" :
                     hlradii = 1. * np.ones(sigmas.shape)
-            return self.fiber_acceptance_rms_func[source](np.array([hlradii.ravel(),sigmas.ravel(),offsets.ravel()]).T).reshape(original_shape)
+            res = self.fiber_acceptance_rms_func[source](np.array([hlradii.ravel(),sigmas.ravel(),offsets.ravel()]).T)
+        
+        res[res<0] = 0.
+        res[res>1] = 1.
+        return res.reshape(original_shape)
     
     def value(self,source,sigmas,offsets,hlradii=None) :
         """
@@ -84,10 +89,11 @@ class FastFiberAcceptance(object):
             assert(hlradii.shape==offsets.shape)
         
         original_shape = sigmas.shape
-
+        
+        res = None
         if source == "POINT" :
 
-            return self.fiber_acceptance_func[source](np.array([sigmas.ravel(),offsets.ravel()]).T).reshape(original_shape)
+            res = self.fiber_acceptance_func[source](np.array([sigmas.ravel(),offsets.ravel()]).T)
 
         else :
 
@@ -97,6 +103,9 @@ class FastFiberAcceptance(object):
                 elif source == "BULGE" :
                     hlradii = 1. * np.ones(sigmas.shape)
             
-            return self.fiber_acceptance_func[source](np.array([hlradii.ravel(),sigmas.ravel(),offsets.ravel()]).T).reshape(original_shape)
+            res = self.fiber_acceptance_func[source](np.array([hlradii.ravel(),sigmas.ravel(),offsets.ravel()]).T)
         
+        res[res<0] = 0.
+        res[res>1] = 1.
+        return res.reshape(original_shape)
         

@@ -104,7 +104,7 @@ wave    = np.linspace(3550.,10000,8) # Angstrom
 sources = ["POINT","DISK","BULGE"]
 nfibers = 10000 # random positions in focal plane (and possibly random source orientation)
 half_light_radii  = np.linspace(0.3,1.5,5) # half light radius in arcsec for disk=exponential and bulge=devaucouleurs profiles
-total_seeing_fwhm = np.linspace(0.5,3.,5)  # FWHM in arcsec atmosphere + Mayall blur
+total_seeing_fwhm = np.linspace(0.6,3.,5)  # FWHM in arcsec atmosphere + Mayall blur
 ########################################################################
 
 

@@ -73,7 +73,7 @@ The recommended way to obtain and maintain all of these dependencies is to use
 a scientific python distribution such as  `anaconda
 <https://store.continuum.io/cshop/anaconda/>`__
 
-* `numpy <http://www.numpy.org/>`__ (version >= 1.6)
+* `numpy <http://www.numpy.org/>`__ (version >= 1.8)
 * `scipy <http://www.scipy.org/scipylib/index.html>`__
 * `astropy <http://www.astropy.org/>`__
 * `pyyaml <http://pyyaml.org/wiki/PyYAML>`__

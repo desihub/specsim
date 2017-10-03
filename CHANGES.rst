@@ -1,4 +1,4 @@
-0.10 (unreleased)
+0.10 (2017-10-03)
 -----------------
 
 - Update to astropy_helpers v2.0.1 (#79).

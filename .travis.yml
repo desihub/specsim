@@ -79,9 +79,6 @@ matrix:
 
         # Now try Astropy dev and LTS vesions with the latest 3.x and 2.7.
         - os: linux
-          env: PYTHON_VERSION=2.7 ASTROPY_VERSION=development
-               EVENT_TYPE='pull_request push cron'
-        - os: linux
           env: ASTROPY_VERSION=development
                EVENT_TYPE='pull_request push cron'
         - os: linux
@@ -94,8 +91,6 @@ matrix:
         # versions of Python, we can vary Python and Numpy versions at the same
         # time.
 
-        - os: linux
-          env: PYTHON_VERSION=2.7 NUMPY_VERSION=1.7
         - os: linux
           env: PYTHON_VERSION=3.4 NUMPY_VERSION=1.8
         - os: linux

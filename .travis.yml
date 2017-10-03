@@ -32,7 +32,7 @@ env:
         - ASTROPY_VERSION=stable
         - MAIN_CMD='python setup.py'
         - SETUP_CMD='test'
-        - PIP_DEPENDENCIES='speclite'
+        - PIP_DEPENDENCIES='git+https://github.com/bsipocz/speclite.git@update-helpers-v2.0.1'
         - EVENT_TYPE='pull_request push'
 
         # For this package-template, we include examples of Cython modules,

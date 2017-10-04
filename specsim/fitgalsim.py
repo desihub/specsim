@@ -22,66 +22,6 @@ import specsim.simulator
 import specsim.fiberloss
 import scipy.interpolate
 
-def prof2d(x,y,z,nx,ny) :
-    x0=np.min(x)
-    x1=np.max(x)
-    y0=np.min(y)
-    y1=np.max(y)
-    xi=( nx*(x-x0)/(x1-x0) ).astype(int)
-    yi=( ny*(y-y0)/(y1-y0) ).astype(int)
-    ii=xi*ny+yi
-    bins=np.arange(nx*ny+1)-0.5
-    h1,junk=np.histogram(ii,bins=bins)
-    hx,junk=np.histogram(ii,bins=bins,weights=x)
-    hy,junk=np.histogram(ii,bins=bins,weights=y)
-    hz,junk=np.histogram(ii,bins=bins,weights=z)
-    h1=h1.astype(float)
-    hx/=(h1+(h1==0))
-    hy/=(h1+(h1==0))
-    hz/=(h1+(h1==0))
-
-    # fill empty bins with linear fit
-    bx1d=(np.arange(nx)+0.5)*((x1-x0)/nx)+x0
-    by1d=(np.arange(ny)+0.5)*((y1-y0)/ny)+y0
-    bx=(np.tile(bx1d,(ny,1)).T)
-    by=(np.tile(by1d,(nx,1)))
-    bx=bx.ravel()
-    by=by.ravel()
-
-    A=np.zeros((3,3))
-    ok=(h1>0)
-    A[0,0] = np.sum(ok)
-    A[1,0] = A[0,1] = np.sum(hx[ok])
-    A[1,1] = np.sum(hx[ok]**2)
-    A[2,0] = A[0,2] = np.sum(hy[ok])
-    A[2,1] = A[1,2] = np.sum(hx[ok]*hy[ok])
-    A[2,2] = np.sum(hy[ok]**2)
-    B=np.zeros((3))
-    B[0] = np.sum(hz[ok])
-    B[1] = np.sum(hz[ok]*hx[ok])
-    B[2] = np.sum(hz[ok]*hy[ok])
-    Ai = np.linalg.inv(A)
-    C  = Ai.dot(B)
-    bad=(h1==0)
-    hz[bad]=C[0]+C[1]*bx[bad]+C[2]*by[bad]
-
-    hx[bad]=bx[bad]
-    hy[bad]=by[bad]
-    h1[bad] += 0.0001 # so we can do averaging anyway
-    h1=h1.reshape(nx,ny)
-    hx=hx.reshape(nx,ny)
-    hy=hy.reshape(nx,ny)
-    hz=hz.reshape(nx,ny)
-    x1d=np.sum(h1*hx,axis=1)/np.sum(h1,axis=1)
-    y1d=np.sum(h1*hy,axis=0)/np.sum(h1,axis=0)
-
-    return x1d,y1d,hz
-
-def func2d(x1d,y1d,z2d):
-    return scipy.interpolate.RegularGridInterpolator(
-        points=(x1d,y1d),values=z2d,method="linear",
-        bounds_error=False,fill_value=None)
-
 def generate_fiber_positions(nfiber, seed, desi):
     gen = np.random.RandomState(seed)
     focal_r = (
@@ -89,62 +29,63 @@ def generate_fiber_positions(nfiber, seed, desi):
     phi = 2 * np.pi * gen.uniform(size=nfiber)
     return np.cos(phi) * focal_r, np.sin(phi) * focal_r
 
-def generate_sources(nsrc, disk_fraction, bulge_fraction, seed , vary=""):
-    gen = np.random.RandomState(seed)
-    varied = vary.split(',')
-    source_fraction = np.tile([disk_fraction, bulge_fraction], (nsrc, 1))
-    source_half_light_radius = np.tile([0.45, 1.0], (nsrc, 1))
-    source_minor_major_axis_ratio = np.tile([1.0, 1.0], (nsrc, 1))
-    if 'pa' in varied:
-        source_position_angle = 360. * gen.uniform(size=(nsrc, 2))
-    else:
-        source_position_angle = np.tile([30., 30.], (nsrc, 1))
-    return source_fraction, source_half_light_radius, source_minor_major_axis_ratio, source_position_angle
-
-
 def main(args=None):
 
     # parameters
     ########################################################################"
     seed=0
-    desi    = specsim.simulator.Simulator('desi') # the only one in package anyway ...
-    wave    = np.linspace(3550.,10000,8) # Angstrom
+    nsigma=11
+    fwhm_to_sigma = 1./2.35482
+    min_sigma=0.6*fwhm_to_sigma # arcsec
+    max_sigma=3.*fwhm_to_sigma # arcsec
+    noffset=30
+    max_offset=2. # arcsec
+    nrand=12 # randoms
+    half_light_radii  = np.linspace(0.3,2.,20-3+1) # half light radius in arcsec
+    axis_ratio = 0.7 # a fixed axis ratio is used for DISK and BULGE (position angles are random)
     sources = ["POINT","DISK","BULGE"]
-    nfibers = 10000 # random positions in focal plane (and possibly random source orientation)
-    half_light_radii  = np.linspace(0.3,1.5,5) # half light radius in arcsec for disk=exponential and bulge=devaucouleurs profiles
-    total_seeing_fwhm = np.linspace(0.6,3.,5)  # FWHM in arcsec atmosphere + Mayall blur
     ########################################################################
-
-    # optics
-    R=desi.instrument.field_radius.to(u.um).value
-    x,y = generate_fiber_positions(nfibers, seed, desi)
+    
+    print("init simulator")
+    
+    desi    = specsim.simulator.Simulator('desi')
+    wave    = np.linspace(6000.,6001.,nsigma) # Angstrom , wavelength are not used
+    
+    # optics with random fiber positions to get the range of scale and blur
+    x,y = generate_fiber_positions(nrand, seed, desi)
     x=x.to(u.um).value
     y=y.to(u.um).value
-
-    scale, blur, offset = desi.instrument.get_focal_plane_optics(x*u.um, y*u.um, wave*u.angstrom)
+    scale, blur, unused_offset = desi.instrument.get_focal_plane_optics(x*u.um, y*u.um, wave*u.angstrom)
     scale  = scale.to(u.um / u.arcsec).value
-    offset = offset.to(u.um).value
     blur   = blur.to(u.um).value
+    mblur  = np.sqrt(np.mean(blur**2)) # quadratic mean
+    mscale = np.sqrt(np.mean(scale[:,0]*scale[:,1])) # quadratic mean
+    # I ignore the offsets from the random locations
 
-    # offset from fiber to source
-    d2=offset[:,:,0]**2+offset[:,:,1]**2
-    d2=d2.ravel()
-
-    mscale=np.mean(np.sqrt(scale[:,0]*scale[:,1]))
-    print("mean scale  =",mscale,"um/arcsec")
-
+    offset  = np.linspace(0,max_offset,noffset)*mscale # this is the final offset array I will save, um
+    sigma   = np.linspace(min_sigma,max_sigma,nsigma)*mscale # this is the final sigma array I will save, um
+    
+    # random orientations of sources (account for source ellipticity)
+    position_angle_source_deg = 360.*np.random.uniform(size=nrand)
+    
+    # random orientations of offsets (account for plate scale asymetry)
+    theta = 2*np.pi*np.random.uniform(size=nrand)
+    rcos_offset = np.cos(theta)
+    rsin_offset = np.sin(theta)
+    
     # init galsim calculator
     fiber_diameter = desi.instrument.fiber_diameter.to(u.um).value
     calc = specsim.fiberloss.GalsimFiberlossCalculator(fiber_diameter=fiber_diameter,wlen_grid=wave,
                                                        num_pixels=16,oversampling=32,moffat_beta=3.5)
 
     hdulist=None
-
+    
     for source in sources :
-
+        
+        nfibers=noffset
         disk_bulge_fraction    = np.zeros((nfibers,2)) # fraction of disk and bulge
-        minor_major_axis_ratio = 1.*np.ones((nfibers,2)) # minor / major axis ratio , for disk and bulge component, respectively
-        position_angle         = 1.*np.zeros((nfibers,2)) # not used because ellipcity=0
+        minor_major_axis_ratio = axis_ratio*np.ones((nfibers,2)) # minor / major axis ratio , for disk and bulge component, respectively
+        position_angle         = np.zeros((nfibers,2)) # deg
 
         source_half_light_radii = None
 
@@ -157,47 +98,55 @@ def main(args=None):
             disk_bulge_fraction[:,1]=1
             source_half_light_radii=half_light_radii
 
-        zz=[]
-        zzrms=[]
+        mean_loss=[]
+        rms_loss=[]
         for half_light_radius_value in source_half_light_radii :
 
             half_light_radius      = half_light_radius_value * np.ones((nfibers,2))
 
-            dd2=np.array([]) # array of values of offsets**2
-            ss2=np.array([]) # array of values of sigma**2
-            ll=np.array([])  # array of values of fiber loss
-
-            for seeing in total_seeing_fwhm :
-
-                print("computing fiberloss for",source,"hlr=",half_light_radius_value,"arcsec, seeing=",seeing,"arcsec")
-                sys.stdout.flush()
-
-                desi.atmosphere._seeing['fwhm_ref'] = ( 2.35482 * np.sqrt((seeing/2.35482) ** 2 - 0.219**2) )
-                atmospheric_seeing = desi.atmosphere.get_seeing_fwhm(wave*u.angstrom) # adds wavelength dependence
-
-                # compute sky+telescope sigma2
-                s2=np.zeros((offset.shape[0],offset.shape[1]))
-                for i in range(offset.shape[0]) :
-                    s2[i] = ( (atmospheric_seeing/2.35482)**2*scale[i,0]*scale[i,1]+blur[i]**2 )
-                ss2=np.append(ss2,s2.ravel())
-                dd2=np.append(dd2,d2.ravel())
+            print("computing fiberloss for",source,"hlr=",half_light_radius_value,"arcsec")
+            sys.stdout.flush()
+            
+            sloss=np.zeros((noffset,nsigma)) # sum of loss values
+            sloss2=np.zeros((noffset,nsigma)) # sum of loss2 values
+            for r in range(nrand) :
+                blur2=np.mean(blur[r,:]**2) # scalar, mean blur
+                scale2=scale[r,0]*scale[r,1] # scalar ,sigmax*sigmay
+                
+                # we artificially set the seeing array to span the seeing range instead of following
+                # evolution with wavelength
+                #
+                # this is the inverse of (in fiberloss.py) :
+                # sigma[i] = np.sqrt( (seeing_fwhm/2.35482)**2*scale_um_per_arcsec[i,0]*scale_um_per_arcsec[i,1]+blur_um[i]**2 )
+                
+                atmospheric_seeing = np.sqrt((sigma**2 - blur2)/scale2)/fwhm_to_sigma # size nsigma , arcsec, fwhm
+                
+                galsim_scale  = np.zeros((noffset,2))
+                galsim_offset = np.zeros((noffset,nsigma,2))
+                galsim_blur   = np.zeros((noffset,nsigma))
+                galsim_scale[:,0] = scale[r,0] # use actual scale of random locations, radial term
+                galsim_scale[:,1] = scale[r,1] # use actual scale of random locations, tangential term
+                for i in range(noffset) :
+                    galsim_blur[i,:]  = blur[r,:] # same blur as a function of wavelength
+                    galsim_offset[i,:,0] = offset[i]*rcos_offset[r] # apply a random angle to the offset
+                    galsim_offset[i,:,1] = offset[i]*rsin_offset[r] # apply a random angle to the offset
+                position_angle[:,:]  = position_angle_source_deg[r] # degrees 
+                                    
                 # calculate using galsim (that's long)
-                loss = calc.calculate(seeing_fwhm=atmospheric_seeing,scale=scale,offset=offset,blur_rms=blur,
+                loss = calc.calculate(seeing_fwhm=atmospheric_seeing,scale=galsim_scale,
+                                      offset=galsim_offset,blur_rms=galsim_blur,
                                       source_fraction=disk_bulge_fraction,source_half_light_radius=half_light_radius,
                                       source_minor_major_axis_ratio=minor_major_axis_ratio,
                                       source_position_angle=position_angle)
-                ll=np.append(ll,loss.ravel())
-
-            # average the fiberloss as a function of s2 and d2
-            x,y,z=prof2d(ss2,dd2,ll,20,15)
-            x,y,z2=prof2d(ss2,dd2,ll**2,20,15)
-            var=z2-z**2
-            zrms=np.sqrt(var*(var>0))
-            zz.append(z)
-            zzrms.append(zrms)
+            
+                sloss += loss
+                sloss2 += loss**2
+            mloss=sloss/nrand 
+            mean_loss.append( mloss.T )
+            rms_loss.append( np.sqrt(sloss2/nrand-mloss**2).T )
 
         if hdulist is None :
-            hdulist=pyfits.HDUList([pyfits.PrimaryHDU(np.sqrt(x)),pyfits.ImageHDU(np.sqrt(y),name="OFFSET"),pyfits.ImageHDU(half_light_radii,name="HLRAD")])
+            hdulist=pyfits.HDUList([pyfits.PrimaryHDU(sigma),pyfits.ImageHDU(offset,name="OFFSET"),pyfits.ImageHDU(half_light_radii,name="HLRAD")])
             header=hdulist[0].header
             header["EXTNAME"]="SIGMA"
             # add stuff ...
@@ -214,24 +163,21 @@ def main(args=None):
             header.add_comment("galsim DISK profile: exponential")
             header.add_comment("galsim BULGE profile: DeVaucouleurs")
             header["MSCALE"]=(mscale,"plate scale in um/arcsec (use for plots only)")
-            header["NRAND"]=(nfibers,"number of random fiber locations")
+            header["NRAND"]=(nrand,"number of random measurements (to average position angles)")
+            header["AXRATIO"]=(axis_ratio,"axis ratio for extended sources")
             moffat_beta=3.5
             header.add_comment("galsim Atmospheric PSF: Moffat with beta=%2.1f"%moffat_beta)
             header.add_comment("galsim Telescope blur PSF: Gaussian")
-            header.add_comment("computed with seeing from %3.2f to %3.2f arcsec FWHM"%(total_seeing_fwhm[0],total_seeing_fwhm[-1]))
-            header.add_comment("computed with wavelength from %dA to %dA"%(wave[0],wave[-1]))
+            
 
-            hdulist.append(pyfits.ImageHDU(z,name="POINT"))
-            hdulist.append(pyfits.ImageHDU(zrms,name="PRMS"))
-
-        if len(zz)>1 :
-            zz=np.array(zz)
-            zzrms=np.array(zzrms)
+        if len(mean_loss)>1 :
+            mean_loss=np.array(mean_loss)
+            rms_loss=np.array(rms_loss)
         else :
-            zz=zz[0]
-            zzrms=zzrms[0]
-        hdulist.append(pyfits.ImageHDU(zz,name=source))
-        hdulist.append(pyfits.ImageHDU(zzrms,name=source[0]+"RMS"))
+            mean_loss=mean_loss[0]
+            rms_loss=rms_loss[0]
+        hdulist.append(pyfits.ImageHDU(mean_loss,name=source))
+        hdulist.append(pyfits.ImageHDU(rms_loss,name=source[0]+"RMS"))
 
     ofilename="galsim-fiber-acceptance.fits"
     hdulist.writeto(ofilename,overwrite=True)

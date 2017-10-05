@@ -23,6 +23,16 @@ import specsim.fiberloss
 import scipy.interpolate
 
 def generate_fiber_positions(nfiber, seed, desi):
+    """
+    returns random fiber location on focal surface
+    
+    Args:
+        nfibers (int) number of fiber
+        seed (int) random seed
+        desi specsim.simulator.Simulator object (need to init first with a config)
+    Returns:
+        x,y 2 1D np.array of size nfibers, random fiber location on focal surface
+    """
     gen = np.random.RandomState(seed)
     focal_r = (
         np.sqrt(gen.uniform(size=nfiber)) * desi.instrument.field_radius)
@@ -30,7 +40,32 @@ def generate_fiber_positions(nfiber, seed, desi):
     return np.cos(phi) * focal_r, np.sin(phi) * focal_r
 
 def main(args=None):
+    """
+    fitgalsim runs the galsim fiber acceptance calculation
+    using class specsim.fiberloss.GalsimFiberlossCalculator
+    and saves the mean and rms acceptance as a function
+    of source profile (point source 'POINT', exponential 'DISK',
+    Devaucouleur 'BULGE'), effective PSF sigma (atmosphere+telescope blur),
+    in um on focal surface, fiber offset from source on focal surface in um,
+    and, for the extended source, the half light radius in arcsec.
 
+    The method consists in first setting sigma and offset grid, and
+    reverse engineering the atmospheric seeing to retrieve the correct
+    effective sigma on the grid given the telescope blur.
+    
+    For each point in the output parameter grid (source type , sigma, offset,
+    source radius), several calculations are done with random angular 
+    orientation of fiber and source to account for the fiber ellipticity
+    (due to anisotropic plate scale) and source ellipticity.
+
+    The output file has to be saved in 
+    $DESIMODEL/data/throughput/galsim-fiber-acceptance.fits to be used
+    for fast fiber acceptance computation.
+    This idea is to compute accurate and correlated values of offset, blur,
+    scale, atmospheric seeing from the fiber location and wavelength, 
+    compute the effective sigma and read with a ND interpolation the
+    fiber acceptance value from the file.
+    """
     # parameters
     ########################################################################"
     seed=0

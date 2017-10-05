@@ -5,7 +5,14 @@ from scipy.interpolate import RegularGridInterpolator
 
 
 class FastFiberAcceptance(object):
-    
+    """
+    This class reads an input fits file generated with specsim.fitgalsim
+    ($DESIMODEL/data/throughput/galsim-fiber-acceptance.fits)
+    and instanciates RegularGridInterpolator objects for 2D and 3D interpolation
+    of the pre-computed galsim fiber acceptance as a function of sigma (atmosphere+telescope blur, in um on focal surface), fiber offset from source (in um on focal surface), and half light radius (in arcsec) from extended source.
+    The average and rms interpolation function for POINT,DISK and BULGE profiles
+    are loaded.
+    """
     def __init__(self,filename):
         
         hdulist=pyfits.open(filename)

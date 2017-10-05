@@ -42,7 +42,7 @@ class FastFiberAcceptance(object):
         returns fiber acceptance fraction rms for the given source,sigmas,offsets
         
         Args:
-            source (string) : POINT, DISK or BULGE for point source, exponential profile or Devaucouleurs profile
+            source (string) : POINT, DISK or BULGE for point source, exponential profile or De Vaucouleurs profile
             sigmas (np.array) : arbitrary shape, values of sigmas in um for the PSF due to atmosphere and telescope blur
             offsets (np.array) : same shape as sigmas, values of offsets on focal surface between fiber and source, in um
         
@@ -81,7 +81,7 @@ class FastFiberAcceptance(object):
         returns the fiber acceptance for the given source,sigmas,offsets
         
         Args:
-            source (string) : POINT, DISK or BULGE for point source, exponential profile or Devaucouleurs profile
+            source (string) : POINT, DISK or BULGE for point source, exponential profile or De Vaucouleurs profile
             sigmas (np.array) : arbitrary shape, values of sigmas in um for the PSF due to atmosphere and telescope blur
             offsets (np.array) : same shape as sigmas, values of offsets on focal surface between fiber and source, in um
         

@@ -45,7 +45,7 @@ def main(args=None):
     using class specsim.fiberloss.GalsimFiberlossCalculator
     and saves the mean and rms acceptance as a function
     of source profile (point source 'POINT', exponential 'DISK',
-    Devaucouleur 'BULGE'), effective PSF sigma (atmosphere+telescope blur),
+    De Vaucouleurs 'BULGE'), effective PSF sigma (atmosphere+telescope blur),
     in um on focal surface, fiber offset from source on focal surface in um,
     and, for the extended source, the half light radius in arcsec.
 

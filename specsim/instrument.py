@@ -19,6 +19,7 @@ An :class:`Instrument` includes one or more
 from __future__ import print_function, division
 
 import numpy as np
+import os.path
 import scipy.interpolate
 import scipy.integrate
 
@@ -26,6 +27,7 @@ import astropy.constants
 import astropy.units as u
 
 import specsim.camera
+import specsim.fastfiberacceptance
 
 
 class Instrument(object):
@@ -47,7 +49,7 @@ class Instrument(object):
         Array of wavelength bin centers where the instrument response is
         calculated, with units.
     fiberloss_method : str
-        Must be "table" or "galsim".  Specifies how fiber acceptance fractions
+        Must be "table" or "galsim" or "fastsim".  Specifies how fiber acceptance fractions
         will be loaded or calculated.
     fiber_acceptance_dict : dict or None
         Dictionary of fiber acceptance fractions tabulated for different
@@ -55,11 +57,11 @@ class Instrument(object):
         Ignored when fiberloss_method is "galsim".
     fiberloss_num_wlen : int
         Number of wavelengths where the fiberloss fraction should be tabulated
-        for interpolation.  Ignored when fiberloss_method is "table".
+        for interpolation.  Ignored when fiberloss_method is not "galsim".
     fiberloss_num_pixels : int
         Number of pixels used to subdivide the fiber diameter for
         numerical convolution and integration calculations.
-        Ignored when fiberloss_method is "table".
+        Ignored when fiberloss_method  is not "galsim".
     blur_function : callable
         Function of field angle and wavelength that returns the corresponding
         RMS blur in length units (e.g., microns).
@@ -93,13 +95,14 @@ class Instrument(object):
         focal-plane distance (with length units) from the boresight.
     """
     def __init__(self, name, wavelength, fiberloss_method,
-                 fiber_acceptance_dict, fiberloss_num_wlen,
+                 fiber_acceptance_dict, fast_fiber_acceptance, fiberloss_num_wlen,
                  fiberloss_num_pixels, blur_function, offset_function, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
                  fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
+        self.fast_fiber_acceptance = fast_fiber_acceptance
         self.fiberloss_method = fiberloss_method
         self.fiberloss_num_wlen = fiberloss_num_wlen
         self.fiberloss_num_pixels = fiberloss_num_pixels
@@ -180,10 +183,10 @@ class Instrument(object):
     def fiberloss_method(self, fiberloss_method):
         """Set the method used to calculate fiber acceptance fractions.
 
-        Must be one of "table" or "galsim".
+        Must be one of "table" or "galsim" or "fastsim".
         """
-        if fiberloss_method not in ('table', 'galsim'):
-            raise ValueError('fiberloss_method must be "table" or "galsim".')
+        if fiberloss_method not in ('table', 'galsim', 'fastsim' ):
+            raise ValueError('fiberloss_method must be "table" or "galsim" or "fastsim".')
         if fiberloss_method == 'table' and self.fiber_acceptance_dict is None:
             raise ValueError('Missing required instrument.fiberloss.table.')
         if fiberloss_method == 'galsim':
@@ -371,9 +374,13 @@ class Instrument(object):
         angle_x = np.zeros(focal_x.shape) * angle_r.unit
         angle_y = np.zeros(focal_y.shape) * angle_r.unit
         positive_radius = focal_r>0
-        angle_x[positive_radius] = (angle_r[positive_radius]/focal_r[positive_radius])*focal_x[positive_radius]
-        angle_y[positive_radius] = (angle_r[positive_radius]/focal_r[positive_radius])*focal_y[positive_radius]
-        
+        angle_x[positive_radius] = (
+            angle_r[positive_radius] / focal_r[positive_radius]
+            ) * focal_x[positive_radius]
+        angle_y[positive_radius] = (
+            angle_r[positive_radius] / focal_r[positive_radius]
+            ) * focal_y[positive_radius]
+
         # Calculate the radial and azimuthal plate scales at each location.
         scale[:, 0] = self.radial_scale(focal_r).to(u.um / u.arcsec).value
         scale[:, 1] = self.azimuthal_scale(focal_r).to(u.um / u.arcsec).value
@@ -654,6 +661,18 @@ def initialize(config, camera_output=True):
             config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
     else:
         fiber_acceptance_dict = None
+    if hasattr(config.instrument.fiberloss, 'fast_fiber_acceptance_path'):
+        filename = os.path.join(
+            config.abs_base_path,
+            config.instrument.fiberloss.fast_fiber_acceptance_path)
+        if not os.path.isfile(filename) :
+            raise RuntimeError(
+            'Cannot find file {}. May need to update desimodel svn ?'
+            .format(filename))
+        fast_fiber_acceptance = specsim.fastfiberacceptance.FastFiberAcceptance(
+            filename)
+    else:
+        fast_fiber_acceptance = None
 
     blur_value = getattr(config.instrument.blur, 'value', None)
     if blur_value:
@@ -704,8 +723,8 @@ def initialize(config, camera_output=True):
 
     instrument = Instrument(
         name, config.wavelength, fiberloss_method, fiber_acceptance_dict,
-        fiberloss_num_wlen, fiberloss_num_pixels, blur_function,
-        offset_function, initialized_cameras,
+        fast_fiber_acceptance, fiberloss_num_wlen, fiberloss_num_pixels,
+        blur_function, offset_function, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['field_radius'], radial_scale, azimuthal_scale)

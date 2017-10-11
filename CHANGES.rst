@@ -2,6 +2,7 @@
 -----------------
 
 - Implement fast fiberloss calculator that interpolates GalSim results (#78).
+- Add uncorrelated random offsets (#81)
 
 0.10 (2017-10-03)
 -----------------

@@ -28,7 +28,7 @@ import astropy.units as u
 
 import specsim.camera
 import specsim.fastfiberacceptance
-
+import specsim.config
 
 class Instrument(object):
     """Model the instrument response of a fiber spectrograph.
@@ -691,23 +691,35 @@ def initialize(config, camera_output=True):
         # Build an interpolator in (r, wlen) of radial chromatic offsets.
         radial_offset_function = config.load_table2d(
             config.instrument.offset, 'wavelength', 'r=')
-        # Look for an optional file of random achromatic offsets.
-        if hasattr(config.instrument.offset, 'random'):
+        # Look for an optional file of achromatic offsets.
+        # Static achromatic term, correlated in focal plane
+        if hasattr(config.instrument.offset, 'static'):
             # Build an interpolator in (x, y).
-            random_interpolators = config.load_fits2d(
-                config.instrument.offset.random, xy_unit=u.deg,
-                random_dx='XOFFSET', random_dy='YOFFSET')
+            interpolators = config.load_fits2d(
+                config.instrument.offset.static, xy_unit=u.deg,
+                dx='XOFFSET', dy='YOFFSET')
+            static_fx = interpolators['dx']
+            static_fy = interpolators['dy']
         else:
-            random_interpolators = dict(
-                random_dx=lambda angle_x, angle_y: 0 * u.um,
-                random_dy=lambda angle_x, angle_y: 0 * u.um)
+            static_fx  = None
+            static_fy  = None
+        # Random uncorrelated achromatic term
+        if hasattr(config.instrument.offset, 'sigma1d'):
+            sigma1d=specsim.config.parse_quantity(config.instrument.offset.sigma1d)
+            random_fx = lambda angle_x, angle_y: np.random.normal(size=angle_x.shape) * sigma1d
+            random_fy = lambda angle_x, angle_y: np.random.normal(size=angle_x.shape) * sigma1d
+        else :
+            random_fx = None
+            random_fy = None
         # Combine the interpolators into a function of (x, y, wlen) that
         # returns (dx, dy).  Use default parameter values to capture the
         # necessary state in the inner function's closure.
         def offset_function(angle_x, angle_y, wlen,
                             fr=radial_offset_function,
-                            fx=random_interpolators['random_dx'],
-                            fy=random_interpolators['random_dy']):
+                            static_fx=static_fx,
+                            static_fy=static_fy,
+                            random_fx=random_fx,
+                            random_fy=random_fy) :
             angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
             dr = fr(angle_r, wlen)
             # Special handling of the origin.
@@ -716,10 +728,14 @@ def initialize(config, camera_output=True):
             uy = np.ones(shape=dr.shape, dtype=float)
             ux[not_at_origin] = angle_x / angle_r
             uy[not_at_origin] = angle_y / angle_r
-            # Add any random offsets.
-            random_dx = fx(angle_x, angle_y)
-            random_dy = fy(angle_x, angle_y)
-            return dr * ux + random_dx, dr * uy + random_dy
+            dx = dr * ux
+            dy = dr * uy
+            # Add interpolated offsets if any.
+            if static_fx is not None : dx += static_fx(angle_x, angle_y)
+            if static_fy is not None : dy += static_fy(angle_x, angle_y)
+            if random_fx is not None : dx += random_fx(angle_x, angle_y)
+            if random_fy is not None : dy += random_fy(angle_x, angle_y)
+            return dx , dy
 
     instrument = Instrument(
         name, config.wavelength, fiberloss_method, fiber_acceptance_dict,

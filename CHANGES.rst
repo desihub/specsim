@@ -1,4 +1,4 @@
-0.11 (unreleased)
+0.11 (2017-10-10)
 -----------------
 
 - Implement fast fiberloss calculator that interpolates GalSim results (#78).

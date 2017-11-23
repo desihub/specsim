@@ -148,6 +148,11 @@ def test_plot():
     a.plot()
 
 
+def test_plot_twilight():
+    plot_twilight_brightness(
+        sun_altitude=-15 * u.deg, sun_azimuth=90 * u.deg)
+
+
 def test_plot_moon():
     plot_lunar_brightness(
         moon_zenith=60*u.deg, moon_azimuth=90*u.deg, moon_phase=0.25)

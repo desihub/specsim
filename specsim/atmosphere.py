@@ -484,13 +484,10 @@ def twilight_surface_brightness(
     ----------
     obj_altitude : astropy.units.Quantity
         Object altitude angle(s) to use. Must be in the range [0, 90] deg.
-
     sun_altitude : astropy.units.Quantity
         Sun altitude angle(s) to use.  Must be in the range [-90, -12] deg.
-
     sun_relative_azimuth : astropy.units.Quantity
         Relative azimuth angle(s) between the object and the sun.
-
     coefs : array
         Array with shape (3, 6) of polynomial coefficients to use.
 
@@ -568,6 +565,81 @@ def twilight_surface_brightness(
     result = 22.5 - 2.5 * result
 
     return result[0] if scalar_result else result
+
+
+def plot_twilight_brightness(
+    sun_altitude, sun_azimuth, coefs=twilight_coefs,
+    imin=17., imax=20.5, ngrid=250, cmap='YlGnBu', figure_size=(8, 6)):
+    """Create a polar plot of the i-band twilight scattered surface brightness.
+    Evaluates the model of :func:`twilight_surface_brightness` on a polar
+    grid of observation pointings, for a fixed sun position.
+    This method requires that matplotlib is installed.
+    Parameters
+    ----------
+    sun_altitude : astropy.units.Quantity
+        See :func:`twilight_surface_brightness`. Must be a scalar.
+    sun_azimuth : astropy.units.Quantity
+        Aziumuthal angle of the sun in angular units.  Azimuth is measured
+        clockwize from zero (North). Must be a scalar.
+    coefs : array
+        Array with shape (3, 6) of polynomial coefficients to use.
+    imin : float
+        Minimum i-band magnitude to use for the color scale.
+    imax : float
+        Maximum i-band magnitude to use for the color scale.
+    ngrid : int
+        Size of observing location zenith and azimuth grids to use.
+    cmap : str
+        Name of the matplotlib color map to use.
+    figure_size : tuple or None
+        Tuple (width, height) giving the figure dimensions in inches.
+
+    Returns
+    -------
+    tuple
+        Tuple (fig, ax, cax) of matplotlib objects created for this plot. You
+        can ignore these unless you want to make further changes to the plot.
+    """
+    import matplotlib.pyplot as plt
+
+    # Build a grid in observation (zenith, azimuth).
+    obs_alt = np.linspace(1., 90., ngrid, endpoint=False) * u.deg
+    obs_az = (np.linspace(0., 360., ngrid) * u.deg)[:, np.newaxis]
+
+    # Calculate the i-band twilight surface brightness.
+    imag = twilight_surface_brightness(
+        obs_alt, sun_altitude, obs_az - sun_azimuth)
+
+    # Initialize the plot. We are borrowing from:
+    # http://blog.rtwilson.com/producing-polar-contour-plots-with-matplotlib/
+    fig, ax = plt.subplots(
+        figsize=figure_size, subplot_kw=dict(projection='polar'))
+    r, theta = np.meshgrid(
+        90 - obs_alt.to(u.deg).value, obs_az.to(u.rad).value[:,0], copy=False)
+    ax.set_theta_zero_location('N')
+    ax.set_theta_direction(-1)
+    ax.set_ylim(0., 90.)
+
+    # Draw a polar contour plot.
+    levels = np.linspace(imin, imax, 50)
+    cax = ax.contourf(theta, r, imag, levels, extend='both', cmap=cmap)
+    fig.colorbar(cax, ticks=np.linspace(imin, imax, 5)).set_label(
+        'Twilight Scattered Sun [i-mag/arcsec2]')
+
+    # Draw a point indicating the sun position mirrored to -alt.
+    sun_alt = sun_altitude.to(u.deg).value
+    plt.scatter(sun_azimuth.to(u.rad).value, 90 + sun_alt,
+                s=150., marker='o', color='yellow', lw=0.5, edgecolor='k')
+
+    # Add labels.
+    xy, coords = (1., 0.), 'axes fraction'
+    plt.annotate('Alt(sun) = {0:.3f}$^\circ$'.format(sun_alt),
+                 xy, xy, coords, coords,
+                 horizontalalignment='right', verticalalignment='top',
+                 size='x-large', color='k')
+
+    plt.tight_layout()
+    return fig, ax, cax
 
 
 class Moon(object):

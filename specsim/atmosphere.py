@@ -571,9 +571,11 @@ def plot_twilight_brightness(
     sun_altitude, sun_azimuth, coefs=twilight_coefs,
     imin=17., imax=20.5, ngrid=250, cmap='YlGnBu', figure_size=(8, 6)):
     """Create a polar plot of the i-band twilight scattered surface brightness.
+
     Evaluates the model of :func:`twilight_surface_brightness` on a polar
     grid of observation pointings, for a fixed sun position.
     This method requires that matplotlib is installed.
+
     Parameters
     ----------
     sun_altitude : astropy.units.Quantity

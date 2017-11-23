@@ -343,6 +343,123 @@ class Twilight(object):
         scale = 10 ** (-(imag0 - imag) / (2.5 * u.mag))
         self._dark_spectrum = scale * dark_spectrum
 
+        # Initialize the model parameters.
+        self.airmass = airmass
+        self.sun_altitude = sun_altitude
+        self.sun_relative_azimuth = sun_relative_azimuth
+
+    def _update(self):
+        """Update the model based on the current parameter values.
+        """
+        self._update_required = False
+
+        if not self.visible:
+            self._surface_brightness = (
+                np.zeros_like(self._twilight_spectrum) / (u.arcsec ** 2))
+            self._scattered_i = None
+            return
+
+    @property
+    def scattered_i(self):
+        """i-band surface brightness of twilight scattered sun.
+
+        This is a read-only attribute whose value depends
+        on the current values of :attr:`airmass`, :attr:`sun_altitude`,
+        and :attr:`sun_relative_azimuth`.  Returns None if the sun is
+        below -18 deg.
+        """
+        if self._update_required:
+            self._update()
+        return self._scattered_i
+
+    @property
+    def surface_brightness(self):
+        """astropy.units.Quantity: Tabulated twilight surface brightness.
+
+        This is the only model attribute used for simulation. Its value depends
+        on the current values of :attr:`airmass`, :attr:`sun_altitude`,
+        and :attr:`sun_relative_azimuth`.
+        """
+        if self._update_required:
+            self._update()
+        return self._surface_brightness
+
+    @property
+    def airmass(self):
+        """Airmass of observation used for twilight model.
+
+        Changes to this value will update :attr:`obs_zenith` and
+        :attr:`surface_brightness`.
+
+        This should normally be the same airmass that is used in the
+        :class:`Atmosphere` model to calculate source extinction, but this
+        is not checked here.
+        """
+        return self._airmass
+
+    @airmass.setter
+    def airmass(self, airmass):
+        # Remove any dimensionless astropy.units.Quantity wrapper since
+        # np.arcsin(Quantity(1)) has u.rad added automatically, but we
+        # add it explicitly below.
+        self._airmass = np.float(airmass)
+        # Estimate the zenith angle corresponding to this observing airmass.
+        # We invert eqn.3 of KS1991 for this (instead of eqn.14).
+        self._obs_zenith = np.arcsin(
+            np.sqrt((1 - self._airmass ** -2) / 0.96)) * u.rad
+        self._update_required = True
+
+    @property
+    def obs_zenith(self):
+        """Read-only value of the observing zenith angle.
+
+        This attribute is calculated from :attr:`airmass` by inverting
+        Eqn.3 of Krisciunas & Schaefer 1991:
+
+        .. math::
+
+            X = (1 - 0.96 \\sin^2 Z)^{-0.5}
+        """
+        return self._obs_zenith
+
+    @property
+    def sun_altitude(self):
+        """Sun altitude angle.
+
+        Changes to this value will update :attr:`surface_brightness`
+        and :attr:`visible`.
+        """
+        return self._sun_altitude
+
+    @sun_altitude.setter
+    def sun_altitude(self, sun_altitude):
+        self._sun_altitude = sun_altitude
+        if self._sun_altitude >= -12 * u.deg:
+            raise ValueError('Twilight: sun_altitude must be below -12 deg.')
+        self._visible = self._sun_altitude > -18 * u.deg
+        self._update_required = True
+
+    @property
+    def sun_relative_azimuth(self):
+        """Sun relative azimuth angle.
+
+        Changes to this value will update :attr:`surface_brightness`.
+        """
+        return self._sun_relative_azimuth
+
+    @sun_relative_azimuth.setter
+    def sun_relative_azimuth(self, sun_relative_azimuth):
+        self._sun_relative_azimuth = sun_relative_azimuth
+        self._update_required = True
+
+    @property
+    def visible(self):
+        """bool: Read-only visibility of any twilight contribution.
+
+        The visibility criterion is :attr:`sun_altitude` > -18 degrees.
+        """
+        return self._visible
+
 
 class Moon(object):
     """Model of scattered moonlight.
@@ -536,14 +653,13 @@ class Moon(object):
         :attr:`surface_brightness` and :attr:`visible`.
         """
         return self._moon_zenith
-        self._update_required = True
 
 
     @moon_zenith.setter
     def moon_zenith(self, moon_zenith):
         self._moon_zenith = moon_zenith
         self._visible = self._moon_zenith < 90 * u.deg
-
+        self._update_required = True
 
     @property
     def separation_angle(self):

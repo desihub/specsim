@@ -310,6 +310,9 @@ class Twilight(object):
         The normalization does not matter since it will be fixed by
         :meth:`get_twilight_surface_brightness`.  A solar spectrum can be used,
         which effectively assumes that the twilight is unfiltered sunlight.
+    dark_spectrum : astropy.units.Quantity
+        Tabulated spectrum of the dark sky with units of surface brightness.
+        The normalization does not matter since only the shape is used.
     airmass : float
         Airmass of the observation.
     sun_altitude :  astropy.units.Quantity
@@ -320,9 +323,25 @@ class Twilight(object):
         range [0, 180] deg, with 0 deg corresponding to pointing directly
         towards the sun.
     """
-    def __init__(self, wavelength, twilight_spectrum, airmass,
+    def __init__(self, wavelength, twilight_spectrum, dark_spectrum, airmass,
                  sun_altitude, sun_relative_azimuth):
-        pass
+        self._wavelength = wavelength
+        self._twilight_spectrum = twilight_spectrum
+        # Polynomial coefficients provided by Sergey Koposov (skoposov@cmu.edu).
+        self._coefs = np.array([
+            0.83117729,  0.0483253 ,  0.16667734,  0.30204442,  0.11951503,
+            -0.02543634, -0.04861683, -0.02823325, -0.02950629,  0.0243316 ,
+            0.01172087,  0.10042982,  0.01908531,  0.00507117, -0.00675572,
+            -0.00111102,  0.02585374, -0.00692469]).reshape(3, -1)
+        # Load the SDSS i-band filter curve.
+        self._iband = speclite.filters.load_filter('sdss2010-i')
+        # Scale the dark-sky spectrum to have i=20.5/sq.arcsec.
+        imag0 = 20.5 * u.mag
+        area = 1 * u.arcsec ** 2
+        imag = self._iband.get_ab_magnitude(
+            dark_spectrum * area, wavelength) * u.mag
+        scale = 10 ** (-(imag0 - imag) / (2.5 * u.mag))
+        self._dark_spectrum = scale * dark_spectrum
 
 
 class Moon(object):
@@ -770,7 +789,8 @@ def initialize(config):
         c = config.get_constants(
             twilight_config, ['sun_altitude', 'sun_relative_azimuth'])
         twilight = Twilight(
-            config.wavelength, twilight_spectrum, atm_config.airmass,
+            config.wavelength, twilight_spectrum,
+            surface_brightness_dict['dark'], atm_config.airmass,
             c['sun_altitude'], c[ 'sun_relative_azimuth'])
     else:
         twilight = None

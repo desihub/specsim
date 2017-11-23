@@ -102,8 +102,10 @@ atmosphere:
             # altitudes < -12 deg and altitudes < -18 deg will have no
             # twilight contribution.
             sun_altitude: -20 deg
-            # Azimuth angle of the sun.
-            sun_azimuth: 90 deg
+            # Azimuth angle of the pointing relative to the sun.
+            # Must be in the range [0, 180] deg, with 0 deg corresponding
+            # to pointing directly towards the sun.
+            sun_relative_azimuth: 90 deg
     # Zenith extinction coefficients.
     extinction:
         table:

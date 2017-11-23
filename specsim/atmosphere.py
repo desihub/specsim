@@ -298,6 +298,33 @@ class Atmosphere(object):
                    ncol=ncol, mode='expand', borderaxespad=0.)
 
 
+class Twilight(object):
+    """Model of twilight scattered sun.
+
+    Parameters
+    ----------
+    wavelength : astropy.units.Quantity
+        Array of wavelengths with units where data is tabulated.
+    twilight_spectrum : astropy.units.Quantity
+        Tabulated spectrum of twilight scattered sun with units of flux density.
+        The normalization does not matter since it will be fixed by
+        :meth:`get_twilight_surface_brightness`.  A solar spectrum can be used,
+        which effectively assumes that the twilight is unfiltered sunlight.
+    airmass : float
+        Airmass of the observation.
+    sun_altitude :  astropy.units.Quantity
+        The altitude angle of the sun, which must be <= -12 deg. The model
+        predicts zero twilight contribution for altitudes below -18 deg.
+    sun_relative_azimuth : astropy.units.Quantity
+        Azimuth angle of the pointing relative to the sun. Must be in the
+        range [0, 180] deg, with 0 deg corresponding to pointing directly
+        towards the sun.
+    """
+    def __init__(self, wavelength, twilight_spectrum, airmass,
+                 sun_altitude, sun_relative_azimuth):
+        pass
+
+
 class Moon(object):
     """Model of scattered moonlight.
 
@@ -735,6 +762,18 @@ def initialize(config):
             c['moon_phase'])
     else:
         moon = None
+
+    # Initialize an optional twilight model.
+    twilight_config = getattr(atm_config, 'twilight', None)
+    if twilight_config:
+        twilight_spectrum = config.load_table(twilight_config, 'flux')
+        c = config.get_constants(
+            twilight_config, ['sun_altitude', 'sun_relative_azimuth'])
+        twilight = Twilight(
+            config.wavelength, twilight_spectrum, atm_config.airmass,
+            c['sun_altitude'], c[ 'sun_relative_azimuth'])
+    else:
+        twilight = None
 
     atmosphere = Atmosphere(
         config.wavelength, surface_brightness_dict, extinction_coefficient,

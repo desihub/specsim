@@ -103,6 +103,45 @@ def test_seeing_none():
         a.seeing_fwhm_ref = 1.5 * u.arcsec
 
 
+def test_twilight_func():
+    def check(*args):
+        result = twilight_surface_brightness(*args)
+        assert np.all((result < 20.6) & (result > 17.1))
+    # Check broadcasting.
+    check(15 * u.deg, -15 * u.deg, 0 * u.rad)
+    check([15] * u.deg, -15 * u.deg, 0 * u.rad)
+    check([15] * u.deg, [-15] * u.deg, 0 * u.rad)
+    check([15] * u.deg, [-15] * u.deg, [0] * u.rad)
+    check(15 * u.deg, [-15] * u.deg, [0] * u.rad)
+    check(15 * u.deg, [-15] * u.deg, [0] * u.rad)
+    check([15] * u.deg, [-16, -15, -14] * u.deg, 0 * u.rad)
+    check([15, 15] * u.deg, -15 * u.deg, [0, 0] * u.rad)
+    check([15, 15] * u.deg, [-15, -20] * u.deg, [0, 0] * u.rad)
+    check([15, 15] * u.deg, -15 * u.deg, 0 * u.deg)
+    check([[15],[15]] * u.deg, [-16, -15, -14] * u.deg, 0 * u.rad)
+    # Check wraparound in azimuth.
+    check(15 * u.deg, -15 * u.deg, [-400, -90, 0, 90, 180, 270, 400] * u.deg)
+    # Verify range checks.
+    with pytest.raises(ValueError):
+        check(-1 * u.deg, -15 * u.deg, 0 * u.deg)
+    with pytest.raises(ValueError):
+        check([1, 91] * u.deg, -15 * u.deg, 0 * u.deg)
+    with pytest.raises(ValueError):
+        check(15 * u.deg, -10 * u.deg, 0 * u.deg)
+    with pytest.raises(ValueError):
+        check(15 * u.deg, [-10, -15] * u.deg, 0 * u.deg)
+    # Verify broadcasting checks.
+    with pytest.raises(ValueError):
+        check([15, 15] * u.deg, [-15, -15, -15] * u.deg, 0 * u.deg)
+    with pytest.raises(ValueError):
+        check([15, 15] * u.deg, -15 * u.deg, [0, 0, 0] * u.deg)
+    # Verify unit checking.
+    with pytest.raises(ValueError):
+        check(15, -15 * u.deg, 0 * u.deg)
+    with pytest.raises(ValueError):
+        check(15 * u.m, -15 * u.deg, 0 * u.deg)
+
+
 def test_plot():
     c = specsim.config.load_config('test')
     a = initialize(c)

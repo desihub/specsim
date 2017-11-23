@@ -327,12 +327,6 @@ class Twilight(object):
                  sun_altitude, sun_relative_azimuth):
         self._wavelength = wavelength
         self._twilight_spectrum = twilight_spectrum
-        # Polynomial coefficients provided by Sergey Koposov (skoposov@cmu.edu).
-        self._coefs = np.array([
-            0.83117729,  0.0483253 ,  0.16667734,  0.30204442,  0.11951503,
-            -0.02543634, -0.04861683, -0.02823325, -0.02950629,  0.0243316 ,
-            0.01172087,  0.10042982,  0.01908531,  0.00507117, -0.00675572,
-            -0.00111102,  0.02585374, -0.00692469]).reshape(3, -1)
         # Load the SDSS i-band filter curve.
         self._iband = speclite.filters.load_filter('sdss2010-i')
         # Scale the dark-sky spectrum to have i=20.5/sq.arcsec.
@@ -459,6 +453,121 @@ class Twilight(object):
         The visibility criterion is :attr:`sun_altitude` > -18 degrees.
         """
         return self._visible
+
+
+"""Polynomial coefficients provided by Sergey Koposov (skoposov@cmu.edu).
+Used by func:`twilight_surface_brightness`.
+"""
+twilight_coefs = np.array([
+    0.83117729,  0.0483253 ,  0.16667734,  0.30204442,  0.11951503,
+    -0.02543634, -0.04861683, -0.02823325, -0.02950629,  0.0243316 ,
+    0.01172087,  0.10042982,  0.01908531,  0.00507117, -0.00675572,
+    -0.00111102,  0.02585374, -0.00692469]).reshape(3, 6)
+
+
+def twilight_surface_brightness(
+    obj_altitude, sun_altitude, sun_relative_azimuth,
+    coefs=twilight_coefs):
+    """Return i-band twilight surface brightness.
+
+    The result combines the dark sky (nominally i=20.5) plus the twilight
+    scattered sun contributions.
+
+    The first three inputs can be arrays with broadcastable shapes.
+    The calculation is then automatically broadcast to the result.
+
+    Based on a fit to SDSS DR9 i-band imaging performed by Sergey Koposov.
+    https://desi.lbl.gov/trac/wiki/MilkyWayWG/SkyBrightnessTwilight
+    https://github.com/segasai/desi_twilight_test
+
+    Parameters
+    ----------
+    obj_altitude : astropy.units.Quantity
+        Object altitude angle(s) to use. Must be in the range [0, 90] deg.
+
+    sun_altitude : astropy.units.Quantity
+        Sun altitude angle(s) to use.  Must be in the range [-90, -12] deg.
+
+    sun_relative_azimuth : astropy.units.Quantity
+        Relative azimuth angle(s) between the object and the sun.
+
+    coefs : array
+        Array with shape (3, 6) of polynomial coefficients to use.
+
+    Returns
+    -------
+    float or array
+        Magnitude(s) of dark sky plus twilight scattered sun.
+    """
+    # Check input units and convert to degrees.
+    try:
+        obj_altitude = obj_altitude.to(u.deg).value
+        sun_altitude = sun_altitude.to(u.deg).value
+        sun_relative_azimuth = sun_relative_azimuth.to(u.deg).value
+    except (u.UnitConversionError, AttributeError) as e:
+        raise ValueError('invalid input units')
+
+    # Remember to return a scalar when all inputs are scalar.
+    scalar_result = np.broadcast(
+        obj_altitude, sun_altitude, sun_relative_azimuth).shape == ()
+
+    # Vectorize all subsequent calculations.
+    obj_altitude = np.atleast_1d(obj_altitude)
+    sun_altitude = np.atleast_1d(sun_altitude)
+    sun_relative_azimuth = np.atleast_1d(sun_relative_azimuth)
+
+    # Check that input arrays have compatible shapes.  Raises a ValueError
+    # if this is not true.
+    result_shape = np.broadcast(
+        obj_altitude, sun_altitude, sun_relative_azimuth).shape
+
+    # Check input ranges.
+    if np.any((obj_altitude < 0) | (obj_altitude > 90)):
+        raise ValueError('obj_altitude allowed range is [0, 90] deg.')
+    if np.any((sun_altitude < -90) | (sun_altitude > -12)):
+        raise ValueError('sun_altitude allowed range is [-90,-12] deg.')
+
+    # Wrap relative azimuth around to [0, 180] deg.
+    sun_relative_azimuth = np.remainder(sun_relative_azimuth, 360)
+    sun_relative_azimuth = np.minimum(
+        sun_relative_azimuth, 360 - sun_relative_azimuth)
+    assert np.all((sun_relative_azimuth >= 0) & (sun_relative_azimuth <= 180))
+
+    # Convert from (obj_altitude, sun_relative_azimuth) to (x, y).
+    daz = np.deg2rad(sun_relative_azimuth)
+    cos_alt = np.cos(np.deg2rad(obj_altitude))
+    x = np.cos(daz) * cos_alt
+    y = np.sin(daz) * cos_alt
+    assert np.all((x ** 2 + y ** 2 <= 1) & (y >= 0) & (np.abs(x) < 1))
+
+    # Convert from (sun_altitude) to z.
+    min_alt = -18.
+    z = np.maximum(sun_altitude, min_alt) - min_alt
+
+    # Evaluate the 3 quadratic coefficients in z at each (x,y).
+    xy_shape = np.broadcast(x, y).shape
+    poly_xy_terms = np.empty(xy_shape + (1, 6))
+    poly_xy_terms[...,0,0] = 1.
+    poly_xy_terms[...,0,1] = x + 0 * y
+    poly_xy_terms[...,0,2] = y + 0 * x
+    poly_xy_terms[...,0,3] = x ** 2 + 0 * y
+    poly_xy_terms[...,0,4] = y ** 2 + 0 * x
+    poly_xy_terms[...,0,5] = x * y
+    z_coefs = (coefs * poly_xy_terms).sum(axis=-1)
+    assert z_coefs.shape == xy_shape + (3,)
+
+    # Evaluate the quadratic in z at each (x,y).
+    z_terms = np.empty(z.shape + (3,))
+    z_terms[...,0] = 1.
+    z_terms[...,1] = z
+    z_terms[...,2] = z ** 2
+    result = (z_terms * z_coefs).sum(axis=-1)
+    assert result.shape == result_shape
+
+    # Convert to magnitude.
+    result = 22.5 - 2.5 * result
+
+    return result[0] if scalar_result else result
 
 
 class Moon(object):

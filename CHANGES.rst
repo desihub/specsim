@@ -1,7 +1,7 @@
 0.12 (unreleased)
 -----------------
 
-- No changes yet.
+- Implement twilight sky brightness model.
 
 0.11 (2017-10-10)
 -----------------

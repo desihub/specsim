@@ -27,8 +27,6 @@ def test_read_only_properties():
     with pytest.raises(AttributeError):
         a.moon = None
     with pytest.raises(AttributeError):
-        a.condition_names = None
-    with pytest.raises(AttributeError):
         a.surface_brightness = None
     with pytest.raises(AttributeError):
         a.extinction = None

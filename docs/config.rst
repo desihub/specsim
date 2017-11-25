@@ -117,13 +117,14 @@ multi-HDU FITS file::
 In this case the HDU and columns are identified by their names in the FITS file.
 
 Finally, some tabulated data uses different files to represent different options.
-For example, sky surface brightness tables under different conditions are
+For example, fiberloss tables for different source types are
 specified by replacing the ``path`` node with a ``paths`` node as follows::
 
     paths:
-        dark: dark-sky.csv
-        grey: grey-sky.csv
-        bright: bright-sky.csv
+        # Each path corresponds to a different source type.
+        qso: throughput/fiberloss-qso.dat
+        elg: throughput/fiberloss-elg.dat
+        lrg: throughput/fiberloss-lrg.dat
 
 For additional examples of specifying tabular data, refer to the configurations
 included with this package and described below.
@@ -188,9 +189,9 @@ and was created using::
     :alt: DESI default atmosphere configuration
 
 The default atmosphere has the moon below the horizon. To simulate grey or
-bright conditions, add scattered moon light by :doc:`modifying the relevant
-parameters in the configuration </api>`, or else by changing attributes of the
-initialized atmosphere model. For example::
+bright conditions, add scattered moon light and/or twilight by
+:doc:`modifying the relevant parameters in the configuration </api>`, or else
+by changing attributes of the initialized atmosphere model. For example::
 
     atm = specsim.atmosphere.initialize(config)
     atm.airmass = 1.3

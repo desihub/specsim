@@ -29,7 +29,6 @@ atmosphere:
                 wavelength: { name: wavelength }
                 surface_brightness: { name: flux }
             path: test/test_sky.ecsv
-        condition: default
     # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
     seeing:
         # The seeing is assumed to scale with wavelength as

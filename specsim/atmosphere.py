@@ -53,11 +53,10 @@ import specsim.config
 
 
 class Atmosphere(object):
-    """Model atmospheric surface brightness and extinction.
+    """Model dark sky surface brightness and extinction.
 
-    A simulation uses only our read-only :attr:`surface_brightness` and
-    :attr:`extinction` attributes.  Use the :attr:`condition` and
-    :attr:`airmass` attributes to update this model.  Refer to the
+    A simulation uses only our read-only :attr:`surface_brightness` attribute.
+    Use the :attr:`airmass` attribute to update this model.  Refer to the
     :class:`scattered moon <Moon>` and :class:`twilight <Twilight>` models
     for details on updating their parameters.
 
@@ -65,16 +64,13 @@ class Atmosphere(object):
     ----------
     wavelength : astropy.units.Quantity
         Array of wavelengths with units where data is tabulated.
-    surface_brightness_dict : dict
-        Dictionary of tabulated sky emission surface brightness values. Each
-        dictionary key defines a possible sky condition.
+    dark_surface_brightness : astropy.units.Quantity
+        Array of tabulated dark-sky emission surface brightness values
+        corresponding to each ``wavelength`` array element.
     extinction_coefficient : array
-        Array of extinction coefficients tabulated on ``wavelength``.
+        Array of extinction coefficients, also tabulated on ``wavelength``.
     extinct_emission : bool
         If set, atmospheric extinction is applied to sky emission.
-    condition : str
-        Sky emission condition to use, which must be one of the keys
-        of ``surface_brightness_dict``.
     seeing : dict or None
         Dictionary of seeing PSF parameters to use which must contain keys
         "fwhm_ref", "wlen_ref" and "moffat_beta".  Seeing is used to define
@@ -87,17 +83,15 @@ class Atmosphere(object):
     twilight : :class:`Twilight` or None
         Model to use for twilight scattered sun.
     """
-    def __init__(self, wavelength, surface_brightness_dict,
-                 extinction_coefficient, extinct_emission, condition, airmass,
+    def __init__(self, wavelength, dark_surface_brightness,
+                 extinction_coefficient, extinct_emission, airmass,
                  seeing, moon, twilight):
         self._wavelength = wavelength
-        self._surface_brightness_dict = surface_brightness_dict
+        self._dark_surface_brightness = dark_surface_brightness
         self._extinction_coefficient = extinction_coefficient
         self._extinct_emission = extinct_emission
-        self._condition_names = surface_brightness_dict.keys()
         self._moon = moon
         self._twilight = twilight
-        self.condition = condition
         self.airmass = airmass
         if seeing is not None:
             for required in ('fwhm_ref', 'wlen_ref', 'moffat_beta'):
@@ -129,10 +123,9 @@ class Atmosphere(object):
         """astropy.units.Quantity: Total sky surface brightness.
 
         Includes both dark sky emission and (if configured) scattered moonlight
-        and/or twilight. Changes to :attr:`condition` or :attr:`airmass` are
-        reflected here.
+        and/or twilight. Changes to :attr:`airmass` are reflected here.
         """
-        sky = self._surface_brightness_dict[self.condition].copy()
+        sky = self._dark_surface_brightness.copy()
         if self._extinct_emission:
             sky *= self.extinction
         if self.moon is not None and self.moon.visible:
@@ -149,32 +142,6 @@ class Atmosphere(object):
         automatically update these values.
         """
         return self._extinction
-
-    @property
-    def condition(self):
-        """str: Sky emission condition.
-
-        Must be one of the predefined names in :attr:`condition_names`.
-        """
-        return self._condition
-
-    @condition.setter
-    def condition(self, name):
-        if name not in self._condition_names:
-            raise ValueError(
-                "Invalid condition '{0}'. Pick one of {1}."
-                .format(name, self._condition_names))
-        self._condition = name
-
-    @property
-    def condition_names(self):
-        """list: The list of valid sky condition names.
-
-        The valid names are keys of the ``atmosphere.sky.table.paths`` node,
-        or "default" if only a single path is specified via a
-        ``atmosphere.sky.table.path`` node.
-        """
-        return self._condition_names
 
     @property
     def airmass(self):
@@ -299,8 +266,7 @@ class Atmosphere(object):
         ax1.set_xlim(wave[0], wave[-1])
 
         ncol = 2
-        ax1.plot([], [], 'g-',
-                 label='Total Emission ({0})'.format(self.condition))
+        ax1.plot([], [], 'g-', label='Total Emission')
         if self.moon is not None and self.moon.visible:
             ax1.plot([], [], 'b-', label='Scattered Moon')
             ncol += 1
@@ -373,8 +339,6 @@ class Twilight(object):
         # surface brightness units.
         scale = 10 ** (-0.4 * (self._scattered_i - self._imag0))
         self._surface_brightness = scale * self._twilight_spectrum / area
-        print('xcheck', self._imag0, self._scattered_i, self._iband.get_ab_magnitude(
-            self._surface_brightness * area, self._wavelength))
 
     @property
     def scattered_i(self):
@@ -1118,8 +1082,8 @@ def initialize(config):
     atm_config = config.atmosphere
 
     # Load tabulated data.
-    surface_brightness_dict = config.load_table(
-        atm_config.sky, 'surface_brightness', as_dict=True)
+    dark_surface_brightness = config.load_table(
+        atm_config.sky, 'surface_brightness', as_dict=False)
     extinction_coefficient = config.load_table(
         atm_config.extinction, 'extinction_coefficient')
 
@@ -1159,14 +1123,11 @@ def initialize(config):
         twilight = None
 
     atmosphere = Atmosphere(
-        config.wavelength, surface_brightness_dict, extinction_coefficient,
-        atm_config.extinct_emission, atm_config.sky.condition,
-        atm_config.airmass, seeing, moon, twilight)
+        config.wavelength, dark_surface_brightness, extinction_coefficient,
+        atm_config.extinct_emission, atm_config.airmass, seeing, moon, twilight)
 
     if config.verbose:
-        print(
-            "Atmosphere initialized with condition '{0}' from {1}."
-            .format(atmosphere.condition, atmosphere.condition_names))
+        print("Atmosphere initialized.")
         if seeing:
             print('Seeing is {0} at {1} with Moffat beta {2}.'
                   .format(seeing['fwhm_ref'], seeing['wlen_ref'],
@@ -1175,5 +1136,7 @@ def initialize(config):
             print(
                 'Lunar V-band extinction coefficient is {0:.5f}.'
                 .format(moon.vband_extinction))
+        if twilight:
+            print('Twlight model initialized.')
 
     return atmosphere

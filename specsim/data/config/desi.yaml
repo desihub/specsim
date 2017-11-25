@@ -31,7 +31,7 @@ wavelength_grid:
 # The atmosphere configuration is interpreted and validated by the
 # specsim.atmosphere module.
 atmosphere:
-    # Sky emission surface brightness.
+    # Dark sky emission surface brightness.
     sky:
         table:
             # The .dat extension is not automatically recognized as ascii.
@@ -42,13 +42,7 @@ atmosphere:
                     index: 1
                     # Note the factor of 1e-17 in the units!
                     unit: 1e-17 erg / (Angstrom arcsec2 cm2 s)
-            paths:
-                # Each path defines a possible condition.
-                dark: spectra/spec-sky.dat
-                grey: spectra/spec-sky-grey.dat
-                bright: spectra/spec-sky-bright.dat
-        # Specify the current condition.
-        condition: dark
+            path: spectra/spec-sky.dat
     # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
     seeing:
         # The seeing is assumed to scale with wavelength as

@@ -476,9 +476,37 @@ def twilight_surface_brightness(
     The first three inputs can be arrays with broadcastable shapes.
     The calculation is then automatically broadcast to the result.
 
-    Based on a fit to SDSS DR9 i-band imaging performed by Sergey Koposov.
-    https://desi.lbl.gov/trac/wiki/MilkyWayWG/SkyBrightnessTwilight
-    https://github.com/segasai/desi_twilight_test
+    The total (dark + twilight) sky surface brightness during periods when
+    the moon is below the horizon and the sun is 12 - 18 deg below the horizon
+    is modeled as:
+
+    .. math::
+
+        B(x, y, z) = \sum_{k=0}^2 z^k \left(
+        p_{k0} + p_{k1} x + p_{k2} y + p_{k3} x^2 + p_{k4} y^2 + p_{k5} xy
+        \\right)
+
+    with:
+
+    .. math::
+
+        x = \cos(Az_{obj} - Az_{sun}) \cos(Alt_{obj}) \quad, \quad
+        y = \sin(\left| Az_{obj} - Az_{sun}\\right|) \cos(Alt_{obj}) \quad, \quad
+        z \equiv \max(Alt_{sun} + 18^\circ, 0) \; .
+
+    For example :math:`(x,y) = (0,0), (1,0), (-1,0)` correspond to the zenith and
+    pointing at the horizon directly towards / away from the sun, respectively.
+    The physical range of :math:`(x, y, z)` is bounded by:
+
+    .. math::
+
+        -1 \le x \le +1 \quad,\quad 0 \le y \le 1 \quad, \quad
+        x^2 + y^2 \le 1 \quad , \quad 0 \le z \le 8 \; .
+
+    The default parameter values :math:`p_{kj}` are based on a fit to SDSS
+    DR9 i-band imaging performed by Sergey Koposov.  For details, see
+    https://desi.lbl.gov/trac/wiki/MilkyWayWG/SkyBrightnessTwilight and
+    https://github.com/segasai/desi_twilight_test.
 
     Parameters
     ----------
@@ -486,6 +514,7 @@ def twilight_surface_brightness(
         Object altitude angle(s) to use. Must be in the range [0, 90] deg.
     sun_altitude : astropy.units.Quantity
         Sun altitude angle(s) to use.  Must be in the range [-90, -12] deg.
+        Values below -18 deg are considered dark, with no scattered sun.
     sun_relative_azimuth : astropy.units.Quantity
         Relative azimuth angle(s) between the object and the sun.
     coefs : array
@@ -539,7 +568,7 @@ def twilight_surface_brightness(
 
     # Convert from (sun_altitude) to z.
     min_alt = -18.
-    z = np.maximum(sun_altitude, min_alt) - min_alt
+    z = np.maximum(sun_altitude + 18, 0)
 
     # Evaluate the 3 quadratic coefficients in z at each (x,y).
     xy_shape = np.broadcast(x, y).shape

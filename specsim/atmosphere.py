@@ -467,11 +467,8 @@ twilight_coefs = np.array([
 
 def twilight_surface_brightness(
     obj_altitude, sun_altitude, sun_relative_azimuth,
-    coefs=twilight_coefs):
+    subtract_dark=20.5, coefs=twilight_coefs):
     """Return i-band twilight surface brightness.
-
-    The result combines the dark sky (nominally i=20.5) plus the twilight
-    scattered sun contributions.
 
     The first three inputs can be arrays with broadcastable shapes.
     The calculation is then automatically broadcast to the result.
@@ -491,12 +488,12 @@ def twilight_surface_brightness(
     .. math::
 
         x = \cos(Az_{obj} - Az_{sun}) \cos(Alt_{obj}) \quad, \quad
-        y = \sin(\left| Az_{obj} - Az_{sun}\\right|) \cos(Alt_{obj}) \quad, \quad
-        z \equiv \max(Alt_{sun} + 18^\circ, 0) \; .
+        y = \sin(\left| Az_{obj} - Az_{sun}\\right|) \cos(Alt_{obj})
+        \quad, \quad z \equiv \max(Alt_{sun} + 18^\circ, 0) \; .
 
-    For example :math:`(x,y) = (0,0), (1,0), (-1,0)` correspond to the zenith and
-    pointing at the horizon directly towards / away from the sun, respectively.
-    The physical range of :math:`(x, y, z)` is bounded by:
+    For example :math:`(x,y) = (0,0), (1,0), (-1,0)` correspond to the zenith
+    and pointing at the horizon directly towards / away from the sun,
+    respectively. The physical range of :math:`(x, y, z)` is bounded by:
 
     .. math::
 
@@ -508,6 +505,17 @@ def twilight_surface_brightness(
     https://desi.lbl.gov/trac/wiki/MilkyWayWG/SkyBrightnessTwilight and
     https://github.com/segasai/desi_twilight_test.
 
+    When a value of ``subtract_dark`` (:math:`m_d`) is specified, the
+    dark + solar predicted magnitude :math:`m_{d+s}` is converted into the
+    solar-only magnitude :math:`m_s` using:
+
+    .. math::
+
+        m_s = -2.5 \log_{10}\left(10^{-0.4 m_{d+s} - 10^{-0.4 m_d}}\\right)
+
+    Otherwise, the result combines the dark sky (nominally i=20.5) plus the
+    twilight scattered sun contribution.
+
     Parameters
     ----------
     obj_altitude : astropy.units.Quantity
@@ -517,13 +525,22 @@ def twilight_surface_brightness(
         Values below -18 deg are considered dark, with no scattered sun.
     sun_relative_azimuth : astropy.units.Quantity
         Relative azimuth angle(s) between the object and the sun.
+    subtract_dark : float or None
+        Surface brightness (in mag/sq.arcsec.) of dark sky component to
+        subtract, returning the solar-only magnitude.  Returns ``-np.inf`` if
+        the dark + solar predicted magnitude is greater than this value.
+        No subtraction is performed when this parameter is ``None``.
     coefs : array
         Array with shape (3, 6) of polynomial coefficients to use.
 
     Returns
     -------
     float or array
-        Magnitude(s) of dark sky plus twilight scattered sun.
+        i-band twilight surface brightness in mags/sq.arc.sec with the flux
+        corresponding to ``subtract_dark`` subtracted (unless this
+        value is ``None``).  Might be ``-np.inf`` if the predicted brightness
+        is less than ``subtract_dark``, indicating that no solar
+        contribution is present.
     """
     # Check input units and convert to degrees.
     try:
@@ -590,14 +607,21 @@ def twilight_surface_brightness(
     result = (z_terms * z_coefs).sum(axis=-1)
     assert result.shape == result_shape
 
-    # Convert to magnitude.
+    # Convert to surface brightness in mag / sq.arcsec.
     result = 22.5 - 2.5 * result
+
+    # Subtract the dark contribution if requested.
+    if subtract_dark is not None:
+        solar_flux = 10 ** (-0.4 * result) - 10 ** (-0.4 * subtract_dark)
+        pos = solar_flux > 0
+        result[pos] = -2.5 * np.log10(solar_flux[pos])
+        result[~pos] = -np.inf
 
     return result[0] if scalar_result else result
 
 
 def plot_twilight_brightness(
-    sun_altitude, sun_azimuth, coefs=twilight_coefs,
+    sun_altitude, sun_azimuth, subtract_dark=None, coefs=twilight_coefs,
     imin=17., imax=20.5, ngrid=250, cmap='YlGnBu', figure_size=(8, 6)):
     """Create a polar plot of the i-band twilight scattered surface brightness.
 
@@ -612,6 +636,8 @@ def plot_twilight_brightness(
     sun_azimuth : astropy.units.Quantity
         Aziumuthal angle of the sun in angular units.  Azimuth is measured
         clockwize from zero (North). Must be a scalar.
+    subtract_dark : float or None
+        See :func:`twilight_surface_brightness`.
     coefs : array
         Array with shape (3, 6) of polynomial coefficients to use.
     imin : float
@@ -639,7 +665,7 @@ def plot_twilight_brightness(
 
     # Calculate the i-band twilight surface brightness.
     imag = twilight_surface_brightness(
-        obs_alt, sun_altitude, obs_az - sun_azimuth)
+        obs_alt, sun_altitude, obs_az - sun_azimuth, subtract_dark, coefs)
 
     # Initialize the plot. We are borrowing from:
     # http://blog.rtwilson.com/producing-polar-contour-plots-with-matplotlib/

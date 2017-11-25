@@ -20,7 +20,7 @@ where :math:`s(\\lambda)` is the source flux entering the atmosphere,
 :math:`e(\\lambda)` is the zenith extinction, :math:`X` is the airmass,
 :math:`a` is the fiber entrance face area, and :math:`b(\\lambda)` is the
 sky emission surface brightness.  The sky brightness can optionally include
-a scattered moonlight component.
+a scattered moonlight or twilight components.
 
 An atmosphere model is usually initialized from a configuration used to create
 a simulator and then accessible via its ``atmosphere`` attribute, for example:
@@ -37,8 +37,9 @@ been initialized, for example:
     >>> simulator.atmosphere.airmass = 1.5
     >>> simulator.atmosphere.moon.moon_phase = 0.25
     >>> simulator.atmosphere.moon.moon_zenith = 25 * u.deg
+    >>> simulator.atmosphere.twilight.sun_altitude = -15 * u.deg
 
-See :class:`Atmosphere` and :class:`Moon` for details.
+See :class:`Atmosphere`, :class:`Moon` and :class:`Twilight` for details.
 """
 from __future__ import print_function, division
 
@@ -57,8 +58,8 @@ class Atmosphere(object):
     A simulation uses only our read-only :attr:`surface_brightness` and
     :attr:`extinction` attributes.  Use the :attr:`condition` and
     :attr:`airmass` attributes to update this model.  Refer to the
-    :class:`moon model <Moon>` for details on updating the optional
-    scattered moon model.
+    :class:`scattered moon <Moon>` and :class:`twilight <Twilight>` models
+    for details on updating their parameters.
 
     Parameters
     ----------
@@ -83,16 +84,19 @@ class Atmosphere(object):
         Airmass of the observation.
     moon : :class:`Moon` or None
         Model to use for scattered moonlight.
+    twilight : :class:`Twilight` or None
+        Model to use for twilight scattered sun.
     """
     def __init__(self, wavelength, surface_brightness_dict,
                  extinction_coefficient, extinct_emission, condition, airmass,
-                 seeing, moon):
+                 seeing, moon, twilight):
         self._wavelength = wavelength
         self._surface_brightness_dict = surface_brightness_dict
         self._extinction_coefficient = extinction_coefficient
         self._extinct_emission = extinct_emission
         self._condition_names = surface_brightness_dict.keys()
         self._moon = moon
+        self._twilight = twilight
         self.condition = condition
         self.airmass = airmass
         if seeing is not None:
@@ -101,7 +105,6 @@ class Atmosphere(object):
                     raise ValueError('Missing required seeing key "{0}"'
                                      .format(required))
         self._seeing = seeing
-
 
     @property
     def moon(self):
@@ -112,21 +115,31 @@ class Atmosphere(object):
         """
         return self._moon
 
+    @property
+    def twilight(self):
+        """Moon or None: Model of twilight scattered sun.
+
+        See :class:`Twilight` for details on changing twilight simulation
+        parameters via this attribute.
+        """
+        return self._twilight
 
     @property
     def surface_brightness(self):
         """astropy.units.Quantity: Total sky surface brightness.
 
-        Includes both dark sky emission and (if configured) scattered moonlight.
-        Changes to :attr:`condition` or :attr:`airmass` are reflected here.
+        Includes both dark sky emission and (if configured) scattered moonlight
+        and/or twilight. Changes to :attr:`condition` or :attr:`airmass` are
+        reflected here.
         """
         sky = self._surface_brightness_dict[self.condition].copy()
         if self._extinct_emission:
             sky *= self.extinction
         if self.moon is not None and self.moon.visible:
             sky += self.moon.surface_brightness
+        if self.twilight is not None and self.twilight.visible:
+            sky += self.twilight.surface_brightness
         return sky
-
 
     @property
     def extinction(self):
@@ -137,7 +150,6 @@ class Atmosphere(object):
         """
         return self._extinction
 
-
     @property
     def condition(self):
         """str: Sky emission condition.
@@ -146,7 +158,6 @@ class Atmosphere(object):
         """
         return self._condition
 
-
     @condition.setter
     def condition(self, name):
         if name not in self._condition_names:
@@ -154,7 +165,6 @@ class Atmosphere(object):
                 "Invalid condition '{0}'. Pick one of {1}."
                 .format(name, self._condition_names))
         self._condition = name
-
 
     @property
     def condition_names(self):
@@ -166,16 +176,14 @@ class Atmosphere(object):
         """
         return self._condition_names
 
-
     @property
     def airmass(self):
         """float: Observing airmass.
 
         Changes to this value automatically propagate to our scattered
-        moon model, if there is one.
+        moon and twilight models, if present.
         """
         return self._airmass
-
 
     @airmass.setter
     def airmass(self, airmass):
@@ -183,7 +191,8 @@ class Atmosphere(object):
         self._extinction = 10 ** (-self._extinction_coefficient * airmass / 2.5)
         if self.moon is not None:
             self.moon.airmass = airmass
-
+        if self.twilight is not None:
+            self.twilight.airmass = airmass
 
     @property
     def seeing_moffat_beta(self):
@@ -193,7 +202,6 @@ class Atmosphere(object):
         """
         return self._seeing['moffat_beta'] if self._seeing else None
 
-
     @property
     def seeing_wlen_ref(self):
         """float: Reference wavelength for :attr:`seeing_fwhm_ref`
@@ -201,7 +209,6 @@ class Atmosphere(object):
         Returns None if no seeing has been specified.
         """
         return self._seeing['wlen_ref'] if self._seeing else None
-
 
     @property
     def seeing_fwhm_ref(self):
@@ -211,7 +218,6 @@ class Atmosphere(object):
         """
         return self._seeing['fwhm_ref'] if self._seeing else None
 
-
     @seeing_fwhm_ref.setter
     def seeing_fwhm_ref(self, fwhm_ref):
         try:
@@ -220,7 +226,6 @@ class Atmosphere(object):
             raise ValueError('Seeing has not been initialized.')
         except (u.UnitConversionError, AttributeError):
             raise ValueError('Invalid units for seeing_fwhm_ref.')
-
 
     def get_seeing_fwhm(self, wavelength):
         """Calculate the seeing FWHM at the specified wavelength.
@@ -242,7 +247,6 @@ class Atmosphere(object):
         wlen_ratio = (wavelength.to(u.Angstrom).value /
                       self._seeing['wlen_ref'].to(u.Angstrom).value)
         return self._seeing['fwhm_ref'] * wlen_ratio ** (-0.2)
-
 
     def plot(self):
         """Plot a summary of this atmosphere model.
@@ -272,6 +276,13 @@ class Atmosphere(object):
             moon_min, moon_max = np.percentile(moon, (1, 99))
             sky_min = min(moon_min, sky_min)
             sky_max = max(moon_max, sky_max)
+        if self.twilight is not None and self.twilight.visible:
+            twilight = self.twilight.surface_brightness.to(sky_unit).value
+            ax1.scatter(wave, twilight, color='orange', lw=0, s=1.)
+            # Adjust the vertical limits to include the moon.
+            twilight_min, twilight_max = np.percentile(twilight, (1, 99))
+            sky_min = min(twilight_min, sky_min)
+            sky_max = max(twilight_max, sky_max)
         ax1_rhs.scatter(wave, ext, color='r', lw=0, s=1.)
 
         ax1.set_yscale('log')
@@ -292,6 +303,9 @@ class Atmosphere(object):
                  label='Total Emission ({0})'.format(self.condition))
         if self.moon is not None and self.moon.visible:
             ax1.plot([], [], 'b-', label='Scattered Moon')
+            ncol += 1
+        if self.twilight is not None and self.twilight.visible:
+            ax1.plot([], [], ls='-', c='orange', label='Twilight')
             ncol += 1
         ax1.plot([], [], 'r-', label='Extinction')
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
@@ -328,7 +342,7 @@ class Twilight(object):
         self._iband = speclite.filters.load_filter('sdss2010-i')
         # Calculate the i-band magnitude of the input spectrum.
         self._imag0 = self._iband.get_ab_magnitude(
-            self._twilight_spectrum, self._wavelength) / u.mag
+            self._twilight_spectrum, self._wavelength)
 
         # Initialize the model parameters.
         self.airmass = airmass
@@ -357,8 +371,10 @@ class Twilight(object):
             return
         # Scale the solar spectrum to the predicted magnitude and apply
         # surface brightness units.
-        scale = 10 ** (-0.4 * (self.imag0 - self._scattered_i))
+        scale = 10 ** (-0.4 * (self._scattered_i - self._imag0))
         self._surface_brightness = scale * self._twilight_spectrum / area
+        print('xcheck', self._imag0, self._scattered_i, self._iband.get_ab_magnitude(
+            self._surface_brightness * area, self._wavelength))
 
     @property
     def scattered_i(self):
@@ -1145,7 +1161,7 @@ def initialize(config):
     atmosphere = Atmosphere(
         config.wavelength, surface_brightness_dict, extinction_coefficient,
         atm_config.extinct_emission, atm_config.sky.condition,
-        atm_config.airmass, seeing, moon)
+        atm_config.airmass, seeing, moon, twilight)
 
     if config.verbose:
         print(

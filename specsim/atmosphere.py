@@ -310,9 +310,6 @@ class Twilight(object):
         The normalization does not matter since it will be fixed by
         :meth:`get_twilight_surface_brightness`.  A solar spectrum can be used,
         which effectively assumes that the twilight is unfiltered sunlight.
-    dark_spectrum : astropy.units.Quantity
-        Tabulated spectrum of the dark sky with units of surface brightness.
-        The normalization does not matter since only the shape is used.
     airmass : float
         Airmass of the observation.
     sun_altitude :  astropy.units.Quantity
@@ -323,19 +320,15 @@ class Twilight(object):
         range [0, 180] deg, with 0 deg corresponding to pointing directly
         towards the sun.
     """
-    def __init__(self, wavelength, twilight_spectrum, dark_spectrum, airmass,
+    def __init__(self, wavelength, twilight_spectrum, airmass,
                  sun_altitude, sun_relative_azimuth):
         self._wavelength = wavelength
         self._twilight_spectrum = twilight_spectrum
         # Load the SDSS i-band filter curve.
         self._iband = speclite.filters.load_filter('sdss2010-i')
-        # Scale the dark-sky spectrum to have i=20.5/sq.arcsec.
-        imag0 = 20.5 * u.mag
-        area = 1 * u.arcsec ** 2
-        imag = self._iband.get_ab_magnitude(
-            dark_spectrum * area, wavelength) * u.mag
-        scale = 10 ** (-(imag0 - imag) / (2.5 * u.mag))
-        self._dark_spectrum = scale * dark_spectrum
+        # Calculate the i-band magnitude of the input spectrum.
+        self._imag0 = self._iband.get_ab_magnitude(
+            self._twilight_spectrum, self._wavelength) / u.mag
 
         # Initialize the model parameters.
         self.airmass = airmass
@@ -344,14 +337,28 @@ class Twilight(object):
 
     def _update(self):
         """Update the model based on the current parameter values.
+
+        Uses visible, obs_zenith, sun_altitude, sun_relative_azimuth and
+        updates _scattered_i and _surface_brightness.
         """
         self._update_required = False
 
-        if not self.visible:
+        area = u.arcsec ** 2
+        if self.visible:
+            # Calculate the i-band surface brightness of the solar component.
+            self._scattered_i = twilight_surface_brightness(
+                90 * u.deg - self.obs_zenith, self.sun_altitude,
+                self.sun_relative_azimuth)
+        if not self.visible or self._scattered_i == -np.inf:
+            # Model predicts zero solar component.
             self._surface_brightness = (
-                np.zeros_like(self._twilight_spectrum) / (u.arcsec ** 2))
+                np.zeros_like(self._twilight_spectrum) / area)
             self._scattered_i = None
             return
+        # Scale the solar spectrum to the predicted magnitude and apply
+        # surface brightness units.
+        scale = 10 ** (-0.4 * (self.imag0 - self._scattered_i))
+        self._surface_brightness = scale * self._twilight_spectrum / area
 
     @property
     def scattered_i(self):
@@ -756,7 +763,6 @@ class Moon(object):
         self.separation_angle = separation_angle
         self.moon_phase = moon_phase
 
-
     def _update(self):
         """Update the model based on the current parameter values.
         """
@@ -789,7 +795,6 @@ class Moon(object):
         self._surface_brightness *= 10 ** (
             -(self._scattered_V * area - raw_V) / (2.5 * u.mag)) / area
 
-
     @property
     def scattered_V(self):
         """V-band surface brightness of scattered moonlight.
@@ -803,7 +808,6 @@ class Moon(object):
             self._update()
         return self._scattered_V
 
-
     @property
     def surface_brightness(self):
         """astropy.units.Quantity: Tabulated scattered moon surface brightness.
@@ -815,7 +819,6 @@ class Moon(object):
         if self._update_required:
             self._update()
         return self._surface_brightness
-
 
     @property
     def airmass(self):
@@ -830,7 +833,6 @@ class Moon(object):
         """
         return self._airmass
 
-
     @airmass.setter
     def airmass(self, airmass):
         # Remove any dimensionless astropy.units.Quantity wrapper since
@@ -843,7 +845,6 @@ class Moon(object):
             np.sqrt((1 - self._airmass ** -2) / 0.96)) * u.rad
         self._update_required = True
 
-
     @property
     def visible(self):
         """bool: Read-only visibility of the moon.
@@ -851,7 +852,6 @@ class Moon(object):
         The visibility criterion is :attr:`moon_zenith` < 90 degrees.
         """
         return self._visible
-
 
     @property
     def moon_phase(self):
@@ -862,12 +862,10 @@ class Moon(object):
         """
         return self._moon_phase
 
-
     @moon_phase.setter
     def moon_phase(self, moon_phase):
         self._moon_phase = moon_phase
         self._update_required = True
-
 
     @property
     def obs_zenith(self):
@@ -882,7 +880,6 @@ class Moon(object):
         """
         return self._obs_zenith
 
-
     @property
     def moon_zenith(self):
         """Moon zenith angle.
@@ -891,7 +888,6 @@ class Moon(object):
         :attr:`surface_brightness` and :attr:`visible`.
         """
         return self._moon_zenith
-
 
     @moon_zenith.setter
     def moon_zenith(self, moon_zenith):
@@ -908,12 +904,10 @@ class Moon(object):
         """
         return self._separation_angle
 
-
     @separation_angle.setter
     def separation_angle(self, separation_angle):
         self._separation_angle = separation_angle
         self._update_required = True
-
 
     @property
     def vband_extinction(self):
@@ -1143,8 +1137,7 @@ def initialize(config):
         c = config.get_constants(
             twilight_config, ['sun_altitude', 'sun_relative_azimuth'])
         twilight = Twilight(
-            config.wavelength, twilight_spectrum,
-            surface_brightness_dict['dark'], atm_config.airmass,
+            config.wavelength, twilight_spectrum, atm_config.airmass,
             c['sun_altitude'], c[ 'sun_relative_azimuth'])
     else:
         twilight = None

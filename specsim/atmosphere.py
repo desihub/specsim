@@ -446,10 +446,10 @@ class Twilight(object):
 Used by func:`twilight_surface_brightness`.
 """
 twilight_coefs = np.array([
-    0.83117729,  0.0483253 ,  0.16667734,  0.30204442,  0.11951503,
-    -0.02543634, -0.04861683, -0.02823325, -0.02950629,  0.0243316 ,
-    0.01172087,  0.10042982,  0.01908531,  0.00507117, -0.00675572,
-    -0.00111102,  0.02585374, -0.00692469]).reshape(3, 6)
+    0.87098868, -0.15359692,  0.0882108 ,  0.57545114, -0.08036678,
+    -0.1185757 ,  0.03180254, -0.31171196, -0.08767353,  0.24909857,
+    0.14857982,  0.05756159, -0.00185209,  0.07598526,  0.02866004,
+    -0.05607969, -0.04374491, -0.01549804]).reshape(3, 6)
 
 
 def twilight_surface_brightness(
@@ -467,7 +467,7 @@ def twilight_surface_brightness(
     .. math::
 
         B(x, y, z) = \sum_{k=0}^2 z^k \left(
-        p_{k0} + p_{k1} x + p_{k2} y + p_{k3} x^2 + p_{k4} y^2 + p_{k5} xy
+        p_{k0} + p_{k1} r + p_{k2} x + p_{k3} r^2 + p_{k4} x r + p_{k5} x^2
         \\right)
 
     with:
@@ -476,6 +476,7 @@ def twilight_surface_brightness(
 
         x = \cos(Az_{obj} - Az_{sun}) \cos(Alt_{obj}) \quad, \quad
         y = \sin(\left| Az_{obj} - Az_{sun}\\right|) \cos(Alt_{obj})
+        \quad, \quad r = \sqrt{x^2 + y^2}
         \quad, \quad z \equiv \max(Alt_{sun} + 18^\circ, 0) \; .
 
     For example :math:`(x,y) = (0,0), (1,0), (-1,0)` correspond to the zenith
@@ -563,12 +564,13 @@ def twilight_surface_brightness(
         sun_relative_azimuth, 360 - sun_relative_azimuth)
     assert np.all((sun_relative_azimuth >= 0) & (sun_relative_azimuth <= 180))
 
-    # Convert from (obj_altitude, sun_relative_azimuth) to (x, y).
+    # Convert from (obj_altitude, sun_relative_azimuth) to (x, y, r).
     daz = np.deg2rad(sun_relative_azimuth)
     cos_alt = np.cos(np.deg2rad(obj_altitude))
     x = np.cos(daz) * cos_alt
     y = np.sin(daz) * cos_alt
-    assert np.all((x ** 2 + y ** 2 <= 1) & (y >= 0) & (np.abs(x) < 1))
+    r = np.sqrt(x ** 2 + y ** 2)
+    assert np.all((r <= 1) & (y >= 0) & (np.abs(x) < 1))
 
     # Convert from (sun_altitude) to z.
     min_alt = -18.
@@ -578,11 +580,11 @@ def twilight_surface_brightness(
     xy_shape = np.broadcast(x, y).shape
     poly_xy_terms = np.empty(xy_shape + (1, 6))
     poly_xy_terms[...,0,0] = 1.
-    poly_xy_terms[...,0,1] = x + 0 * y
-    poly_xy_terms[...,0,2] = y + 0 * x
-    poly_xy_terms[...,0,3] = x ** 2 + 0 * y
-    poly_xy_terms[...,0,4] = y ** 2 + 0 * x
-    poly_xy_terms[...,0,5] = x * y
+    poly_xy_terms[...,0,1] = r + 0 * x
+    poly_xy_terms[...,0,2] = x + 0 * r
+    poly_xy_terms[...,0,3] = r ** 2 + 0 * x
+    poly_xy_terms[...,0,4] = x * r
+    poly_xy_terms[...,0,5] = x ** 2 + 0 * r
     z_coefs = (coefs * poly_xy_terms).sum(axis=-1)
     assert z_coefs.shape == xy_shape + (3,)
 

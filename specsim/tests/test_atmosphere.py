@@ -47,7 +47,7 @@ def test_property_updates():
     m = a.moon
 
     assert m._update_required == True
-    sb = 1.76986565e-17
+    sb = 1.56361062e-17
     assert np.allclose(
         np.mean(a.surface_brightness.value), sb, atol=0.)
     assert m.visible == True
@@ -62,7 +62,7 @@ def test_property_updates():
     assert m._update_required == True
     assert np.allclose(m.obs_zenith.value, 1.20942920)
     assert np.allclose(
-        np.mean(a.surface_brightness.value), 4.524009e-17, atol=0.)
+        np.mean(a.surface_brightness.value), 3.65356327e-17, atol=0.)
     assert np.allclose(
         np.mean(m.surface_brightness.value), 1.430046e-17, atol=0.)
     assert m._update_required == False
@@ -104,8 +104,11 @@ def test_seeing_none():
 
 def test_twilight_func():
     def check(*args):
-        result = twilight_surface_brightness(*args)
-        assert np.all((result < 20.6) & (result > 17.1))
+        result = twilight_surface_brightness(*args, subtract_dark=None)
+        assert np.all((result < 21.2) & (result > 18.2))
+    # Check limiting cases.
+    check(0 * u.deg, -12 * u.deg, 0 * u.deg)
+    check(90 * u.deg, -18 * u.deg, 1 * u.deg)
     # Check broadcasting.
     check(15 * u.deg, -15 * u.deg, 0 * u.rad)
     check([15] * u.deg, -15 * u.deg, 0 * u.rad)

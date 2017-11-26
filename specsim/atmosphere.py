@@ -304,10 +304,10 @@ class Twilight(object):
                  sun_altitude, sun_relative_azimuth):
         self._wavelength = wavelength
         self._twilight_spectrum = twilight_spectrum
-        # Load the SDSS i-band filter curve.
-        self._iband = speclite.filters.load_filter('sdss2010-i')
-        # Calculate the i-band magnitude of the input spectrum.
-        self._imag0 = self._iband.get_ab_magnitude(
+        # Load the SDSS r-band filter curve.
+        self._rband = speclite.filters.load_filter('sdss2010-r')
+        # Calculate the r-band magnitude of the input spectrum.
+        self._rmag0 = self._rband.get_ab_magnitude(
             self._twilight_spectrum, self._wavelength)
 
         # Initialize the model parameters.
@@ -319,30 +319,30 @@ class Twilight(object):
         """Update the model based on the current parameter values.
 
         Uses visible, obs_zenith, sun_altitude, sun_relative_azimuth and
-        updates _scattered_i and _surface_brightness.
+        updates _scattered_r and _surface_brightness.
         """
         self._update_required = False
 
         area = u.arcsec ** 2
         if self.visible:
-            # Calculate the i-band surface brightness of the solar component.
-            self._scattered_i = twilight_surface_brightness(
+            # Calculate the r-band surface brightness of the solar component.
+            self._scattered_r = twilight_surface_brightness(
                 90 * u.deg - self.obs_zenith, self.sun_altitude,
                 self.sun_relative_azimuth)
-        if not self.visible or self._scattered_i == -np.inf:
+        if not self.visible or self._scattered_r == -np.inf:
             # Model predicts zero solar component.
             self._surface_brightness = (
                 np.zeros_like(self._twilight_spectrum) / area)
-            self._scattered_i = None
+            self._scattered_r = None
             return
         # Scale the solar spectrum to the predicted magnitude and apply
         # surface brightness units.
-        scale = 10 ** (-0.4 * (self._scattered_i - self._imag0))
+        scale = 10 ** (-0.4 * (self._scattered_r - self._rmag0))
         self._surface_brightness = scale * self._twilight_spectrum / area
 
     @property
-    def scattered_i(self):
-        """i-band surface brightness of twilight scattered sun.
+    def scattered_r(self):
+        """r-band surface brightness of twilight scattered sun.
 
         This is a read-only attribute whose value depends
         on the current values of :attr:`airmass`, :attr:`sun_altitude`,
@@ -351,7 +351,7 @@ class Twilight(object):
         """
         if self._update_required:
             self._update()
-        return self._scattered_i
+        return self._scattered_r
 
     @property
     def surface_brightness(self):
@@ -443,19 +443,21 @@ class Twilight(object):
 
 
 """Polynomial coefficients provided by Sergey Koposov (skoposov@cmu.edu).
-Used by func:`twilight_surface_brightness`.
+
+Used by func:`twilight_surface_brightness`. For details, see
+https://github.com/segasai/desi_twilight_test
 """
 twilight_coefs = np.array([
-    0.87098868, -0.15359692,  0.0882108 ,  0.57545114, -0.08036678,
-    -0.1185757 ,  0.03180254, -0.31171196, -0.08767353,  0.24909857,
-    0.14857982,  0.05756159, -0.00185209,  0.07598526,  0.02866004,
-    -0.05607969, -0.04374491, -0.01549804]).reshape(3, 6)
+    0.57375516, -0.04514612,  0.15431331,  0.57284421, -0.15712937,
+    -0.15469861,  0.00591423, -0.20653481, -0.0815443 ,  0.13372185,
+    0.12848504,  0.08304845,  0.00713782,  0.04781154,  0.01822   ,
+    -0.02672601, -0.02406313, -0.02164916]).reshape(3, 6)
 
 
 def twilight_surface_brightness(
     obj_altitude, sun_altitude, sun_relative_azimuth,
     subtract_dark=20.5, coefs=twilight_coefs):
-    """Return i-band twilight surface brightness.
+    """Return r-band twilight surface brightness.
 
     The first three inputs can be arrays with broadcastable shapes.
     The calculation is then automatically broadcast to the result.
@@ -489,7 +491,7 @@ def twilight_surface_brightness(
         x^2 + y^2 \le 1 \quad , \quad 0 \le z \le 8 \; .
 
     The default parameter values :math:`p_{kj}` are based on a fit to SDSS
-    DR9 i-band imaging performed by Sergey Koposov.  For details, see
+    DR9 r-band imaging performed by Sergey Koposov.  For details, see
     https://desi.lbl.gov/trac/wiki/MilkyWayWG/SkyBrightnessTwilight and
     https://github.com/segasai/desi_twilight_test.
 
@@ -527,7 +529,7 @@ def twilight_surface_brightness(
     Returns
     -------
     float or array
-        i-band twilight surface brightness in mags/sq.arc.sec with the flux
+        r-band twilight surface brightness in mags/sq.arc.sec with the flux
         corresponding to ``subtract_dark`` subtracted (unless this
         value is ``None``).  Might be ``-np.inf`` if the predicted brightness
         is less than ``subtract_dark``, indicating that no solar
@@ -573,7 +575,7 @@ def twilight_surface_brightness(
     x = np.cos(daz) * cos_alt
     y = np.sin(daz) * cos_alt
     r = np.sqrt(x ** 2 + y ** 2)
-    assert np.all((r <= 1) & (y >= 0) & (np.abs(x) < 1))
+    assert np.all((r <= 1) & (y >= 0) & (np.abs(x) <= 1))
 
     # Convert from (sun_altitude) to z.
     min_alt = -18.
@@ -614,8 +616,8 @@ def twilight_surface_brightness(
 
 def plot_twilight_brightness(
     sun_altitude, sun_azimuth, subtract_dark=None, coefs=twilight_coefs,
-    imin=None, imax=None, ngrid=250, cmap='YlGnBu', figure_size=(8, 6)):
-    """Create a polar plot of the i-band twilight scattered surface brightness.
+    rmin=None, rmax=None, ngrid=250, cmap='YlGnBu', figure_size=(8, 6)):
+    """Create a polar plot of the r-band twilight scattered surface brightness.
 
     Evaluates the model of :func:`twilight_surface_brightness` on a polar
     grid of observation pointings, for a fixed sun position.
@@ -632,11 +634,11 @@ def plot_twilight_brightness(
         See :func:`twilight_surface_brightness`.
     coefs : array
         Array with shape (3, 6) of polynomial coefficients to use.
-    imin : float or None
-        Minimum i-band magnitude to use for the color scale. Use the
+    rmin : float or None
+        Minimum r-band magnitude to use for the color scale. Use the
         minimum predicted value when this value is None.
-    imax : float or None
-        Maximum i-band magnitude to use for the color scale. Use the
+    rmax : float or None
+        Maximum r-band magnitude to use for the color scale. Use the
         maximum predicted value when this value is None.
     ngrid : int
         Size of observing location zenith and azimuth grids to use.
@@ -657,8 +659,8 @@ def plot_twilight_brightness(
     obs_alt = np.linspace(1., 90., ngrid, endpoint=False) * u.deg
     obs_az = (np.linspace(0., 360., ngrid) * u.deg)[:, np.newaxis]
 
-    # Calculate the i-band twilight surface brightness.
-    imag = twilight_surface_brightness(
+    # Calculate the r-band twilight surface brightness.
+    rmag = twilight_surface_brightness(
         obs_alt, sun_altitude, obs_az - sun_azimuth, subtract_dark, coefs)
 
     # Initialize the plot. We are borrowing from:
@@ -672,19 +674,18 @@ def plot_twilight_brightness(
     ax.set_ylim(0., 90.)
 
     # Autorange if requested.
-    if imin is None:
-        imin = np.min(imag)
-    if imax is None:
-        imax = np.max(imag)
-    if imin >= imax:
+    if rmin is None:
+        rmin = np.min(rmag)
+    if rmax is None:
+        rmax = np.max(rmag)
+    if rmin >= rmax:
         raise ValueError('Expected plot limits with min < max.')
 
     # Draw a polar contour plot.
-    levels = np.linspace(imin, imax, 50)
-    cax = ax.contourf(theta, r, imag, levels, extend='both', cmap=cmap)
+    levels = np.linspace(rmin, rmax, 50)
+    cax = ax.contourf(theta, r, rmag, levels, extend='both', cmap=cmap)
     fig.colorbar(cax).set_label(
-        'Twilight Scattered Sun [i-mag/arcsec2]')
-    #ticks=np.linspace(imin, imax, nticks)
+        'Twilight Scattered Sun [r-mag/arcsec2]')
 
     # Draw a point indicating the sun position mirrored to -alt.
     sun_alt = sun_altitude.to(u.deg).value

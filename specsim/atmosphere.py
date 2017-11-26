@@ -504,6 +504,9 @@ def twilight_surface_brightness(
     Otherwise, the result combines the dark sky (nominally i=20.5) plus the
     twilight scattered sun contribution.
 
+    Use :func:`plot_twilight_brightness` to display the distribution of
+    predicted sky brightness in the (alt, az) plane.
+
     Parameters
     ----------
     obj_altitude : astropy.units.Quantity
@@ -611,7 +614,7 @@ def twilight_surface_brightness(
 
 def plot_twilight_brightness(
     sun_altitude, sun_azimuth, subtract_dark=None, coefs=twilight_coefs,
-    imin=17., imax=20.5, ngrid=250, cmap='YlGnBu', figure_size=(8, 6)):
+    imin=None, imax=None, ngrid=250, cmap='YlGnBu', figure_size=(8, 6)):
     """Create a polar plot of the i-band twilight scattered surface brightness.
 
     Evaluates the model of :func:`twilight_surface_brightness` on a polar
@@ -629,10 +632,12 @@ def plot_twilight_brightness(
         See :func:`twilight_surface_brightness`.
     coefs : array
         Array with shape (3, 6) of polynomial coefficients to use.
-    imin : float
-        Minimum i-band magnitude to use for the color scale.
-    imax : float
-        Maximum i-band magnitude to use for the color scale.
+    imin : float or None
+        Minimum i-band magnitude to use for the color scale. Use the
+        minimum predicted value when this value is None.
+    imax : float or None
+        Maximum i-band magnitude to use for the color scale. Use the
+        maximum predicted value when this value is None.
     ngrid : int
         Size of observing location zenith and azimuth grids to use.
     cmap : str
@@ -665,6 +670,14 @@ def plot_twilight_brightness(
     ax.set_theta_zero_location('N')
     ax.set_theta_direction(-1)
     ax.set_ylim(0., 90.)
+
+    # Autorange if requested.
+    if imin is None:
+        imin = np.min(imag)
+    if imax is None:
+        imax = np.max(imag)
+    if imin >= imax:
+        raise ValueError('Expected plot limits with min < max.')
 
     # Draw a polar contour plot.
     levels = np.linspace(imin, imax, 50)

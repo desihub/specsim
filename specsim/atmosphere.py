@@ -667,8 +667,9 @@ def plot_twilight_brightness(
     # Draw a polar contour plot.
     levels = np.linspace(imin, imax, 50)
     cax = ax.contourf(theta, r, imag, levels, extend='both', cmap=cmap)
-    fig.colorbar(cax, ticks=np.linspace(imin, imax, 5)).set_label(
+    fig.colorbar(cax).set_label(
         'Twilight Scattered Sun [i-mag/arcsec2]')
+    #ticks=np.linspace(imin, imax, nticks)
 
     # Draw a point indicating the sun position mirrored to -alt.
     sun_alt = sun_altitude.to(u.deg).value

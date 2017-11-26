@@ -183,36 +183,54 @@ The following plot summarizes the default DESI atmosphere used for simulations,
 and was created using::
 
     config = specsim.config.load_config('desi')
-    specsim.atmosphere.initialize(config).plot()
+    atm = specsim.atmosphere.initialize(config)
+    atm.plot()
 
 .. image:: _static/desi_atmosphere.png
     :alt: DESI default atmosphere configuration
 
-The default atmosphere has the moon below the horizon. To simulate grey or
-bright conditions, add scattered moon light and/or twilight by
-:doc:`modifying the relevant parameters in the configuration </api>`, or else
-by changing attributes of the initialized atmosphere model. For example::
+The default atmosphere has the moon below the horizon. To add scattered
+moonlight, :doc:`adjust the relevant parameters in the configuration </api>`,
+or change attributes of the initialized atmosphere model. For example::
 
-    atm = specsim.atmosphere.initialize(config)
     atm.airmass = 1.3
     atm.moon.moon_zenith = 60 * u.deg
     atm.moon.separation_angle = 50 * u.deg
     atm.moon.moon_phase = 0.25
     atm.plot()
 
-.. image:: _static/desi_bright_atmosphere.png
-    :alt: DESI bright atmosphere configuration
+.. image:: _static/desi_moon_atmosphere.png
+    :alt: DESI moon configuration
+
+To add an additional twilight component:
+
+    atm.twilight.sun_altitude = -13 * u.deg
+    atm.twilight.sun_relative_azimuth = 30 * u.deg
+    atm.plot()
+
+.. image:: _static/desi_moon_twilight_atmosphere.png
+    :alt: DESI moon plus twilight configuration
 
 Note how total sky emission has increased significantly and is dominated by
-scattered moon at the blue end.  To explore the dependence of the scattered
-moon brightness on the observed field, use
-:func:`specsim.atmosphere.plot_lunar_brightness`.  For example::
+scattered moon at the blue end and twilight sun at the red end.  To explore
+the dependence of scattering on the observing conditions, use the plot
+:func:`specsim.atmosphere.plot_lunar_brightness` and
+:func:`specsim.atmosphere.plot_twlight_brightness`.  For example::
 
     specsim.atmosphere.plot_lunar_brightness(
         moon_zenith=60*u.deg, moon_azimuth=90*u.deg, moon_phase=0.25)
 
 .. image:: _static/desi_scattered_moon.png
     :alt: DESI scattered moon brightness
+
+and::
+
+    specsim.atmosphere.plot_twilight_brightness(
+            sun_altitude=-13*u.deg, sun_azimuth=90*u.deg,
+            imax=20., imin=18.0)
+
+.. image:: _static/desi_twilight_polar.png
+    :alt: DESI twlight brightness
 
 Instrument
 ^^^^^^^^^^

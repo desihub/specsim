@@ -528,7 +528,7 @@ twilight_coefs = np.array([
 
 def twilight_surface_brightness(
     obj_altitude, sun_altitude, sun_relative_azimuth,
-    subtract_dark=20.5, coefs=twilight_coefs):
+    subtract_dark=21.2, coefs=twilight_coefs):
     """Return r-band twilight surface brightness.
 
     The first three inputs can be arrays with broadcastable shapes.

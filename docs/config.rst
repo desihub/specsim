@@ -231,6 +231,18 @@ and::
 .. image:: _static/desi_twilight_polar.png
     :alt: DESI twlight brightness
 
+For an explanatory plot of the twilight spectrum, use::
+
+    atm.twilight.plot_spectrum()
+
+.. image:: _static/twilight_spectrum.png
+    :alt: DESI twilight spectrum
+
+Note how the twilight spectrum is significantly reddened relative to the
+solar spectrum above the atmosphere (yellow) since it passes through a
+large airmass (X~40) before scattering in the atmosphere above the observing
+line of sight.
+
 Instrument
 ^^^^^^^^^^
 

@@ -452,6 +452,67 @@ class Twilight(object):
         """
         return self._visible
 
+    def plot_spectrum(self, Xsun=40.):
+        """Explanatory plot of twilight spectrum.
+
+        Shows the incident solar spectrum (above the atmosphere, in yellow),
+        the spectrum of sunlight illuminated the atmosphere along the
+        line of sight (reddened by extinction, in red), and the spectrum
+        that subsequently scatters into the telescope for X=1,2 (in blue).
+
+        Parameters
+        ----------
+        Xsun : float
+            Airmass that sunlight traverses before scattering in the atmosphere
+            along the line of sight. The value 40 corresponds to the total
+            airmass at the horizon.
+        """
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure(figsize=(8, 4))
+
+        # Plot normalized incident (above atmosphere) solar spectrum.
+        wlen = self._wavelength.to(u.Angstrom).value
+        incident = self._twilight_spectrum.value
+        incident /= np.trapz(incident, wlen)
+        plt.fill_between(wlen, incident, color='yellow', label='Incident')
+        plt.plot(wlen, incident, '-', c='k', lw=0.5)
+
+        # Plot scattering spectrum scaled for visibility.
+        ex = self._extinction_coefficient
+        scattering = incident * 10 ** (-0.4 * ex * Xsun)
+        norm = np.percentile(scattering, 99) / np.max(incident)
+        scattering /= norm
+        plt.fill_between(wlen, scattering, color='red',
+                         alpha=0.7, lw=0, label='Scattering')
+
+        # Plot scattered spectrum for Xobs=2 scaled for visibility.
+        Xobs = 2.0
+        scattered2 = scattering * (1 - 10 ** (-0.4 * ex * Xobs))
+        norm2 = np.percentile(scattered2, 99) / np.max(incident)
+        scattered2 /= norm2
+        plt.fill_between(wlen, scattered2, color='b',
+                         alpha=0.5, lw=0, label='X=2')
+        plt.plot(wlen, scattered2, '-', c='b', lw=0.1, alpha=0.5)
+
+        # Plot scattered spectrum for Xobs=1 with correct relative
+        # normalization to Xobs=2.
+        Xobs = 1.0
+        scattered1 = scattering * (1 - 10 ** (-0.4 * ex * Xobs))
+        scattered1 /= norm2
+        plt.plot([], [], 'b-', label='X=1')
+        plt.plot(wlen, scattered1, '-', c='b', lw=0.2)
+        plt.plot(wlen[wlen<5000], scattered1[wlen<5000], '-', c='b', lw=0.5)
+
+        plt.xlim(wlen[0], wlen[-1])
+        plt.gca().set_yticks([])
+        plt.ylim(0, 1.02 * np.max(incident))
+        plt.xlabel('Wavelength [A]')
+        plt.ylabel('Flux [arb.units]')
+        plt.legend(loc='upper left', ncol=2)
+
+        plt.tight_layout()
+
 
 """Polynomial coefficients provided by Sergey Koposov (skoposov@cmu.edu).
 

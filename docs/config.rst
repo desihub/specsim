@@ -202,7 +202,7 @@ or change attributes of the initialized atmosphere model. For example::
 .. image:: _static/desi_moon_atmosphere.png
     :alt: DESI moon configuration
 
-To add an additional twilight component:
+To add an additional twilight component::
 
     atm.twilight.sun_altitude = -13 * u.deg
     atm.twilight.sun_relative_azimuth = 30 * u.deg
@@ -213,9 +213,10 @@ To add an additional twilight component:
 
 Note how total sky emission has increased significantly and is dominated by
 scattered moon at the blue end and twilight sun at the red end.  To explore
-the dependence of scattering on the observing conditions, use the plot
-:func:`specsim.atmosphere.plot_lunar_brightness` and
-:func:`specsim.atmosphere.plot_twlight_brightness`.  For example::
+the dependence of scattering on the observing conditions, use the
+:func:`plot_lunar_brightness <specsim.atmosphere.plot_lunar_brightness>` and
+:func:`plot_twlight_brightness <specsim.atmosphere.plot_twilight_brightness>`
+functions.  For example::
 
     specsim.atmosphere.plot_lunar_brightness(
         moon_zenith=60*u.deg, moon_azimuth=90*u.deg, moon_phase=0.25)

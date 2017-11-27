@@ -62,7 +62,7 @@ def test_property_updates():
     assert m._update_required == True
     assert np.allclose(m.obs_zenith.value, 1.20942920)
     assert np.allclose(
-        np.mean(a.surface_brightness.value), 3.65356327e-17, atol=0.)
+        np.mean(a.surface_brightness.value), 4.50681053e-17, atol=0.)
     assert np.allclose(
         np.mean(m.surface_brightness.value), 1.430046e-17, atol=0.)
     assert m._update_required == False

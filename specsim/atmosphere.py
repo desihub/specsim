@@ -252,6 +252,9 @@ class Atmosphere(object):
             sky_max = max(twilight_max, sky_max)
         ax1_rhs.scatter(wave, ext, color='r', lw=0, s=1.)
 
+        # Clip low values if necessary.
+        sky_min = max(0.01 * sky_max, sky_min)
+
         ax1.set_yscale('log')
         ax1_rhs.set_yscale('log')
 
@@ -290,6 +293,8 @@ class Twilight(object):
         The normalization does not matter since it will be fixed by
         :meth:`get_twilight_surface_brightness`.  A solar spectrum can be used,
         which effectively assumes that the twilight is unfiltered sunlight.
+    extinction_coefficient : array
+        Array of extinction coefficients tabulated on ``wavelength``.
     airmass : float
         Airmass of the observation.
     sun_altitude :  astropy.units.Quantity
@@ -300,16 +305,13 @@ class Twilight(object):
         range [0, 180] deg, with 0 deg corresponding to pointing directly
         towards the sun.
     """
-    def __init__(self, wavelength, twilight_spectrum, airmass,
-                 sun_altitude, sun_relative_azimuth):
+    def __init__(self, wavelength, twilight_spectrum, extinction_coefficient,
+                 airmass, sun_altitude, sun_relative_azimuth):
         self._wavelength = wavelength
         self._twilight_spectrum = twilight_spectrum
+        self._extinction_coefficient = extinction_coefficient
         # Load the SDSS r-band filter curve.
         self._rband = speclite.filters.load_filter('sdss2010-r')
-        # Calculate the r-band magnitude of the input spectrum.
-        self._rmag0 = self._rband.get_ab_magnitude(
-            self._twilight_spectrum, self._wavelength)
-
         # Initialize the model parameters.
         self.airmass = airmass
         self.sun_altitude = sun_altitude
@@ -335,10 +337,19 @@ class Twilight(object):
                 np.zeros_like(self._twilight_spectrum) / area)
             self._scattered_r = None
             return
-        # Scale the solar spectrum to the predicted magnitude and apply
-        # surface brightness units.
-        scale = 10 ** (-0.4 * (self._scattered_r - self._rmag0))
-        self._surface_brightness = scale * self._twilight_spectrum / area
+        # Apply extinction to the solar spectrum as it passes through
+        # the atmosphere at grazing incidence.  Assume a fixed X=40 for this.
+        Xsun = 40.
+        flux = self._twilight_spectrum * 10 ** (
+            -0.4 * self._extinction_coefficient * Xsun)
+        # Calculate the spectrum after this flux is scattered into the
+        # observing line of sight.
+        Xobs = self.airmass
+        flux *= (1 - 10 ** (-0.4 * self._extinction_coefficient * Xobs))
+        # Normalize the spectrum to the predicted r-band surface brightness.
+        rmag0 = self._rband.get_ab_magnitude(flux, self._wavelength)
+        scale = 10 ** (-0.4 * (self._scattered_r - rmag0))
+        self._surface_brightness = scale * flux / area
 
     @property
     def scattered_r(self):
@@ -1134,8 +1145,8 @@ def initialize(config):
         c = config.get_constants(
             twilight_config, ['sun_altitude', 'sun_relative_azimuth'])
         twilight = Twilight(
-            config.wavelength, twilight_spectrum, atm_config.airmass,
-            c['sun_altitude'], c[ 'sun_relative_azimuth'])
+            config.wavelength, twilight_spectrum, extinction_coefficient,
+            atm_config.airmass, c['sun_altitude'], c[ 'sun_relative_azimuth'])
     else:
         twilight = None
 

@@ -226,8 +226,7 @@ the dependence of scattering on the observing conditions, use the plot
 and::
 
     specsim.atmosphere.plot_twilight_brightness(
-            sun_altitude=-13*u.deg, sun_azimuth=90*u.deg,
-            imax=20., imin=18.0)
+            sun_altitude=-13*u.deg, sun_azimuth=90*u.deg)
 
 .. image:: _static/desi_twilight_polar.png
     :alt: DESI twlight brightness

@@ -291,7 +291,7 @@ class Twilight(object):
     twilight_spectrum : astropy.units.Quantity
         Tabulated spectrum of twilight scattered sun with units of flux density.
         The normalization does not matter since it will be fixed by
-        :meth:`get_twilight_surface_brightness`.  A solar spectrum can be used,
+        :meth:`twilight_surface_brightness`.  A solar spectrum can be used,
         which effectively assumes that the twilight is unfiltered sunlight.
     extinction_coefficient : array
         Array of extinction coefficients tabulated on ``wavelength``.
@@ -600,7 +600,7 @@ def twilight_surface_brightness(
 
     Returns
     -------
-    float or array
+    astropy.units.Quantity
         r-band twilight surface brightness in mags/sq.arc.sec with the flux
         corresponding to ``subtract_dark`` subtracted (unless this
         value is ``None``).  Might be ``-np.inf`` if the predicted brightness
@@ -683,7 +683,8 @@ def twilight_surface_brightness(
         result[pos] = -2.5 * np.log10(solar_flux[pos])
         result[~pos] = -np.inf
 
-    return result[0] if scalar_result else result
+    sb_unit = u.mag / (u.arcsec ** 2)
+    return result[0] * sb_unit if scalar_result else result * sb_unit
 
 
 def plot_twilight_brightness(

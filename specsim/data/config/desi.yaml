@@ -31,7 +31,7 @@ wavelength_grid:
 # The atmosphere configuration is interpreted and validated by the
 # specsim.atmosphere module.
 atmosphere:
-    # Dark sky emission surface brightness.
+    # Dark sky emission surface brightness at airmass=1.
     sky:
         table:
             # The .dat extension is not automatically recognized as ascii.

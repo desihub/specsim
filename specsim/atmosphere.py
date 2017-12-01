@@ -125,7 +125,7 @@ class Atmosphere(object):
         Includes both dark sky emission and (if configured) scattered moonlight
         and/or twilight. Changes to :attr:`airmass` are reflected here.
         """
-        sky = self._dark_surface_brightness.copy()
+        sky = self._dark_surface_brightness * self.airmass
         if self._extinct_emission:
             sky *= self.extinction
         if self.moon is not None and self.moon.visible:

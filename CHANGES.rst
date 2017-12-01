@@ -1,6 +1,7 @@
 0.12 (unreleased)
 -----------------
 
+- Scale the dark sky spectrum with airmass.
 - Implement Twilight sky brightness model and integrate with Atmosphere model.
 - Remove obsolete sky_conditions parameter and only read tabulated dark sky.
 

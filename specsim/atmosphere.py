@@ -330,7 +330,7 @@ class Twilight(object):
             # Calculate the r-band surface brightness of the solar component.
             self._scattered_r = twilight_surface_brightness(
                 90 * u.deg - self.obs_zenith, self.sun_altitude,
-                self.sun_relative_azimuth).value
+                self.sun_relative_azimuth)
         if not self.visible or self._scattered_r == -np.inf:
             # Model predicts zero solar component.
             self._surface_brightness = (
@@ -348,7 +348,7 @@ class Twilight(object):
         flux *= (1 - 10 ** (-0.4 * self._extinction_coefficient * Xobs))
         # Normalize the spectrum to the predicted r-band surface brightness.
         rmag0 = self._rband.get_ab_magnitude(flux, self._wavelength)
-        scale = 10 ** (-0.4 * (self._scattered_r - rmag0))
+        scale = 10 ** (-0.4 * (self._scattered_r.value - rmag0))
         self._surface_brightness = scale * flux / area
 
     @property

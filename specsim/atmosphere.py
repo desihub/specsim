@@ -330,7 +330,7 @@ class Twilight(object):
             # Calculate the r-band surface brightness of the solar component.
             self._scattered_r = twilight_surface_brightness(
                 90 * u.deg - self.obs_zenith, self.sun_altitude,
-                self.sun_relative_azimuth)
+                self.sun_relative_azimuth).value
         if not self.visible or self._scattered_r == -np.inf:
             # Model predicts zero solar component.
             self._surface_brightness = (
@@ -734,7 +734,7 @@ def plot_twilight_brightness(
 
     # Calculate the r-band twilight surface brightness.
     rmag = twilight_surface_brightness(
-        obs_alt, sun_altitude, obs_az - sun_azimuth, subtract_dark, coefs)
+        obs_alt, sun_altitude, obs_az - sun_azimuth, subtract_dark, coefs).value
 
     # Initialize the plot. We are borrowing from:
     # http://blog.rtwilson.com/producing-polar-contour-plots-with-matplotlib/

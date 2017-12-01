@@ -104,7 +104,7 @@ def test_seeing_none():
 
 def test_twilight_func():
     def check(*args):
-        result = twilight_surface_brightness(*args, subtract_dark=None)
+        result = twilight_surface_brightness(*args, subtract_dark=None).value
         assert np.all((result < 21.2) & (result > 18.2))
     # Check limiting cases.
     check(0 * u.deg, -12 * u.deg, 0 * u.deg)

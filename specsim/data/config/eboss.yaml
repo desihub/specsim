@@ -2,7 +2,7 @@ name: eBOSS QuickSim
 
 # The base path is pre-pended to all non-absolute path values below.
 # {...} will be expanded using environment variables.
-base_path: '{DESIMODEL}/data'
+base_path: <PACKAGE_DATA>
 
 # Be verbose during the simulation?
 verbose: no
@@ -44,9 +44,9 @@ atmosphere:
                     unit: 1e-17 erg / (Angstrom arcsec2 cm2 s)
             paths:
                 # Each path defines a possible condition.
-                dark: spectra/star1_sky.dat #eboss-spec-sky.dat
-                #grey: spectra/spec-sky-grey.dat
-                #bright: spectra/spec-sky-bright.dat
+                dark: sdss/spectra/eboss-spec-sky.dat
+                #grey: sdss/spectra/eboss-spec-sky-grey.dat
+                #bright: sdss/spectra/eboss-spec-sky-bright.dat
         # Specify the current condition.
         condition: dark
     # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
@@ -72,7 +72,7 @@ atmosphere:
                     # not matter and old versions of speclite.filters do
                     # not interpret the actual units correctly.
                     unit: erg / (cm2 s Angstrom)
-            path: sky/solarspec.txt
+            path: sdss/sky/solarspec.txt
             format: ascii.basic
         constants:
             # Phase of the moon from 0 (full) to 1 (new).
@@ -89,7 +89,7 @@ atmosphere:
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 extinction_coefficient: { index: 1 }
-            path: spectra/eboss-KPNO-extinction.dat
+            path: sdss/spectra/eboss-KPNO-extinction.dat
     # Should extinction be applied to the sky emission?
     extinct_emission: yes
     # Airmass to use when the pointing is not calculated from the source
@@ -111,7 +111,7 @@ instrument:
         field_radius: 325.0 mm
     plate_scale:
         table:
-            path: focalplane/platescale.txt
+            path: sdss/focalplane/platescale.txt
             format: ascii
             columns:
                 radius: { index: 0, unit: mm }
@@ -120,7 +120,7 @@ instrument:
     fiberloss:
         # Method for calculating fiberloss fractions.
         # Either galsim or table.
-        method: galsim #table
+        method: galsim
         # Number of wavelengths where fiberloss should be calculated
         # and interpolated. Ignored unless method is galsim.
         num_wlen: 11
@@ -133,15 +133,15 @@ instrument:
             format: ascii
             paths:
                 # Each path corresponds to a different source type.
-                # These 'eboss' fiberlosses are actually desi values,
-                # adjusted to contain the wavelength grid so it lies
-                # within the interpolation range
-                qso: throughput/eboss-fiberloss-qso.dat
-                elg: throughput/eboss-fiberloss-elg.dat
-                lrg: throughput/eboss-fiberloss-lrg.dat
-                star: throughput/eboss-fiberloss-star.dat
-                sky: throughput/eboss-fiberloss-sky.dat
-                perfect: throughput/eboss-fiberloss-perfect.dat
+                # These 'eboss' fiberlosses are desi values,
+                # adjusted to lie within interpolation range of
+  # wavelength grid
+                qso: sdss/throughput/eboss-fiberloss-qso.dat
+                elg: sdss/throughput/eboss-fiberloss-elg.dat
+                lrg: sdss/throughput/eboss-fiberloss-lrg.dat
+                star: sdss/throughput/eboss-fiberloss-star.dat
+                sky: sdss/throughput/eboss-fiberloss-sky.dat
+                perfect: sdss/throughput/eboss-fiberloss-perfect.dat
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
@@ -149,22 +149,22 @@ instrument:
         # Read RMS blur values tabulated as a function of field angle and
         # wavelength, and derived from ray tracing simulations.  For details,
         # see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
-        path: throughput/DESI-0347_blur.ecsv
+        path: sdss/throughput/DESI-0347_blur.ecsv
         # The ECSV format is not auto-detected so we specify it explicitly.
         format: ascii.ecsv
     offset:
         # Read radial centroid offsets tabulated as a function of field angle
         # and wavelength, and derived from ray tracing simulations.  For
         # details, see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
-        path: throughput/DESI-0347_offset.ecsv
+        path: sdss/throughput/DESI-0347_offset.ecsv
         # The ECSV format is not auto-detected so we specify it explicitly.
         format: ascii.ecsv
         # Read random achromatic centroid offsets from a FITS file.
         # Uncomment any one of these lines to select a different random set.
         # No random offsets are applied if all lines are commented out.
-        random: throughput/DESI-0347_random_offset_1.fits
-        #random: throughput/DESI-0347_random_offset_2.fits
-        #random: throughput/DESI-0347_random_offset_3.fits
+        random: sdss/throughput/DESI-0347_random_offset_1.fits
+        #random: sdss/throughput/DESI-0347_random_offset_2.fits
+        #random: sdss/throughput/DESI-0347_random_offset_3.fits
     cameras:
         b:
             constants:
@@ -181,7 +181,7 @@ instrument:
                 output_pixel_size: 0.5 Angstrom
             ccd:
                 table:
-                    path: specpsf/eboss-blue.fits
+                    path: sdss/specpsf/eboss-blue.fits
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
@@ -196,8 +196,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/eboss-thru-b.fits
-                    #hdu: THROUGHPUT
+                    path: sdss/throughput/smee-eboss-thru-b.fits
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength, unit: Angstrom }
@@ -217,7 +216,7 @@ instrument:
                 output_pixel_size: 0.5 Angstrom
             ccd:
                 table:
-                    path: specpsf/eboss-red.fits
+                    path: sdss/specpsf/eboss-red.fits
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
@@ -232,8 +231,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/eboss-thru-r.fits
-                    #hdu: THROUGHPUT
+                    path: sdss/throughput/smee-eboss-thru-r.fits
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength, unit: Angstrom }
@@ -243,18 +241,15 @@ instrument:
 # The source configuration is interpreted and validated by the
 # specsim.source module.
 source:
-    name: standard star #22nd AB magnitude reference
+    name: 22nd AB magnitude reference
     # The type is only used when instrument.fiberloss.method is 'table'.
-    type: star
+    type: qso
     table:
-        format: ascii
-        path: spectra/star1.dat #spectra/spec-ABmag22.0.dat
+        format: ascii.ecsv
+        path: test/test_source.ecsv
         columns:
-            wavelength: { index: 0, unit: Angstrom }
-            flux:
-                index: 1
-                # Note the factor of 1e-17 in the units!
-                unit: 1e-17 erg / (Angstrom cm2 s)
+            wavelength: { name: wavelength}
+            flux: { name: flux}
     # Transverse profile of the source on the sky, used to calculate the
     # fiberloss fraction when instrument.fiberloss.method = galsim (but
     # ignored otherwise).
@@ -297,7 +292,7 @@ source:
 observation:
     observatory: KPNO
     constants:
-        exposure_time:  900.84 s #1000.0 s
+        exposure_time:  900.84 s
         # Atmospheric pressure at the telescope (not at sea level) used
         # to calculate atmospheric refraction.  Leave commented out to use a
         # nominal value calculated for the observatory elevation.

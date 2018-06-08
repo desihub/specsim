@@ -31,7 +31,7 @@ wavelength_grid:
 # The atmosphere configuration is interpreted and validated by the
 # specsim.atmosphere module.
 atmosphere:
-    # Sky emission surface brightness.
+    # Dark sky emission surface brightness at airmass=1.
     sky:
         table:
             # The .dat extension is not automatically recognized as ascii.
@@ -42,13 +42,7 @@ atmosphere:
                     index: 1
                     # Note the factor of 1e-17 in the units!
                     unit: 1e-17 erg / (Angstrom arcsec2 cm2 s)
-            paths:
-                # Each path defines a possible condition.
-                dark: spectra/spec-sky.dat
-                grey: spectra/spec-sky-grey.dat
-                bright: spectra/spec-sky-bright.dat
-        # Specify the current condition.
-        condition: dark
+            path: spectra/spec-sky.dat
     # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
     seeing:
         # The seeing is assumed to scale with wavelength as
@@ -77,11 +71,35 @@ atmosphere:
         constants:
             # Phase of the moon from 0 (full) to 1 (new).
             moon_phase: 0.5
-            # Zenith angles of the moon. An angle > 90 (below the horizon)
+            # Zenith angle of the moon. An angle > 90 (below the horizon)
             # will zero the scattered moon contribution.
             moon_zenith: 100 deg
             # Separation angle between the observation and moon.
             separation_angle: 60 deg
+    twilight:
+        # Un-normalized spectrum of scattered twilight sun.
+        # Use the same Wehrli 1985 extraterrestial solar spectrum for now.
+        table:
+            columns:
+                wavelength: { index: 1, unit: Angstrom }
+                flux:
+                    index: 2
+                    # The actual units are W / (m2 micron) but we lie here
+                    # (by a factor of 10) since the input normalization does
+                    # not matter and old versions of speclite.filters do
+                    # not interpret the actual units correctly.
+                    unit: erg / (cm2 s Angstrom)
+            path: sky/solarspec.txt
+            format: ascii.basic
+        constants:
+            # Altitude angle of the sun. The model is only valid for
+            # altitudes < -12 deg and altitudes < -18 deg will have no
+            # twilight contribution.
+            sun_altitude: -20 deg
+            # Azimuth angle of the pointing relative to the sun.
+            # Must be in the range [0, 180] deg, with 0 deg corresponding
+            # to pointing directly towards the sun.
+            sun_relative_azimuth: 90 deg
     # Zenith extinction coefficients.
     extinction:
         table:
@@ -143,7 +161,7 @@ instrument:
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
-        # Fits file of precomputed galsim fiber acceptance 
+        # Fits file of precomputed galsim fiber acceptance
         # the fits file is created with specsim/fitgalsim.py
         # the fits file is read with specsim/fastfiberacceptance.py
         fast_fiber_acceptance_path: throughput/galsim-fiber-acceptance.fits

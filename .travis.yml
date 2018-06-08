@@ -77,10 +77,12 @@ matrix:
         - os: linux
           env: SETUP_CMD='build_docs -w'
 
-        # Now try Astropy dev and LTS vesions with the latest 3.x and 2.7.
+        # Try astropy dev version.
         - os: linux
           env: ASTROPY_VERSION=development
                EVENT_TYPE='pull_request push cron'
+
+        # Now try Astropy LTS vesions with the latest 3.x and 2.7.
         - os: linux
           env: PYTHON_VERSION=2.7 ASTROPY_VERSION=lts
         - os: linux
@@ -108,6 +110,13 @@ matrix:
           env: MAIN_CMD='pycodestyle specsim --count' SETUP_CMD=''
 
     allow_failures:
+        # Try astropy dev version.  This current causes some doctests
+        # to fail because they produce the following unexpected output:
+        # Downloading http://maia.usno.navy.mil/ser7/finals2000A.all [Done]
+        # from `simulator = specsim.simulator.Simulator('test')``
+        - os: linux
+          env: ASTROPY_VERSION=development
+               EVENT_TYPE='pull_request push cron'
         # Do a PEP8 test with pycodestyle
         # (allow to fail unless your code completely compliant)
         - os: linux

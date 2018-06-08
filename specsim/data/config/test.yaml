@@ -20,7 +20,7 @@ wavelength_grid:
 # The atmosphere configuration is interpreted and validated by the
 # specsim.atmosphere module.
 atmosphere:
-    # Sky emission surface brightness.
+    # Dark sky emission surface brightness at airmass=1.
     sky:
         table:
             # The .ecsv extension is not automatically recognized.
@@ -29,7 +29,6 @@ atmosphere:
                 wavelength: { name: wavelength }
                 surface_brightness: { name: flux }
             path: test/test_sky.ecsv
-        condition: default
     # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
     seeing:
         # The seeing is assumed to scale with wavelength as
@@ -55,6 +54,25 @@ atmosphere:
             moon_zenith: 70 deg
             # Separation angle between the observation and moon.
             separation_angle: 60 deg
+    twilight:
+        # Un-normalized spectrum of scattered twilight sun.
+        # Use the same Wehrli 1985 extraterrestial solar spectrum for now.
+        table:
+            # The .ecsv extension is not automatically recognized.
+            format: ascii.ecsv
+            columns:
+                wavelength: { name: wavelength }
+                flux: { name: flux }
+            path: test/test_solar.ecsv
+        constants:
+            # Altitude angle of the sun. The model is only valid for
+            # altitudes < -12 deg and altitudes < -18 deg will have no
+            # twilight contribution.
+            sun_altitude: -15 deg
+            # Azimuth angle of the pointing relative to the sun.
+            # Must be in the range [0, 180] deg, with 0 deg corresponding
+            # to pointing directly towards the sun.
+            sun_relative_azimuth: 90 deg
     # Zenith extinction coefficients.
     extinction:
         table:

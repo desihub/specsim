@@ -42,9 +42,9 @@ independent of its SED.
 Atmosphere Model
 ----------------
 
-The atmosphere adds its own emission spectrum :math:`b(\lambda)` to that of the
-source and then both are attenuated by their passage through the atmosphere by
-the extinction factor:
+The atmosphere adds its own emission spectrum :math:`b(\lambda) X` to that of
+the source and then both are attenuated by their passage through the atmosphere
+by the extinction factor:
 
 .. math::
 

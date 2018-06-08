@@ -117,13 +117,14 @@ multi-HDU FITS file::
 In this case the HDU and columns are identified by their names in the FITS file.
 
 Finally, some tabulated data uses different files to represent different options.
-For example, sky surface brightness tables under different conditions are
+For example, fiberloss tables for different source types are
 specified by replacing the ``path`` node with a ``paths`` node as follows::
 
     paths:
-        dark: dark-sky.csv
-        grey: grey-sky.csv
-        bright: bright-sky.csv
+        # Each path corresponds to a different source type.
+        qso: throughput/fiberloss-qso.dat
+        elg: throughput/fiberloss-elg.dat
+        lrg: throughput/fiberloss-lrg.dat
 
 For additional examples of specifying tabular data, refer to the configurations
 included with this package and described below.
@@ -182,36 +183,66 @@ The following plot summarizes the default DESI atmosphere used for simulations,
 and was created using::
 
     config = specsim.config.load_config('desi')
-    specsim.atmosphere.initialize(config).plot()
+    atm = specsim.atmosphere.initialize(config)
+    atm.plot()
 
 .. image:: _static/desi_atmosphere.png
     :alt: DESI default atmosphere configuration
 
-The default atmosphere has the moon below the horizon. To simulate grey or
-bright conditions, add scattered moon light by :doc:`modifying the relevant
-parameters in the configuration </api>`, or else by changing attributes of the
-initialized atmosphere model. For example::
+The default atmosphere has the moon below the horizon. To add scattered
+moonlight, :doc:`adjust the relevant parameters in the configuration </api>`,
+or change attributes of the initialized atmosphere model. For example::
 
-    atm = specsim.atmosphere.initialize(config)
     atm.airmass = 1.3
     atm.moon.moon_zenith = 60 * u.deg
     atm.moon.separation_angle = 50 * u.deg
     atm.moon.moon_phase = 0.25
     atm.plot()
 
-.. image:: _static/desi_bright_atmosphere.png
-    :alt: DESI bright atmosphere configuration
+.. image:: _static/desi_moon_atmosphere.png
+    :alt: DESI moon configuration
+
+To add an additional twilight component::
+
+    atm.twilight.sun_altitude = -13 * u.deg
+    atm.twilight.sun_relative_azimuth = 30 * u.deg
+    atm.plot()
+
+.. image:: _static/desi_moon_twilight_atmosphere.png
+    :alt: DESI moon plus twilight configuration
 
 Note how total sky emission has increased significantly and is dominated by
-scattered moon at the blue end.  To explore the dependence of the scattered
-moon brightness on the observed field, use
-:func:`specsim.atmosphere.plot_lunar_brightness`.  For example::
+scattered moon at the blue end and twilight sun at the red end.  To explore
+the dependence of scattering on the observing conditions, use the
+:func:`plot_lunar_brightness <specsim.atmosphere.plot_lunar_brightness>` and
+:func:`plot_twlight_brightness <specsim.atmosphere.plot_twilight_brightness>`
+functions.  For example::
 
     specsim.atmosphere.plot_lunar_brightness(
         moon_zenith=60*u.deg, moon_azimuth=90*u.deg, moon_phase=0.25)
 
 .. image:: _static/desi_scattered_moon.png
     :alt: DESI scattered moon brightness
+
+and::
+
+    specsim.atmosphere.plot_twilight_brightness(
+            sun_altitude=-13*u.deg, sun_azimuth=90*u.deg)
+
+.. image:: _static/desi_twilight_polar.png
+    :alt: DESI twlight brightness
+
+For an explanatory plot of the twilight spectrum, use::
+
+    atm.twilight.plot_spectrum()
+
+.. image:: _static/twilight_spectrum.png
+    :alt: DESI twilight spectrum
+
+Note how the twilight spectrum is significantly reddened relative to the
+solar spectrum above the atmosphere (yellow) since it passes through a
+large airmass (X~40) before scattering in the atmosphere above the observing
+line of sight.
 
 Instrument
 ^^^^^^^^^^

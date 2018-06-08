@@ -27,8 +27,6 @@ def main(args=None):
         help='name of the simulation configuration to use')
     parser.add_argument('--exposure-time', type=str, default='1000s',
         help='exposure time in to use (with units)')
-    parser.add_argument('--sky-condition', type=str, default=None,
-        help='sky condition to use (uses default if not set)')
     parser.add_argument('--airmass', type=float, default=1.,
         help='atmosphere airmass to use.')
     parser.add_argument('--moon-phase', type=float, default=None, metavar='P',
@@ -66,8 +64,6 @@ def main(args=None):
     # Update configuration options from command-line options.
     config.verbose = args.verbose
 
-    if args.sky_condition is not None:
-        config.atmosphere.sky.condition = args.sky_condition
     config.atmosphere.airmass = args.airmass
     if (args.moon_phase is not None or args.moon_zenith is not None or
         args.moon_separation is not None):

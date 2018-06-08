@@ -1,9 +1,11 @@
 0.12 (unreleased)
 -----------------
 
-- No changes yet.
+- Scale the dark sky spectrum with airmass.
+- Implement Twilight sky brightness model and integrate with Atmosphere model.
+- Remove obsolete sky_conditions parameter and only read tabulated dark sky.
 
-0.11 (2017-10-10)
+0.11 (2017-11-10)
 -----------------
 
 - Implement fast fiberloss calculator that interpolates GalSim results (#78).

@@ -20,7 +20,7 @@ where :math:`s(\\lambda)` is the source flux entering the atmosphere,
 :math:`e(\\lambda)` is the zenith extinction, :math:`X` is the airmass,
 :math:`a` is the fiber entrance face area, and :math:`b(\\lambda)` is the
 sky emission surface brightness.  The sky brightness can optionally include
-a scattered moonlight component.
+a scattered moonlight or twilight components.
 
 An atmosphere model is usually initialized from a configuration used to create
 a simulator and then accessible via its ``atmosphere`` attribute, for example:
@@ -37,8 +37,9 @@ been initialized, for example:
     >>> simulator.atmosphere.airmass = 1.5
     >>> simulator.atmosphere.moon.moon_phase = 0.25
     >>> simulator.atmosphere.moon.moon_zenith = 25 * u.deg
+    >>> simulator.atmosphere.twilight.sun_altitude = -15 * u.deg
 
-See :class:`Atmosphere` and :class:`Moon` for details.
+See :class:`Atmosphere`, :class:`Moon` and :class:`Twilight` for details.
 """
 from __future__ import print_function, division
 
@@ -52,28 +53,24 @@ import specsim.config
 
 
 class Atmosphere(object):
-    """Model atmospheric surface brightness and extinction.
+    """Model dark sky surface brightness and extinction.
 
-    A simulation uses only our read-only :attr:`surface_brightness` and
-    :attr:`extinction` attributes.  Use the :attr:`condition` and
-    :attr:`airmass` attributes to update this model.  Refer to the
-    :class:`moon model <Moon>` for details on updating the optional
-    scattered moon model.
+    A simulation uses only our read-only :attr:`surface_brightness` attribute.
+    Use the :attr:`airmass` attribute to update this model.  Refer to the
+    :class:`scattered moon <Moon>` and :class:`twilight <Twilight>` models
+    for details on updating their parameters.
 
     Parameters
     ----------
     wavelength : astropy.units.Quantity
         Array of wavelengths with units where data is tabulated.
-    surface_brightness_dict : dict
-        Dictionary of tabulated sky emission surface brightness values. Each
-        dictionary key defines a possible sky condition.
+    dark_surface_brightness : astropy.units.Quantity
+        Array of tabulated dark-sky emission surface brightness values
+        corresponding to each ``wavelength`` array element.
     extinction_coefficient : array
-        Array of extinction coefficients tabulated on ``wavelength``.
+        Array of extinction coefficients, also tabulated on ``wavelength``.
     extinct_emission : bool
         If set, atmospheric extinction is applied to sky emission.
-    condition : str
-        Sky emission condition to use, which must be one of the keys
-        of ``surface_brightness_dict``.
     seeing : dict or None
         Dictionary of seeing PSF parameters to use which must contain keys
         "fwhm_ref", "wlen_ref" and "moffat_beta".  Seeing is used to define
@@ -83,17 +80,18 @@ class Atmosphere(object):
         Airmass of the observation.
     moon : :class:`Moon` or None
         Model to use for scattered moonlight.
+    twilight : :class:`Twilight` or None
+        Model to use for twilight scattered sun.
     """
-    def __init__(self, wavelength, surface_brightness_dict,
-                 extinction_coefficient, extinct_emission, condition, airmass,
-                 seeing, moon):
+    def __init__(self, wavelength, dark_surface_brightness,
+                 extinction_coefficient, extinct_emission, airmass,
+                 seeing, moon, twilight):
         self._wavelength = wavelength
-        self._surface_brightness_dict = surface_brightness_dict
+        self._dark_surface_brightness = dark_surface_brightness
         self._extinction_coefficient = extinction_coefficient
         self._extinct_emission = extinct_emission
-        self._condition_names = surface_brightness_dict.keys()
         self._moon = moon
-        self.condition = condition
+        self._twilight = twilight
         self.airmass = airmass
         if seeing is not None:
             for required in ('fwhm_ref', 'wlen_ref', 'moffat_beta'):
@@ -101,7 +99,6 @@ class Atmosphere(object):
                     raise ValueError('Missing required seeing key "{0}"'
                                      .format(required))
         self._seeing = seeing
-
 
     @property
     def moon(self):
@@ -112,21 +109,30 @@ class Atmosphere(object):
         """
         return self._moon
 
+    @property
+    def twilight(self):
+        """Moon or None: Model of twilight scattered sun.
+
+        See :class:`Twilight` for details on changing twilight simulation
+        parameters via this attribute.
+        """
+        return self._twilight
 
     @property
     def surface_brightness(self):
         """astropy.units.Quantity: Total sky surface brightness.
 
-        Includes both dark sky emission and (if configured) scattered moonlight.
-        Changes to :attr:`condition` or :attr:`airmass` are reflected here.
+        Includes both dark sky emission and (if configured) scattered moonlight
+        and/or twilight. Changes to :attr:`airmass` are reflected here.
         """
-        sky = self._surface_brightness_dict[self.condition].copy()
+        sky = self._dark_surface_brightness * self.airmass
         if self._extinct_emission:
             sky *= self.extinction
         if self.moon is not None and self.moon.visible:
             sky += self.moon.surface_brightness
+        if self.twilight is not None and self.twilight.visible:
+            sky += self.twilight.surface_brightness
         return sky
-
 
     @property
     def extinction(self):
@@ -137,45 +143,14 @@ class Atmosphere(object):
         """
         return self._extinction
 
-
-    @property
-    def condition(self):
-        """str: Sky emission condition.
-
-        Must be one of the predefined names in :attr:`condition_names`.
-        """
-        return self._condition
-
-
-    @condition.setter
-    def condition(self, name):
-        if name not in self._condition_names:
-            raise ValueError(
-                "Invalid condition '{0}'. Pick one of {1}."
-                .format(name, self._condition_names))
-        self._condition = name
-
-
-    @property
-    def condition_names(self):
-        """list: The list of valid sky condition names.
-
-        The valid names are keys of the ``atmosphere.sky.table.paths`` node,
-        or "default" if only a single path is specified via a
-        ``atmosphere.sky.table.path`` node.
-        """
-        return self._condition_names
-
-
     @property
     def airmass(self):
         """float: Observing airmass.
 
         Changes to this value automatically propagate to our scattered
-        moon model, if there is one.
+        moon and twilight models, if present.
         """
         return self._airmass
-
 
     @airmass.setter
     def airmass(self, airmass):
@@ -183,7 +158,8 @@ class Atmosphere(object):
         self._extinction = 10 ** (-self._extinction_coefficient * airmass / 2.5)
         if self.moon is not None:
             self.moon.airmass = airmass
-
+        if self.twilight is not None:
+            self.twilight.airmass = airmass
 
     @property
     def seeing_moffat_beta(self):
@@ -193,7 +169,6 @@ class Atmosphere(object):
         """
         return self._seeing['moffat_beta'] if self._seeing else None
 
-
     @property
     def seeing_wlen_ref(self):
         """float: Reference wavelength for :attr:`seeing_fwhm_ref`
@@ -201,7 +176,6 @@ class Atmosphere(object):
         Returns None if no seeing has been specified.
         """
         return self._seeing['wlen_ref'] if self._seeing else None
-
 
     @property
     def seeing_fwhm_ref(self):
@@ -211,7 +185,6 @@ class Atmosphere(object):
         """
         return self._seeing['fwhm_ref'] if self._seeing else None
 
-
     @seeing_fwhm_ref.setter
     def seeing_fwhm_ref(self, fwhm_ref):
         try:
@@ -220,7 +193,6 @@ class Atmosphere(object):
             raise ValueError('Seeing has not been initialized.')
         except (u.UnitConversionError, AttributeError):
             raise ValueError('Invalid units for seeing_fwhm_ref.')
-
 
     def get_seeing_fwhm(self, wavelength):
         """Calculate the seeing FWHM at the specified wavelength.
@@ -242,7 +214,6 @@ class Atmosphere(object):
         wlen_ratio = (wavelength.to(u.Angstrom).value /
                       self._seeing['wlen_ref'].to(u.Angstrom).value)
         return self._seeing['fwhm_ref'] * wlen_ratio ** (-0.2)
-
 
     def plot(self):
         """Plot a summary of this atmosphere model.
@@ -272,7 +243,17 @@ class Atmosphere(object):
             moon_min, moon_max = np.percentile(moon, (1, 99))
             sky_min = min(moon_min, sky_min)
             sky_max = max(moon_max, sky_max)
+        if self.twilight is not None and self.twilight.visible:
+            twilight = self.twilight.surface_brightness.to(sky_unit).value
+            ax1.scatter(wave, twilight, color='orange', lw=0, s=1.)
+            # Adjust the vertical limits to include the moon.
+            twilight_min, twilight_max = np.percentile(twilight, (1, 99))
+            sky_min = min(twilight_min, sky_min)
+            sky_max = max(twilight_max, sky_max)
         ax1_rhs.scatter(wave, ext, color='r', lw=0, s=1.)
+
+        # Clip low values if necessary.
+        sky_min = max(0.01 * sky_max, sky_min)
 
         ax1.set_yscale('log')
         ax1_rhs.set_yscale('log')
@@ -288,14 +269,511 @@ class Atmosphere(object):
         ax1.set_xlim(wave[0], wave[-1])
 
         ncol = 2
-        ax1.plot([], [], 'g-',
-                 label='Total Emission ({0})'.format(self.condition))
+        ax1.plot([], [], 'g-', label='Total Emission')
         if self.moon is not None and self.moon.visible:
             ax1.plot([], [], 'b-', label='Scattered Moon')
+            ncol += 1
+        if self.twilight is not None and self.twilight.visible:
+            ax1.plot([], [], ls='-', c='orange', label='Twilight')
             ncol += 1
         ax1.plot([], [], 'r-', label='Extinction')
         ax1.legend(bbox_to_anchor=(0., 1.02, 1., .102), loc=3,
                    ncol=ncol, mode='expand', borderaxespad=0.)
+
+
+class Twilight(object):
+    """Model of twilight scattered sun.
+
+    Parameters
+    ----------
+    wavelength : astropy.units.Quantity
+        Array of wavelengths with units where data is tabulated.
+    twilight_spectrum : astropy.units.Quantity
+        Tabulated spectrum of twilight scattered sun with units of flux density.
+        The normalization does not matter since it will be fixed by
+        :meth:`twilight_surface_brightness`.  A solar spectrum can be used,
+        which effectively assumes that the twilight is unfiltered sunlight.
+    extinction_coefficient : array
+        Array of extinction coefficients tabulated on ``wavelength``.
+    airmass : float
+        Airmass of the observation.
+    sun_altitude :  astropy.units.Quantity
+        The altitude angle of the sun, which must be <= -12 deg. The model
+        predicts zero twilight contribution for altitudes below -18 deg.
+    sun_relative_azimuth : astropy.units.Quantity
+        Azimuth angle of the pointing relative to the sun. Must be in the
+        range [0, 180] deg, with 0 deg corresponding to pointing directly
+        towards the sun.
+    """
+    def __init__(self, wavelength, twilight_spectrum, extinction_coefficient,
+                 airmass, sun_altitude, sun_relative_azimuth):
+        self._wavelength = wavelength
+        self._twilight_spectrum = twilight_spectrum
+        self._extinction_coefficient = extinction_coefficient
+        # Load the SDSS r-band filter curve.
+        self._rband = speclite.filters.load_filter('sdss2010-r')
+        # Initialize the model parameters.
+        self.airmass = airmass
+        self.sun_altitude = sun_altitude
+        self.sun_relative_azimuth = sun_relative_azimuth
+
+    def _update(self):
+        """Update the model based on the current parameter values.
+
+        Uses visible, obs_zenith, sun_altitude, sun_relative_azimuth and
+        updates _scattered_r and _surface_brightness.
+        """
+        self._update_required = False
+
+        area = u.arcsec ** 2
+        if self.visible:
+            # Calculate the r-band surface brightness of the solar component.
+            self._scattered_r = twilight_surface_brightness(
+                90 * u.deg - self.obs_zenith, self.sun_altitude,
+                self.sun_relative_azimuth)
+        if not self.visible or self._scattered_r == -np.inf:
+            # Model predicts zero solar component.
+            self._surface_brightness = (
+                np.zeros_like(self._twilight_spectrum) / area)
+            self._scattered_r = None
+            return
+        # Apply extinction to the solar spectrum as it passes through
+        # the atmosphere at grazing incidence.  Assume a fixed X=40 for this.
+        Xsun = 40.
+        flux = self._twilight_spectrum * 10 ** (
+            -0.4 * self._extinction_coefficient * Xsun)
+        # Calculate the spectrum after this flux is scattered into the
+        # observing line of sight.
+        Xobs = self.airmass
+        flux *= (1 - 10 ** (-0.4 * self._extinction_coefficient * Xobs))
+        # Normalize the spectrum to the predicted r-band surface brightness.
+        rmag0 = self._rband.get_ab_magnitude(flux, self._wavelength)
+        scale = 10 ** (-0.4 * (self._scattered_r.value - rmag0))
+        self._surface_brightness = scale * flux / area
+
+    @property
+    def scattered_r(self):
+        """r-band surface brightness of twilight scattered sun.
+
+        This is a read-only attribute whose value depends
+        on the current values of :attr:`airmass`, :attr:`sun_altitude`,
+        and :attr:`sun_relative_azimuth`.  Returns None if the sun is
+        below -18 deg.
+        """
+        if self._update_required:
+            self._update()
+        return self._scattered_r
+
+    @property
+    def surface_brightness(self):
+        """astropy.units.Quantity: Tabulated twilight surface brightness.
+
+        This is the only model attribute used for simulation. Its value depends
+        on the current values of :attr:`airmass`, :attr:`sun_altitude`,
+        and :attr:`sun_relative_azimuth`.
+        """
+        if self._update_required:
+            self._update()
+        return self._surface_brightness
+
+    @property
+    def airmass(self):
+        """Airmass of observation used for twilight model.
+
+        Changes to this value will update :attr:`obs_zenith` and
+        :attr:`surface_brightness`.
+
+        This should normally be the same airmass that is used in the
+        :class:`Atmosphere` model to calculate source extinction, but this
+        is not checked here.
+        """
+        return self._airmass
+
+    @airmass.setter
+    def airmass(self, airmass):
+        # Remove any dimensionless astropy.units.Quantity wrapper since
+        # np.arcsin(Quantity(1)) has u.rad added automatically, but we
+        # add it explicitly below.
+        self._airmass = np.float(airmass)
+        # Estimate the zenith angle corresponding to this observing airmass.
+        # We invert eqn.3 of KS1991 for this (instead of eqn.14).
+        self._obs_zenith = np.arcsin(
+            np.sqrt((1 - self._airmass ** -2) / 0.96)) * u.rad
+        self._update_required = True
+
+    @property
+    def obs_zenith(self):
+        """Read-only value of the observing zenith angle.
+
+        This attribute is calculated from :attr:`airmass` by inverting
+        Eqn.3 of Krisciunas & Schaefer 1991:
+
+        .. math::
+
+            X = (1 - 0.96 \\sin^2 Z)^{-0.5}
+        """
+        return self._obs_zenith
+
+    @property
+    def sun_altitude(self):
+        """Sun altitude angle.
+
+        Changes to this value will update :attr:`surface_brightness`
+        and :attr:`visible`.
+        """
+        return self._sun_altitude
+
+    @sun_altitude.setter
+    def sun_altitude(self, sun_altitude):
+        self._sun_altitude = sun_altitude
+        if self._sun_altitude >= -12 * u.deg:
+            raise ValueError('Twilight: sun_altitude must be below -12 deg.')
+        self._visible = self._sun_altitude > -18 * u.deg
+        self._update_required = True
+
+    @property
+    def sun_relative_azimuth(self):
+        """Sun relative azimuth angle.
+
+        Changes to this value will update :attr:`surface_brightness`.
+        """
+        return self._sun_relative_azimuth
+
+    @sun_relative_azimuth.setter
+    def sun_relative_azimuth(self, sun_relative_azimuth):
+        self._sun_relative_azimuth = sun_relative_azimuth
+        self._update_required = True
+
+    @property
+    def visible(self):
+        """bool: Read-only visibility of any twilight contribution.
+
+        The visibility criterion is :attr:`sun_altitude` > -18 degrees.
+        """
+        return self._visible
+
+    def plot_spectrum(self, Xsun=40.):
+        """Explanatory plot of twilight spectrum.
+
+        Shows the incident solar spectrum (above the atmosphere, in yellow),
+        the spectrum of sunlight illuminated the atmosphere along the
+        line of sight (reddened by extinction, in red), and the spectrum
+        that subsequently scatters into the telescope for X=1,2 (in blue).
+
+        Parameters
+        ----------
+        Xsun : float
+            Airmass that sunlight traverses before scattering in the atmosphere
+            along the line of sight. The value 40 corresponds to the total
+            airmass at the horizon.
+        """
+        import matplotlib.pyplot as plt
+
+        fig = plt.figure(figsize=(8, 4))
+
+        # Plot normalized incident (above atmosphere) solar spectrum.
+        wlen = self._wavelength.to(u.Angstrom).value
+        incident = self._twilight_spectrum.value
+        incident /= np.trapz(incident, wlen)
+        plt.fill_between(wlen, incident, color='yellow', label='Incident')
+        plt.plot(wlen, incident, '-', c='k', lw=0.5)
+
+        # Plot scattering spectrum scaled for visibility.
+        ex = self._extinction_coefficient
+        scattering = incident * 10 ** (-0.4 * ex * Xsun)
+        norm = np.percentile(scattering, 99) / np.max(incident)
+        scattering /= norm
+        plt.fill_between(wlen, scattering, color='red',
+                         alpha=0.7, lw=0, label='Scattering')
+
+        # Plot scattered spectrum for Xobs=2 scaled for visibility.
+        Xobs = 2.0
+        scattered2 = scattering * (1 - 10 ** (-0.4 * ex * Xobs))
+        norm2 = np.percentile(scattered2, 99) / np.max(incident)
+        scattered2 /= norm2
+        plt.fill_between(wlen, scattered2, color='b',
+                         alpha=0.5, lw=0, label='X=2')
+        plt.plot(wlen, scattered2, '-', c='b', lw=0.1, alpha=0.5)
+
+        # Plot scattered spectrum for Xobs=1 with correct relative
+        # normalization to Xobs=2.
+        Xobs = 1.0
+        scattered1 = scattering * (1 - 10 ** (-0.4 * ex * Xobs))
+        scattered1 /= norm2
+        plt.plot([], [], 'b-', label='X=1')
+        plt.plot(wlen, scattered1, '-', c='b', lw=0.2)
+        plt.plot(wlen[wlen<5000], scattered1[wlen<5000], '-', c='b', lw=0.5)
+
+        plt.xlim(wlen[0], wlen[-1])
+        plt.gca().set_yticks([])
+        plt.ylim(0, 1.02 * np.max(incident))
+        plt.xlabel('Wavelength [A]')
+        plt.ylabel('Flux [arb.units]')
+        plt.legend(loc='upper left', ncol=2)
+
+        plt.tight_layout()
+
+
+"""Polynomial coefficients provided by Sergey Koposov (skoposov@cmu.edu).
+
+Used by func:`twilight_surface_brightness`. For details, see
+https://github.com/segasai/desi_twilight_test
+"""
+twilight_coefs = np.array([
+    0.57375516, -0.04514612,  0.15431331,  0.57284421, -0.15712937,
+    -0.15469861,  0.00591423, -0.20653481, -0.0815443 ,  0.13372185,
+    0.12848504,  0.08304845,  0.00713782,  0.04781154,  0.01822   ,
+    -0.02672601, -0.02406313, -0.02164916]).reshape(3, 6)
+
+
+def twilight_surface_brightness(
+    obj_altitude, sun_altitude, sun_relative_azimuth,
+    subtract_dark=21.2, coefs=twilight_coefs):
+    """Return r-band twilight surface brightness.
+
+    The first three inputs can be arrays with broadcastable shapes.
+    The calculation is then automatically broadcast to the result.
+
+    The total (dark + twilight) sky surface brightness during periods when
+    the moon is below the horizon and the sun is 12 - 18 deg below the horizon
+    is modeled as:
+
+    .. math::
+
+        B(x, y, z) = \sum_{k=0}^2 z^k \left(
+        p_{k0} + p_{k1} r + p_{k2} x + p_{k3} r^2 + p_{k4} x r + p_{k5} x^2
+        \\right)
+
+    with:
+
+    .. math::
+
+        x = \cos(Az_{obj} - Az_{sun}) \cos(Alt_{obj}) \quad, \quad
+        y = \sin(\left| Az_{obj} - Az_{sun}\\right|) \cos(Alt_{obj})
+        \quad, \quad r = \sqrt{x^2 + y^2}
+        \quad, \quad z \equiv \max(Alt_{sun} + 18^\circ, 0) \; .
+
+    For example :math:`(x,y) = (0,0), (1,0), (-1,0)` correspond to the zenith
+    and pointing at the horizon directly towards / away from the sun,
+    respectively. The physical range of :math:`(x, y, z)` is bounded by:
+
+    .. math::
+
+        -1 \le x \le +1 \quad,\quad 0 \le y \le 1 \quad, \quad
+        x^2 + y^2 \le 1 \quad , \quad 0 \le z \le 8 \; .
+
+    The default parameter values :math:`p_{kj}` are based on a fit to SDSS
+    DR9 r-band imaging performed by Sergey Koposov.  For details, see
+    https://desi.lbl.gov/trac/wiki/MilkyWayWG/SkyBrightnessTwilight and
+    https://github.com/segasai/desi_twilight_test.
+
+    When a value of ``subtract_dark`` (:math:`m_d`) is specified, the
+    dark + solar predicted magnitude :math:`m_{d+s}` is converted into the
+    solar-only magnitude :math:`m_s` using:
+
+    .. math::
+
+        m_s = -2.5 \log_{10}\left(10^{-0.4 m_{d+s} - 10^{-0.4 m_d}}\\right)
+
+    Otherwise, the result combines the dark sky (nominally i=20.5) plus the
+    twilight scattered sun contribution.
+
+    Use :func:`plot_twilight_brightness` to display the distribution of
+    predicted sky brightness in the (alt, az) plane.
+
+    Parameters
+    ----------
+    obj_altitude : astropy.units.Quantity
+        Object altitude angle(s) to use. Must be in the range [0, 90] deg.
+    sun_altitude : astropy.units.Quantity
+        Sun altitude angle(s) to use.  Must be in the range [-90, -12] deg.
+        Values below -18 deg are considered dark, with no scattered sun.
+    sun_relative_azimuth : astropy.units.Quantity
+        Relative azimuth angle(s) between the object and the sun.
+    subtract_dark : float or None
+        Surface brightness (in mag/sq.arcsec.) of dark sky component to
+        subtract, returning the solar-only magnitude.  Returns ``-np.inf`` if
+        the dark + solar predicted magnitude is greater than this value.
+        No subtraction is performed when this parameter is ``None``.
+    coefs : array
+        Array with shape (3, 6) of polynomial coefficients to use.
+
+    Returns
+    -------
+    astropy.units.Quantity
+        r-band twilight surface brightness in mags/sq.arc.sec with the flux
+        corresponding to ``subtract_dark`` subtracted (unless this
+        value is ``None``).  Might be ``-np.inf`` if the predicted brightness
+        is less than ``subtract_dark``, indicating that no solar
+        contribution is present.
+    """
+    # Check input units and convert to degrees.
+    try:
+        obj_altitude = obj_altitude.to(u.deg).value
+        sun_altitude = sun_altitude.to(u.deg).value
+        sun_relative_azimuth = sun_relative_azimuth.to(u.deg).value
+    except (u.UnitConversionError, AttributeError) as e:
+        raise ValueError('invalid input units')
+
+    # Remember to return a scalar when all inputs are scalar.
+    scalar_result = np.broadcast(
+        obj_altitude, sun_altitude, sun_relative_azimuth).shape == ()
+
+    # Vectorize all subsequent calculations.
+    obj_altitude = np.atleast_1d(obj_altitude)
+    sun_altitude = np.atleast_1d(sun_altitude)
+    sun_relative_azimuth = np.atleast_1d(sun_relative_azimuth)
+
+    # Check that input arrays have compatible shapes.  Raises a ValueError
+    # if this is not true.
+    result_shape = np.broadcast(
+        obj_altitude, sun_altitude, sun_relative_azimuth).shape
+
+    # Check input ranges.
+    if np.any((obj_altitude < 0) | (obj_altitude > 90)):
+        raise ValueError('obj_altitude allowed range is [0, 90] deg.')
+    if np.any((sun_altitude < -90) | (sun_altitude > -12)):
+        raise ValueError('sun_altitude allowed range is [-90,-12] deg.')
+
+    # Wrap relative azimuth around to [0, 180] deg.
+    sun_relative_azimuth = np.remainder(sun_relative_azimuth, 360)
+    sun_relative_azimuth = np.minimum(
+        sun_relative_azimuth, 360 - sun_relative_azimuth)
+    assert np.all((sun_relative_azimuth >= 0) & (sun_relative_azimuth <= 180))
+
+    # Convert from (obj_altitude, sun_relative_azimuth) to (x, y, r).
+    daz = np.deg2rad(sun_relative_azimuth)
+    cos_alt = np.cos(np.deg2rad(obj_altitude))
+    x = np.cos(daz) * cos_alt
+    y = np.sin(daz) * cos_alt
+    r = np.sqrt(x ** 2 + y ** 2)
+    assert np.all((r <= 1) & (y >= 0) & (np.abs(x) <= 1))
+
+    # Convert from (sun_altitude) to z.
+    min_alt = -18.
+    z = np.maximum(sun_altitude + 18, 0)
+
+    # Evaluate the 3 quadratic coefficients in z at each (x,y).
+    xy_shape = np.broadcast(x, y).shape
+    poly_xy_terms = np.empty(xy_shape + (1, 6))
+    poly_xy_terms[...,0,0] = 1.
+    poly_xy_terms[...,0,1] = r + 0 * x
+    poly_xy_terms[...,0,2] = x + 0 * r
+    poly_xy_terms[...,0,3] = r ** 2 + 0 * x
+    poly_xy_terms[...,0,4] = x * r
+    poly_xy_terms[...,0,5] = x ** 2 + 0 * r
+    z_coefs = (coefs * poly_xy_terms).sum(axis=-1)
+    assert z_coefs.shape == xy_shape + (3,)
+
+    # Evaluate the quadratic in z at each (x,y).
+    z_terms = np.empty(z.shape + (3,))
+    z_terms[...,0] = 1.
+    z_terms[...,1] = z
+    z_terms[...,2] = z ** 2
+    result = (z_terms * z_coefs).sum(axis=-1)
+    assert result.shape == result_shape
+
+    # Convert to surface brightness in mag / sq.arcsec.
+    result = 22.5 - 2.5 * result
+
+    # Subtract the dark contribution if requested.
+    if subtract_dark is not None:
+        solar_flux = 10 ** (-0.4 * result) - 10 ** (-0.4 * subtract_dark)
+        pos = solar_flux > 0
+        result[pos] = -2.5 * np.log10(solar_flux[pos])
+        result[~pos] = -np.inf
+
+    sb_unit = u.mag / (u.arcsec ** 2)
+    return result[0] * sb_unit if scalar_result else result * sb_unit
+
+
+def plot_twilight_brightness(
+    sun_altitude, sun_azimuth, subtract_dark=None, coefs=twilight_coefs,
+    rmin=None, rmax=None, ngrid=250, cmap='YlGnBu', figure_size=(8, 6)):
+    """Create a polar plot of the r-band twilight scattered surface brightness.
+
+    Evaluates the model of :func:`twilight_surface_brightness` on a polar
+    grid of observation pointings, for a fixed sun position.
+    This method requires that matplotlib is installed.
+
+    Parameters
+    ----------
+    sun_altitude : astropy.units.Quantity
+        See :func:`twilight_surface_brightness`. Must be a scalar.
+    sun_azimuth : astropy.units.Quantity
+        Aziumuthal angle of the sun in angular units.  Azimuth is measured
+        clockwize from zero (North). Must be a scalar.
+    subtract_dark : float or None
+        See :func:`twilight_surface_brightness`.
+    coefs : array
+        Array with shape (3, 6) of polynomial coefficients to use.
+    rmin : float or None
+        Minimum r-band magnitude to use for the color scale. Use the
+        minimum predicted value when this value is None.
+    rmax : float or None
+        Maximum r-band magnitude to use for the color scale. Use the
+        maximum predicted value when this value is None.
+    ngrid : int
+        Size of observing location zenith and azimuth grids to use.
+    cmap : str
+        Name of the matplotlib color map to use.
+    figure_size : tuple or None
+        Tuple (width, height) giving the figure dimensions in inches.
+
+    Returns
+    -------
+    tuple
+        Tuple (fig, ax, cax) of matplotlib objects created for this plot. You
+        can ignore these unless you want to make further changes to the plot.
+    """
+    import matplotlib.pyplot as plt
+
+    # Build a grid in observation (zenith, azimuth).
+    obs_alt = np.linspace(1., 90., ngrid, endpoint=False) * u.deg
+    obs_az = (np.linspace(0., 360., ngrid) * u.deg)[:, np.newaxis]
+
+    # Calculate the r-band twilight surface brightness.
+    rmag = twilight_surface_brightness(
+        obs_alt, sun_altitude, obs_az - sun_azimuth, subtract_dark, coefs).value
+
+    # Initialize the plot. We are borrowing from:
+    # http://blog.rtwilson.com/producing-polar-contour-plots-with-matplotlib/
+    fig, ax = plt.subplots(
+        figsize=figure_size, subplot_kw=dict(projection='polar'))
+    r, theta = np.meshgrid(
+        90 - obs_alt.to(u.deg).value, obs_az.to(u.rad).value[:,0], copy=False)
+    ax.set_theta_zero_location('N')
+    ax.set_theta_direction(-1)
+    ax.set_ylim(0., 90.)
+
+    # Autorange if requested.
+    if rmin is None:
+        rmin = np.min(rmag)
+    if rmax is None:
+        rmax = np.max(rmag)
+    if rmin >= rmax:
+        raise ValueError('Expected plot limits with min < max.')
+
+    # Draw a polar contour plot.
+    levels = np.linspace(rmin, rmax, 50)
+    cax = ax.contourf(theta, r, rmag, levels, extend='both', cmap=cmap)
+    fig.colorbar(cax).set_label(
+        'Twilight Scattered Sun [r-mag/arcsec2]')
+
+    # Draw a point indicating the sun position mirrored to -alt.
+    sun_alt = sun_altitude.to(u.deg).value
+    plt.scatter(sun_azimuth.to(u.rad).value, 90 + sun_alt,
+                s=150., marker='o', color='yellow', lw=0.5, edgecolor='k')
+
+    # Add labels.
+    xy, coords = (1., 0.), 'axes fraction'
+    plt.annotate('Alt(sun) = {0:.3f}$^\circ$'.format(sun_alt),
+                 xy, xy, coords, coords,
+                 horizontalalignment='right', verticalalignment='top',
+                 size='x-large', color='k')
+
+    plt.tight_layout()
+    return fig, ax, cax
 
 
 class Moon(object):
@@ -355,7 +833,6 @@ class Moon(object):
         self.separation_angle = separation_angle
         self.moon_phase = moon_phase
 
-
     def _update(self):
         """Update the model based on the current parameter values.
         """
@@ -388,7 +865,6 @@ class Moon(object):
         self._surface_brightness *= 10 ** (
             -(self._scattered_V * area - raw_V) / (2.5 * u.mag)) / area
 
-
     @property
     def scattered_V(self):
         """V-band surface brightness of scattered moonlight.
@@ -402,7 +878,6 @@ class Moon(object):
             self._update()
         return self._scattered_V
 
-
     @property
     def surface_brightness(self):
         """astropy.units.Quantity: Tabulated scattered moon surface brightness.
@@ -414,7 +889,6 @@ class Moon(object):
         if self._update_required:
             self._update()
         return self._surface_brightness
-
 
     @property
     def airmass(self):
@@ -429,7 +903,6 @@ class Moon(object):
         """
         return self._airmass
 
-
     @airmass.setter
     def airmass(self, airmass):
         # Remove any dimensionless astropy.units.Quantity wrapper since
@@ -442,7 +915,6 @@ class Moon(object):
             np.sqrt((1 - self._airmass ** -2) / 0.96)) * u.rad
         self._update_required = True
 
-
     @property
     def visible(self):
         """bool: Read-only visibility of the moon.
@@ -450,7 +922,6 @@ class Moon(object):
         The visibility criterion is :attr:`moon_zenith` < 90 degrees.
         """
         return self._visible
-
 
     @property
     def moon_phase(self):
@@ -461,12 +932,10 @@ class Moon(object):
         """
         return self._moon_phase
 
-
     @moon_phase.setter
     def moon_phase(self, moon_phase):
         self._moon_phase = moon_phase
         self._update_required = True
-
 
     @property
     def obs_zenith(self):
@@ -481,7 +950,6 @@ class Moon(object):
         """
         return self._obs_zenith
 
-
     @property
     def moon_zenith(self):
         """Moon zenith angle.
@@ -490,14 +958,12 @@ class Moon(object):
         :attr:`surface_brightness` and :attr:`visible`.
         """
         return self._moon_zenith
-        self._update_required = True
-
 
     @moon_zenith.setter
     def moon_zenith(self, moon_zenith):
         self._moon_zenith = moon_zenith
         self._visible = self._moon_zenith < 90 * u.deg
-
+        self._update_required = True
 
     @property
     def separation_angle(self):
@@ -508,12 +974,10 @@ class Moon(object):
         """
         return self._separation_angle
 
-
     @separation_angle.setter
     def separation_angle(self, separation_angle):
         self._separation_angle = separation_angle
         self._update_required = True
-
 
     @property
     def vband_extinction(self):
@@ -708,8 +1172,8 @@ def initialize(config):
     atm_config = config.atmosphere
 
     # Load tabulated data.
-    surface_brightness_dict = config.load_table(
-        atm_config.sky, 'surface_brightness', as_dict=True)
+    dark_surface_brightness = config.load_table(
+        atm_config.sky, 'surface_brightness', as_dict=False)
     extinction_coefficient = config.load_table(
         atm_config.extinction, 'extinction_coefficient')
 
@@ -736,15 +1200,24 @@ def initialize(config):
     else:
         moon = None
 
+    # Initialize an optional twilight model.
+    twilight_config = getattr(atm_config, 'twilight', None)
+    if twilight_config:
+        twilight_spectrum = config.load_table(twilight_config, 'flux')
+        c = config.get_constants(
+            twilight_config, ['sun_altitude', 'sun_relative_azimuth'])
+        twilight = Twilight(
+            config.wavelength, twilight_spectrum, extinction_coefficient,
+            atm_config.airmass, c['sun_altitude'], c[ 'sun_relative_azimuth'])
+    else:
+        twilight = None
+
     atmosphere = Atmosphere(
-        config.wavelength, surface_brightness_dict, extinction_coefficient,
-        atm_config.extinct_emission, atm_config.sky.condition,
-        atm_config.airmass, seeing, moon)
+        config.wavelength, dark_surface_brightness, extinction_coefficient,
+        atm_config.extinct_emission, atm_config.airmass, seeing, moon, twilight)
 
     if config.verbose:
-        print(
-            "Atmosphere initialized with condition '{0}' from {1}."
-            .format(atmosphere.condition, atmosphere.condition_names))
+        print("Atmosphere initialized.")
         if seeing:
             print('Seeing is {0} at {1} with Moffat beta {2}.'
                   .format(seeing['fwhm_ref'], seeing['wlen_ref'],
@@ -753,5 +1226,7 @@ def initialize(config):
             print(
                 'Lunar V-band extinction coefficient is {0:.5f}.'
                 .format(moon.vband_extinction))
+        if twilight:
+            print('Twlight model initialized.')
 
     return atmosphere

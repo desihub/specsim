@@ -7,7 +7,7 @@ a simulator and then accessible via its ``instrument.cameras`` attribute,
 for example:
 
     >>> import specsim.simulator
-    >>> simulator = specsim.simulator.Simulator('test')
+    >>> simulator = specsim.simulator.Simulator('test')  # doctest: +IGNORE_OUTPUT
     >>> print(np.round(simulator.instrument.cameras[0].read_noise, 1))
     2.9 electron / pix2
 

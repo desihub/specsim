@@ -5,7 +5,7 @@ An instrument model is usually initialized from a configuration used to create
 a simulator and then accessible via its ``instrument`` attribute, for example:
 
     >>> import specsim.simulator
-    >>> simulator = specsim.simulator.Simulator('test')
+    >>> simulator = specsim.simulator.Simulator('test')  # doctest: +IGNORE_OUTPUT
     >>> print(np.round(simulator.instrument.fiber_diameter, 1))
     107.0 um
 

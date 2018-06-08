@@ -5,7 +5,7 @@ An source model is usually initialized from a configuration used to create
 a simulator and then accessible via its ``source`` attribute, for example:
 
     >>> import specsim.simulator
-    >>> simulator = specsim.simulator.Simulator('test')
+    >>> simulator = specsim.simulator.Simulator('test')  # doctest: +IGNORE_OUTPUT
     >>> print(simulator.source.name)
     Constant flux density test source
 

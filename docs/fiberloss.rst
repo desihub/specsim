@@ -47,7 +47,10 @@ methods selected by the value of ``instrument.fiberloss.method``:
   coordinates, using the plate scales to transform the on-sky source and
   atmospheric models.  This mode is the most flexible and slowest, and uses
   all of the relevant configuration parameters.
-
+* The ``fastsim`` method is based on an interpolation of fiber acceptance values
+  pre-computed with ``galsim`` using the script ``fitgalsim``.
+  The interpolation parameters/axis are source profile (point source, exponential disk, De Vaucouleurs bulge), sigma (atmosphere+telescope blur, in um on focal surface), fiber offset from source (in um on focal surface), and half light radius (in arcsec) from extended source. This interpolation is performed with the class ``fastfiberacceptance.FastFiberAcceptance``. The accuracy is about 1 percent, which is sufficient for simulations.
+  
 Refer to the comments in the sample configuration files for more information
 about the available parameters.
 

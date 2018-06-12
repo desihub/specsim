@@ -19,6 +19,7 @@ An :class:`Instrument` includes one or more
 from __future__ import print_function, division
 
 import numpy as np
+import os.path
 import scipy.interpolate
 import scipy.integrate
 
@@ -26,7 +27,8 @@ import astropy.constants
 import astropy.units as u
 
 import specsim.camera
-
+import specsim.fastfiberacceptance
+import specsim.config
 
 class Instrument(object):
     """Model the instrument response of a fiber spectrograph.
@@ -47,7 +49,7 @@ class Instrument(object):
         Array of wavelength bin centers where the instrument response is
         calculated, with units.
     fiberloss_method : str
-        Must be "table" or "galsim".  Specifies how fiber acceptance fractions
+        Must be "table" or "galsim" or "fastsim".  Specifies how fiber acceptance fractions
         will be loaded or calculated.
     fiber_acceptance_dict : dict or None
         Dictionary of fiber acceptance fractions tabulated for different
@@ -55,11 +57,11 @@ class Instrument(object):
         Ignored when fiberloss_method is "galsim".
     fiberloss_num_wlen : int
         Number of wavelengths where the fiberloss fraction should be tabulated
-        for interpolation.  Ignored when fiberloss_method is "table".
+        for interpolation.  Ignored when fiberloss_method is not "galsim".
     fiberloss_num_pixels : int
         Number of pixels used to subdivide the fiber diameter for
         numerical convolution and integration calculations.
-        Ignored when fiberloss_method is "table".
+        Ignored when fiberloss_method  is not "galsim".
     blur_function : callable
         Function of field angle and wavelength that returns the corresponding
         RMS blur in length units (e.g., microns).
@@ -93,13 +95,14 @@ class Instrument(object):
         focal-plane distance (with length units) from the boresight.
     """
     def __init__(self, name, wavelength, fiberloss_method,
-                 fiber_acceptance_dict, fiberloss_num_wlen,
+                 fiber_acceptance_dict, fast_fiber_acceptance, fiberloss_num_wlen,
                  fiberloss_num_pixels, blur_function, offset_function, cameras,
                  primary_mirror_diameter, obscuration_diameter, support_width,
                  fiber_diameter, field_radius, radial_scale, azimuthal_scale):
         self.name = name
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
+        self.fast_fiber_acceptance = fast_fiber_acceptance
         self.fiberloss_method = fiberloss_method
         self.fiberloss_num_wlen = fiberloss_num_wlen
         self.fiberloss_num_pixels = fiberloss_num_pixels
@@ -180,10 +183,10 @@ class Instrument(object):
     def fiberloss_method(self, fiberloss_method):
         """Set the method used to calculate fiber acceptance fractions.
 
-        Must be one of "table" or "galsim".
+        Must be one of "table" or "galsim" or "fastsim".
         """
-        if fiberloss_method not in ('table', 'galsim'):
-            raise ValueError('fiberloss_method must be "table" or "galsim".')
+        if fiberloss_method not in ('table', 'galsim', 'fastsim' ):
+            raise ValueError('fiberloss_method must be "table" or "galsim" or "fastsim".')
         if fiberloss_method == 'table' and self.fiber_acceptance_dict is None:
             raise ValueError('Missing required instrument.fiberloss.table.')
         if fiberloss_method == 'galsim':
@@ -366,14 +369,17 @@ class Instrument(object):
         offset = np.empty((n_xy, n_wlen, 2))
 
         # Convert x, y offsets in length units to field angles.
-        angle_x = (np.sign(focal_x_mm) *
-                   self.field_radius_to_angle(np.abs(focal_x)))
-        angle_y = (np.sign(focal_y_mm) *
-                   self.field_radius_to_angle(np.abs(focal_y)))
-
-        # Calculate radial offsets from the field center.
-        focal_r = np.sqrt(focal_x_mm ** 2 + focal_y_mm ** 2) * u.mm
-        angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
+        focal_r = np.sqrt(focal_x**2+focal_y**2)
+        angle_r = self.field_radius_to_angle(focal_r)
+        angle_x = np.zeros(focal_x.shape) * angle_r.unit
+        angle_y = np.zeros(focal_y.shape) * angle_r.unit
+        positive_radius = focal_r>0
+        angle_x[positive_radius] = (
+            angle_r[positive_radius] / focal_r[positive_radius]
+            ) * focal_x[positive_radius]
+        angle_y[positive_radius] = (
+            angle_r[positive_radius] / focal_r[positive_radius]
+            ) * focal_y[positive_radius]
 
         # Calculate the radial and azimuthal plate scales at each location.
         scale[:, 0] = self.radial_scale(focal_r).to(u.um / u.arcsec).value
@@ -655,6 +661,18 @@ def initialize(config, camera_output=True):
             config.instrument.fiberloss, 'fiber_acceptance', as_dict=True)
     else:
         fiber_acceptance_dict = None
+    if hasattr(config.instrument.fiberloss, 'fast_fiber_acceptance_path'):
+        filename = os.path.join(
+            config.abs_base_path,
+            config.instrument.fiberloss.fast_fiber_acceptance_path)
+        if not os.path.isfile(filename) :
+            raise RuntimeError(
+            'Cannot find file {}. May need to update desimodel svn ?'
+            .format(filename))
+        fast_fiber_acceptance = specsim.fastfiberacceptance.FastFiberAcceptance(
+            filename)
+    else:
+        fast_fiber_acceptance = None
 
     blur_value = getattr(config.instrument.blur, 'value', None)
     if blur_value:
@@ -673,23 +691,35 @@ def initialize(config, camera_output=True):
         # Build an interpolator in (r, wlen) of radial chromatic offsets.
         radial_offset_function = config.load_table2d(
             config.instrument.offset, 'wavelength', 'r=')
-        # Look for an optional file of random achromatic offsets.
-        if hasattr(config.instrument.offset, 'random'):
+        # Look for an optional file of achromatic offsets.
+        # Static achromatic term, correlated in focal plane
+        if hasattr(config.instrument.offset, 'static'):
             # Build an interpolator in (x, y).
-            random_interpolators = config.load_fits2d(
-                config.instrument.offset.random, xy_unit=u.deg,
-                random_dx='XOFFSET', random_dy='YOFFSET')
+            interpolators = config.load_fits2d(
+                config.instrument.offset.static, xy_unit=u.deg,
+                dx='XOFFSET', dy='YOFFSET')
+            static_fx = interpolators['dx']
+            static_fy = interpolators['dy']
         else:
-            random_interpolators = dict(
-                random_dx=lambda angle_x, angle_y: 0 * u.um,
-                random_dy=lambda angle_x, angle_y: 0 * u.um)
+            static_fx  = None
+            static_fy  = None
+        # Random uncorrelated achromatic term
+        if hasattr(config.instrument.offset, 'sigma1d'):
+            sigma1d=specsim.config.parse_quantity(config.instrument.offset.sigma1d)
+            random_fx = lambda angle_x, angle_y: np.random.normal(size=angle_x.shape) * sigma1d
+            random_fy = lambda angle_x, angle_y: np.random.normal(size=angle_x.shape) * sigma1d
+        else :
+            random_fx = None
+            random_fy = None
         # Combine the interpolators into a function of (x, y, wlen) that
         # returns (dx, dy).  Use default parameter values to capture the
         # necessary state in the inner function's closure.
         def offset_function(angle_x, angle_y, wlen,
                             fr=radial_offset_function,
-                            fx=random_interpolators['random_dx'],
-                            fy=random_interpolators['random_dy']):
+                            static_fx=static_fx,
+                            static_fy=static_fy,
+                            random_fx=random_fx,
+                            random_fy=random_fy) :
             angle_r = np.sqrt(angle_x ** 2 + angle_y ** 2)
             dr = fr(angle_r, wlen)
             # Special handling of the origin.
@@ -698,15 +728,19 @@ def initialize(config, camera_output=True):
             uy = np.ones(shape=dr.shape, dtype=float)
             ux[not_at_origin] = angle_x / angle_r
             uy[not_at_origin] = angle_y / angle_r
-            # Add any random offsets.
-            random_dx = fx(angle_x, angle_y)
-            random_dy = fy(angle_x, angle_y)
-            return dr * ux + random_dx, dr * uy + random_dy
+            dx = dr * ux
+            dy = dr * uy
+            # Add interpolated offsets if any.
+            if static_fx is not None : dx += static_fx(angle_x, angle_y)
+            if static_fy is not None : dy += static_fy(angle_x, angle_y)
+            if random_fx is not None : dx += random_fx(angle_x, angle_y)
+            if random_fy is not None : dy += random_fy(angle_x, angle_y)
+            return dx , dy
 
     instrument = Instrument(
         name, config.wavelength, fiberloss_method, fiber_acceptance_dict,
-        fiberloss_num_wlen, fiberloss_num_pixels, blur_function,
-        offset_function, initialized_cameras,
+        fast_fiber_acceptance, fiberloss_num_wlen, fiberloss_num_pixels,
+        blur_function, offset_function, initialized_cameras,
         constants['primary_mirror_diameter'], constants['obscuration_diameter'],
         constants['support_width'], constants['fiber_diameter'],
         constants['field_radius'], radial_scale, azimuthal_scale)

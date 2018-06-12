@@ -110,13 +110,8 @@ instrument:
         fiber_diameter: 120.0 um
         field_radius: 325.0 mm
     plate_scale:
-        table:
-            path: sdss/focalplane/platescale.txt
-            format: ascii
-            columns:
-                radius: { index: 0, unit: mm }
-                radial_scale: { index: 6, unit: um/arcsec }
-                azimuthal_scale: { index: 7, unit: um/arcsec }
+        constants:
+            value: 60.45 um / arcsec
     fiberloss:
         # Method for calculating fiberloss fractions.
         # Either galsim or table.

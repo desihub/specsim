@@ -310,7 +310,12 @@ def create_observing_model(where, when, wavelength, temperature=15*u.deg_C,
     # See https://en.wikipedia.org/wiki/Vertical_pressure_variation
     if pressure is None:
         h = where.height
-        p0 = astropy.constants.atm
+        # The atmosphere constant in astropy < 2.0 was renamed to atm in 2.0.
+        try:
+            p0 = astropy.constants.atm
+        except AttributeError:
+            # Fallback for astropy < 2.0.
+            p0 = astropy.constants.atmosphere
         g0 = astropy.constants.g0
         R = astropy.constants.R
         air_molar_mass = 0.0289644 * u.kg / u.mol
@@ -336,7 +341,7 @@ def sky_to_altaz(sky_coords, observing_model):
     two steps.  First, define the atmosphere through which the sky is being
     observed with a call to :func:`create_observing_model`.  Next, call this
     function. For example, to locate Polaris from Kitt Peak, observing at
-    a wavelength of 5400 Angstroms:
+    a wavelength of 5400 Angstroms (we expect altitude ~ longitude ~ 32 deg):
 
     >>> where = observatories['KPNO']
     >>> when = astropy.time.Time('2001-01-01T00:00:00')
@@ -346,8 +351,6 @@ def sky_to_altaz(sky_coords, observing_model):
     >>> print('alt = %.3f deg, az = %.3f deg' %
     ... (altaz.alt.to(u.deg).value, altaz.az.to(u.deg).value))
     alt = 32.465 deg, az = 0.667 deg
-    >>> print('lat = %.3f deg' % where.latitude.to(u.deg).value)
-    lat = 31.963 deg
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied

@@ -222,8 +222,13 @@ def initialize(config):
         nominal_start = exposure_start
         point_radec = pointing.transform_to('icrs')
         hour_angle = astropy.coordinates.Angle(adjust_ha)
+        try:
+            lon = location.lon
+        except AttributeError:
+            # Required for astropy < 2.0
+            lon = location.longitude
         exposure_start = specsim.transform.adjust_time_to_hour_angle(
-            nominal_start, point_radec.ra, hour_angle, location.longitude)
+            nominal_start, point_radec.ra, hour_angle, lon)
         # Put the requested HA at the middle of the exposure.
         exposure_start -= 0.5 * constants['exposure_time']
 

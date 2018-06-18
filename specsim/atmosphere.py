@@ -26,8 +26,7 @@ An atmosphere model is usually initialized from a configuration used to create
 a simulator and then accessible via its ``atmosphere`` attribute, for example:
 
     >>> import specsim.simulator
-    >>> simulator = specsim.simulator.Simulator('test')
-    Downloading http://maia.usno.navy.mil/ser7/finals2000A.all [Done]
+    >>> simulator = specsim.simulator.Simulator('test')  # doctest: +IGNORE_OUTPUT
     >>> simulator.atmosphere.airmass
     1.0
 

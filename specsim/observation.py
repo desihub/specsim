@@ -5,7 +5,7 @@ An observation is usually initialized from a configuration used to create
 a simulator and then accessible via its ``observation`` attribute, for example:
 
     >>> import specsim.simulator
-    >>> simulator = specsim.simulator.Simulator('test')
+    >>> simulator = specsim.simulator.Simulator('test')  # doctest: +IGNORE_OUTPUT
     >>> print(simulator.observation.exposure_time)
     1000.0 s
 

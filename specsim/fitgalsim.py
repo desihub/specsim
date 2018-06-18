@@ -15,8 +15,6 @@ import numpy as np
 import astropy.table
 import astropy.units as u
 import astropy.io.fits as pyfits
-import matplotlib.pyplot as plt
-import time
 
 import specsim.simulator
 import specsim.fiberloss

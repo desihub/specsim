@@ -1,7 +1,11 @@
-0.12 (unreleased)
------------------
+==================
+specsim Change Log
+==================
 
-- No changes yet.
+0.11.1 (2018-06-27)
+-------------------
+
+- Changes to test infrastructure to support Astropy 2, no API changes.
 
 0.11 (2017-10-10)
 -----------------

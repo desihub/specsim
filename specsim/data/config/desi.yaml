@@ -121,7 +121,7 @@ instrument:
     fiberloss:
         # Method for calculating fiberloss fractions.
         # Either galsim or table or fastsim.
-        method: fastsim
+        method: galsim
         # Number of wavelengths where fiberloss should be calculated
         # and interpolated. Ignored unless method is galsim.
         num_wlen: 11
@@ -143,7 +143,7 @@ instrument:
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
-        # Fits file of precomputed galsim fiber acceptance 
+        # Fits file of precomputed galsim fiber acceptance
         # the fits file is created with specsim/fitgalsim.py
         # the fits file is read with specsim/fastfiberacceptance.py
         fast_fiber_acceptance_path: throughput/galsim-fiber-acceptance.fits

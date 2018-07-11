@@ -101,8 +101,7 @@ atmosphere:
 # The instrument configuration is interpreted and validated by the
 # specsim.instrument module.
 instrument:
-    # See DESI documents 334, 336, 347 for details.
-    name: DESI
+    name: eBOSS
     constants:
         primary_mirror_diameter: 2.5 m
         obscuration_diameter: 0.625 m
@@ -236,15 +235,18 @@ instrument:
 # The source configuration is interpreted and validated by the
 # specsim.source module.
 source:
-    name: 22nd AB magnitude reference
+    name: 20th AB magnitude reference
     # The type is only used when instrument.fiberloss.method is 'table'.
     type: qso
     table:
-        format: ascii.ecsv
-        path: test/test_source.ecsv
+        format: ascii
+        path: sdss/spectra/spec-ABmag20.0.dat
         columns:
-            wavelength: { name: wavelength}
-            flux: { name: flux}
+            wavelength: { index: 0, unit: Angstrom }
+            flux:
+                index: 1
+                # Note the factor of 1e-17 in the units!
+                unit: 1e-17 erg / (Angstrom cm2 s)
     # Transverse profile of the source on the sky, used to calculate the
     # fiberloss fraction when instrument.fiberloss.method = galsim (but
     # ignored otherwise).

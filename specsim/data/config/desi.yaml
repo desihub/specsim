@@ -184,6 +184,9 @@ instrument:
         # and 'FVC corrector optics figure error' (a static term)
         # is 7.38 um = 5.22 * sqrt(2) um
         sigma1d: 5.22 um
+        # Random offsets are generated independently for each fiber of each exposure,
+        # but reproducibly according to this seed.
+        seed: 123
     cameras:
         b:
             constants:

@@ -5,7 +5,8 @@ specsim Change Log
 0.12 (unreleased)
 -----------------
 
-- No changes yet.
+- Update centroid offset config to match desimodel 0.9.6.
+- Manage random state for centroid offsets (fixes #83).
 
 0.11.1 (2018-06-27)
 -------------------

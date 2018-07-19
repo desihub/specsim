@@ -298,8 +298,7 @@ def create_observing_model(where, when, wavelength, temperature=15*u.deg_C,
         :func:`np.broadcast(where, when, wavelength, temperature, pressure,
         relative_humidity) <numpy.broadcast>`.
     """
-    if not isinstance(relative_humidity, np.ndarray):
-        relative_humidity = np.float(relative_humidity)
+    relative_humidity = np.asarray(relative_humidity)
     if np.any((relative_humidity < 0) | (relative_humidity > 1)):
         raise ValueError('Values of relative_humidity must be 0-1.')
 

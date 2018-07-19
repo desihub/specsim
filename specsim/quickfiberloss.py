@@ -63,7 +63,7 @@ def main(args=None):
                             args.num_wlen) * wlen_unit
 
     # Calculate the seeing at each wavelength.
-    simulator.atmosphere.seeing['fwhm_ref'] = args.seeing * u.arcsec
+    simulator.atmosphere.seeing_fwhm_ref = args.seeing * u.arcsec
     seeing_fwhm = simulator.atmosphere.get_seeing_fwhm(
         wlen_grid).to(u.arcsec).value
 

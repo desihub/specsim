@@ -562,7 +562,7 @@ class Simulator(object):
             # Zero our random noise realization column.
             output['random_noise_electrons'][:] = 0.
 
-    def generate_random_noise(self, random_state=None):
+    def generate_random_noise(self, random_state=None, use_poisson=True):
         """Generate a random noise realization for the most recent simulation.
 
         Fills the "random_noise_electrons" column in each camera's output
@@ -585,6 +585,11 @@ class Simulator(object):
             The random number generation state to use for reproducible noise
             realizations. A new state will be created with a randomized seed
             if None is specified.
+        use_poisson : bool
+            If False, use numpy.random.normal instead of numpy.random.poisson.
+            This is useful for simulations where one wants the same noise 
+            realization for varying average flux (numpy.random.poisson
+            uses a varying number of random numbers depending on the mean).
         """
         if not self.camera_output:
             raise RuntimeError('Simulator initialized with no camera output.')
@@ -596,9 +601,12 @@ class Simulator(object):
             mean_electrons = (
                 output['num_source_electrons'] +
                 output['num_sky_electrons'] + output['num_dark_electrons'])
-            output['random_noise_electrons'] = (
-                random_state.poisson(mean_electrons) - mean_electrons +
-                random_state.normal(scale=output['read_noise_electrons']))
+            if use_poisson :
+                output['random_noise_electrons'] = (
+                    random_state.poisson(mean_electrons) - mean_electrons +
+                    random_state.normal(scale=output['read_noise_electrons']))
+            else :
+                output['random_noise_electrons'] = random_state.normal(scale=np.sqrt( mean_electrons + output['read_noise_electrons']**2))
 
     def save(self, filename, clobber=True):
         """Save results of the last simulation to a FITS file.

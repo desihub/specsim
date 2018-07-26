@@ -7,6 +7,9 @@ specsim Change Log
 
 - Update centroid offset config to match desimodel 0.9.6.
 - Manage random state for centroid offsets (fixes #83).
+- Update jupyter notebooks (supercedes #89, fixes #76).
+- Update API docs (fixes #39).
+- Implement optional Gaussian noise realization to decouple noise from mean value (#92).
 
 0.11.1 (2018-06-27)
 -------------------

@@ -2,7 +2,7 @@
 specsim Change Log
 ==================
 
-0.12 (unreleased)
+0.12 (2018-07-26)
 -----------------
 
 - Update centroid offset config to match desimodel 0.9.6.

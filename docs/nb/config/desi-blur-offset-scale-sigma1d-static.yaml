@@ -113,9 +113,16 @@ instrument:
         fiber_diameter: 107.0 um
         field_radius: 414.0 mm
     plate_scale:
-        constants:
+        ##constants:
             # Set the scale to give 1.52 arcsecs on the sky
-            value: 70.3947 um / arcsec
+            ##value: 70.3947 um / arcsec
+        table:
+            path: focalplane/platescale.txt
+            format: ascii
+            columns:
+                radius: { index: 0, unit: mm }
+                radial_scale: { index: 6, unit: um/arcsec }
+                azimuthal_scale: { index: 7, unit: um/arcsec }
     fiberloss:
         # Method for calculating fiberloss fractions.
         # Either galsim or table.
@@ -136,8 +143,8 @@ instrument:
     offset:
         path: throughput/DESI-0347_offset.ecsv
         format: ascii.ecsv
-        #static: throughput/DESI-0347_static_offset_1.fits
-        #sigma1d: 5.22 micron
+        static: throughput/DESI-0347_static_offset_1.fits
+        sigma1d: 5.22 micron
     cameras:
         b:
             constants:

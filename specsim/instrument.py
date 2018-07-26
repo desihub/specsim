@@ -705,9 +705,13 @@ def initialize(config, camera_output=True):
             static_fy  = None
         # Random uncorrelated achromatic term
         if hasattr(config.instrument.offset, 'sigma1d'):
+            if hasattr(config.instrument.offset, 'seed'):
+                offset_gen = np.random.RandomState(config.instrument.offset.seed)
+            else:
+                offset_gen = np.random.RandomState()
             sigma1d=specsim.config.parse_quantity(config.instrument.offset.sigma1d)
-            random_fx = lambda angle_x, angle_y: np.random.normal(size=angle_x.shape) * sigma1d
-            random_fy = lambda angle_x, angle_y: np.random.normal(size=angle_x.shape) * sigma1d
+            random_fx = lambda angle_x, angle_y: offset_gen.normal(size=angle_x.shape) * sigma1d
+            random_fy = lambda angle_x, angle_y: offset_gen.normal(size=angle_x.shape) * sigma1d
         else :
             random_fx = None
             random_fy = None

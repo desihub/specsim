@@ -137,18 +137,8 @@ instrument:
         # Corresponds to 0.2 arcsec with the fixed plate scale above.
         # Always in the radial direction.
         value: 0.0 micron
-        # Read radial centroid offsets tabulated as a function of field angle
-        # and wavelength, and derived from ray tracing simulations.  For
-        # details, see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
-        ##path: throughput/DESI-0347_offset.ecsv
-        # The ECSV format is not auto-detected so we specify it explicitly.
-        ##format: ascii.ecsv
-        # Read random achromatic centroid offsets from a FITS file.
-        # Uncomment any one of these lines to select a different random set.
-        # No random offsets are applied if all lines are commented out.
-        #random: throughput/DESI-0347_random_offset_1.fits
-        #random: throughput/DESI-0347_random_offset_2.fits
-        #random: throughput/DESI-0347_random_offset_3.fits
+        #static: throughput/DESI-0347_static_offset_1.fits
+        #sigma1d: 5.22 micron
     cameras:
         b:
             constants:

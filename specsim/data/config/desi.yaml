@@ -166,13 +166,13 @@ instrument:
         # this is to emulate any systematic residual of the plate maker
         # in particular the effect of the corrector lens
         # polishing errors (see DESI-1071)
-        # DESI-0347_random_offset_*.fits is the worst case scenario where
+        # DESI-0347_static_offset_*.fits is the worst case scenario where
         # we cannot correct for this during commissionning
         # Uncomment any one of these lines to select a different random set.
-        # If all lines are commented out, this effect is ignored
-        #static: throughput/DESI-0347_random_offset_1.fits
-        #static: throughput/DESI-0347_random_offset_2.fits
-        #static: throughput/DESI-0347_random_offset_3.fits
+        # If all lines are commented out, this effect is ignored.
+        #static: throughput/DESI-0347_static_offset_1.fits
+        #static: throughput/DESI-0347_static_offset_2.fits
+        #static: throughput/DESI-0347_static_offset_3.fits
         #
         # random achromatic and uncorrelated offsets with 1D rms = sigma1d
         # ( per axis, i.e. sqrt(mean(dx**2+dy**2))=sqrt(2)*sigma1d )
@@ -182,15 +182,18 @@ instrument:
         # in DESI-347-v11 the quadratic sum of all lateral error terms except
         # 'Band-limited chromatic shift microns' (already included in radial centroid offsets)
         # and 'FVC corrector optics figure error' (a static term)
-        # is 7.26 um = 5.1 * sqrt(2) um
-        sigma1d: 5.1 um
+        # is 7.38 um = 5.22 * sqrt(2) um
+        sigma1d: 5.22 um
+        # Random offsets are generated independently for each fiber of each exposure,
+        # but reproducibly according to this seed.
+        seed: 123
     cameras:
         b:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 3.0 electron/pixel**2
+                read_noise: 3.41 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 3.0 electron/(hour pixel**2)
+                dark_current: 2.0 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
                 num_sigmas_clip: 5
@@ -225,9 +228,9 @@ instrument:
         r:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 2.9 electron/pixel**2
+                read_noise: 2.6 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 2.0 electron/(hour pixel**2)
+                dark_current: 2.4 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
                 num_sigmas_clip: 5
@@ -262,9 +265,9 @@ instrument:
         z:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 2.9 electron/pixel**2
+                read_noise: 2.6 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 2.0 electron/(hour pixel**2)
+                dark_current: 2.4 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
                 num_sigmas_clip: 5

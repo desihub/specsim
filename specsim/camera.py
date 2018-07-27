@@ -357,10 +357,11 @@ class Camera(object):
         flux = np.asarray(flux)
         dispersed = np.zeros_like(flux)
 
-        dispersed[..., self.ccd_slice] = self._resolution_matrix.dot(
-            flux[..., self.response_slice].T).T
+        dispersed[self.ccd_slice] = self._resolution_matrix.dot(
+            flux[self.response_slice])
+            #flux[..., self.response_slice].T).T
 
-        return dispersed
+        return dispersed.T
 
     # Canonical wavelength unit used for all internal arrays.
     _wavelength_unit = u.Angstrom

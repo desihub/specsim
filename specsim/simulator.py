@@ -525,9 +525,9 @@ class Simulator(object):
             # Apply resolution to the source and sky detected electrons on
             # the high-resolution grid.
             num_source_electrons[:] = camera.apply_resolution(
-                num_source_electrons.T).T
+                num_source_electrons).T
             num_sky_electrons[:] = camera.apply_resolution(
-                num_sky_electrons.T).T
+                num_sky_electrons).T
 
             # Calculate the corresponding downsampled output quantities.
             output['num_source_electrons'][:] = (
@@ -548,7 +548,7 @@ class Simulator(object):
             # source flux above the atmosphere, downsampled to output pixels.
             output['flux_calibration'][:] = 1.0 / camera.downsample(
                 camera.apply_resolution(
-                    source_flux_to_photons.T * camera.throughput)).T
+                    source_flux_to_photons * camera.throughput.reshape(-1, 1))).T
 
             # Calculate the calibrated flux in this camera.
             output['observed_flux'][:] = (

@@ -359,9 +359,8 @@ class Camera(object):
 
         dispersed[self.ccd_slice] = self._resolution_matrix.dot(
             flux[self.response_slice])
-            #flux[..., self.response_slice].T).T
 
-        return dispersed.T
+        return dispersed
 
     # Canonical wavelength unit used for all internal arrays.
     _wavelength_unit = u.Angstrom

@@ -251,7 +251,7 @@ def initialize(config):
             print('Adjusted by {0:+.3f} for HA {1}.'
                   .format(dt.to(u.hour), hour_angle))
         cond = obs.observing_model
-        print('Conditions: pressure {0:.1f}, temperature {1:.1f}, RH {2:.3f}.'
+        print('Conditions: pressure {0:.1f}, temperature {1:.1f}, RH {2}.'
               .format(cond.pressure, cond.temperature, cond.relative_humidity))
         altaz = obs.boresight_altaz
         print('Boresight (alt, az) = ({0:.1f}, {1:.1f}).'

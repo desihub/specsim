@@ -5,7 +5,13 @@ specsim Change Log
 0.13 (unreleased)
 -----------------
 
-- No changes yet.
+- Changes to SimulationExamples notebook:
+   - Change median LRG minor/major axis ratio from 0.16 to 0.5.
+   - Add quantitative comparison of galsim and fastsim fiberloss modes.
+- Streamline array indexing for downsampling and convolution operations.
+- Do not require fastsim file to be present (fixes #90).
+- Update to astropy_helpers v2.0.6 (merges #85).
+- Remove python 3.4 from travis test matrix and update "old" numpy versions used (fixes #93).
 
 0.12 (2018-07-26)
 -----------------

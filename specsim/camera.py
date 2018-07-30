@@ -338,13 +338,13 @@ class Camera(object):
         if not self.allow_convolution:
             raise RuntimeError('Camera created with allow_convolution False.')
         data = np.asanyarray(data)
-        if data.shape[-1] != len(self._wavelength):
+        if data.shape[0] != len(self._wavelength):
             raise ValueError(
                 'Invalid data shape for downsampling: {0}.'.format(data.shape))
 
-        output = data[..., self._output_slice]
-        new_shape = output.shape[:-1] + self._downsampled_shape
-        return method(output.reshape(new_shape), axis=-1)
+        output = data[self._output_slice]
+        new_shape = self._downsampled_shape + output.shape[1:]
+        return method(output.reshape(new_shape), axis=1)
 
     def apply_resolution(self, flux):
         """
@@ -357,8 +357,8 @@ class Camera(object):
         flux = np.asarray(flux)
         dispersed = np.zeros_like(flux)
 
-        dispersed[..., self.ccd_slice] = self._resolution_matrix.dot(
-            flux[..., self.response_slice].T).T
+        dispersed[self.ccd_slice] = self._resolution_matrix.dot(
+            flux[self.response_slice])
 
         return dispersed
 

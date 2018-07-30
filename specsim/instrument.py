@@ -55,6 +55,9 @@ class Instrument(object):
         Dictionary of fiber acceptance fractions tabulated for different
         source models, with keys corresponding to source model names.
         Ignored when fiberloss_method is "galsim".
+    fast_fiber_acceptance : specsim.fastfiberacceptance.FastFiberAcceptance or None
+        Initialized instance to use when fiberloss_method is "fastsim".
+        Ignored for other values of fiberloss_method.
     fiberloss_num_wlen : int
         Number of wavelengths where the fiberloss fraction should be tabulated
         for interpolation.  Ignored when fiberloss_method is not "galsim".
@@ -103,6 +106,8 @@ class Instrument(object):
         self._wavelength = wavelength
         self.fiber_acceptance_dict = fiber_acceptance_dict
         self.fast_fiber_acceptance = fast_fiber_acceptance
+        # Both fiber_acceptance_dict and fast_fiber_acceptance must be initialized
+        # before assigning to fiberloss_method (since its setter checks their values).
         self.fiberloss_method = fiberloss_method
         self.fiberloss_num_wlen = fiberloss_num_wlen
         self.fiberloss_num_pixels = fiberloss_num_pixels
@@ -186,9 +191,13 @@ class Instrument(object):
         Must be one of "table" or "galsim" or "fastsim".
         """
         if fiberloss_method not in ('table', 'galsim', 'fastsim' ):
-            raise ValueError('fiberloss_method must be "table" or "galsim" or "fastsim".')
+            raise ValueError(
+                'fiberloss_method must be "table" or "galsim" or "fastsim".')
         if fiberloss_method == 'table' and self.fiber_acceptance_dict is None:
             raise ValueError('Missing required instrument.fiberloss.table.')
+        if fiberloss_method == 'fastsim' and self.fast_fiber_acceptance is None:
+            raise ValueError(
+                'Missing required instrument.fiberloss.fast_fiber_acceptance_path.')
         if fiberloss_method == 'galsim':
             try:
                 import galsim

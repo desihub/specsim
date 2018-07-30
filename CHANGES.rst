@@ -5,7 +5,11 @@ specsim Change Log
 0.13 (unreleased)
 -----------------
 
-- No changes yet.
+- Changes to SimulationExamples notebook:
+   - Change median LRG minor/major axis ratio from 0.16 to 0.5.
+   - Add quantitative comparison of galsim and fastsim fiberloss modes.
+- Streamline array indexing for downsampling and convolution operations.
+- Fixes #90.
 
 0.12 (2018-07-26)
 -----------------

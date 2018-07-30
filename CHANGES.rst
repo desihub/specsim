@@ -2,7 +2,7 @@
 specsim Change Log
 ==================
 
-0.13 (unreleased)
+0.13 (2018-07-30)
 -----------------
 
 - Changes to SimulationExamples notebook:

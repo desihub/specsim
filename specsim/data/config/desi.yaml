@@ -143,9 +143,12 @@ instrument:
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
-        # Fits file of precomputed galsim fiber acceptance 
-        # the fits file is created with specsim/fitgalsim.py
-        # the fits file is read with specsim/fastfiberacceptance.py
+        # Fits file of precomputed galsim fiber acceptances.
+        # Ignored unless method is fastsim.
+        # The fits file is created with specsim/fitgalsim.py
+        # and used by specsim/fastfiberacceptance.py
+        # Comment out this line to disable the "fastsim" mode (e.g., if
+        # this file is not available or describes a different config).
         fast_fiber_acceptance_path: throughput/galsim-fiber-acceptance.fits
     blur:
         # Read RMS blur values tabulated as a function of field angle and

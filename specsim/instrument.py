@@ -186,9 +186,13 @@ class Instrument(object):
         Must be one of "table" or "galsim" or "fastsim".
         """
         if fiberloss_method not in ('table', 'galsim', 'fastsim' ):
-            raise ValueError('fiberloss_method must be "table" or "galsim" or "fastsim".')
+            raise ValueError(
+                'fiberloss_method must be "table" or "galsim" or "fastsim".')
         if fiberloss_method == 'table' and self.fiber_acceptance_dict is None:
             raise ValueError('Missing required instrument.fiberloss.table.')
+        if fiberloss_method == 'fastsim' and self.fast_fiber_acceptance is None:
+            raise ValueError(
+                'Missing required instrument.fiberloss.fast_fiber_acceptance_path.')
         if fiberloss_method == 'galsim':
             try:
                 import galsim

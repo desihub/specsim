@@ -48,8 +48,16 @@ methods selected by the value of ``instrument.fiberloss.method``:
   atmospheric models.  This mode is the most flexible and slowest, and uses
   all of the relevant configuration parameters.
 * The ``fastsim`` method is based on an interpolation of fiber acceptance values
-  pre-computed with ``galsim`` using the script ``fitgalsim``.
-  The interpolation parameters/axis are source profile (point source, exponential disk, De Vaucouleurs bulge), sigma (atmosphere+telescope blur, in um on focal surface), fiber offset from source (in um on focal surface), and half light radius (in arcsec) from extended source. This interpolation is performed with the class ``fastfiberacceptance.FastFiberAcceptance``. The accuracy is about 1 percent, which is sufficient for simulations.
+  pre-computed with ``galsim`` using the script ``fitgalsim``, which assumes
+  a fixed axis ratio of 0.7 (for extended objects), a fixed Moffat PSF
+  model with beta=3.5 (but variable FWHM) for the atmosphere, and a fixed
+  fiber diameter of 107um.
+  The interpolation parameters/axis are source profile (point source,
+  exponential disk, De Vaucouleurs bulge), sigma (atmosphere+telescope blur,
+  in um on focal surface), fiber offset from source (in um on focal surface),
+  and half light radius (in arcsec) from extended source. This interpolation
+  is performed with the class ``fastfiberacceptance.FastFiberAcceptance``.
+  The accuracy is about 1 percent when the assumptions above are valid.
   
 Refer to the comments in the sample configuration files for more information
 about the available parameters.
@@ -58,6 +66,9 @@ GalSim Dependency
 -----------------
 
 The GalSim package is only required when the ``galsim`` method is selected.
+As of GalSim version 2.0, this package can be easily install using either
+conda or pip.
+
 Fiberloss arrays calculated with GalSim can be saved for later table-based
 simulations.  For example, first run the :ref:`quickspecsim` script to
 use GalSim to calculate and save the fiberloss for a specific configuration

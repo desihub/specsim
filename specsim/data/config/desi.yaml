@@ -121,7 +121,7 @@ instrument:
     fiberloss:
         # Method for calculating fiberloss fractions.
         # Either galsim or table or fastsim.
-        method: galsim
+        method: fastsim
         # Number of wavelengths where fiberloss should be calculated
         # and interpolated. Ignored unless method is galsim.
         num_wlen: 11

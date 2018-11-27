@@ -25,7 +25,7 @@ verbose: no
 wavelength_grid:
     unit: Angstrom
     min: 3000.0
-    max: 10980.0
+    max: 10050.0
     step: 0.1
 
 # The atmosphere configuration is interpreted and validated by the

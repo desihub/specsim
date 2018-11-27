@@ -70,7 +70,7 @@ atmosphere:
                     # not matter and old versions of speclite.filters do
                     # not interpret the actual units correctly.
                     unit: erg / (cm2 s Angstrom)
-            path: sky/solarspec.txt
+            path: sdss/solarspec.txt
             format: ascii.basic
         constants:
             # Phase of the moon from 0 (full) to 1 (new).
@@ -128,11 +128,11 @@ instrument:
             paths:
                 # Each path corresponds to a different source type.
                 qso: throughput/fiberloss-qso.dat
-                elg: throughput/fiberloss-elg.dat
-                lrg: throughput/fiberloss-lrg.dat
-                star: throughput/fiberloss-star.dat
-                sky: throughput/fiberloss-sky.dat
-                perfect: throughput/fiberloss-perfect.dat
+                #elg: throughput/fiberloss-elg.dat
+                #lrg: throughput/fiberloss-lrg.dat
+                #star: throughput/fiberloss-star.dat
+                #sky: throughput/fiberloss-sky.dat
+                #perfect: throughput/fiberloss-perfect.dat
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
@@ -227,7 +227,7 @@ instrument:
                 dark_current: 4.25 electron/(hour pixel**2)
                 gain: 1.66 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
-                num_sigmas_clip: 5
+                num_sigmas_clip: 0
                 # Output pixels are used to report simulation results but are
                 # not the physical pixels.  The output pixel size must be a
                 # multiple of wavelength_grid.step.

@@ -114,7 +114,7 @@ instrument:
     fiberloss:
         # Method for calculating fiberloss fractions.
         # Either galsim or table or fastsim.
-        method: fastsim
+        method: table
         # Number of wavelengths where fiberloss should be calculated
         # and interpolated. Ignored unless method is galsim.
         num_wlen: 11
@@ -127,7 +127,7 @@ instrument:
             format: ascii
             paths:
                 # Each path corresponds to a different source type.
-                qso: throughput/fiberloss-qso.dat
+                qso: sdss/eboss-fiberloss-qso.dat
                 #elg: throughput/fiberloss-elg.dat
                 #lrg: throughput/fiberloss-lrg.dat
                 #star: throughput/fiberloss-star.dat
@@ -142,7 +142,7 @@ instrument:
         # and used by specsim/fastfiberacceptance.py
         # Comment out this line to disable the "fastsim" mode (e.g., if
         # this file is not available or describes a different config).
-        fast_fiber_acceptance_path: throughput/galsim-fiber-acceptance.fits
+        #fast_fiber_acceptance_path: throughput/galsim-fiber-acceptance.fits
     blur:
         # Read RMS blur values tabulated as a function of field angle and
         # wavelength, and derived from ray tracing simulations.  For details,

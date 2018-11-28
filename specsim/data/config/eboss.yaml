@@ -192,7 +192,7 @@ instrument:
                 dark_current: 2.1 electron/(hour pixel**2)
                 gain: 1.02 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
-                num_sigmas_clip: 5
+                num_sigmas_clip: 0
                 # Output pixels are used to report simulation results but are
                 # not the physical pixels.  The output pixel size must be a
                 # multiple of wavelength_grid.step.

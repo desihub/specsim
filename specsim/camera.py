@@ -374,6 +374,8 @@ class Camera(object):
 
     def downsample_to_eboss(self, wave_out, wave_in, data):
     
+        num_fibers = data.shape[1]
+
         ## Get nominal bin width
         diff_in = np.diff(wave_in)
         ## Check that nominal grid is equally spaced 
@@ -407,7 +409,7 @@ class Camera(object):
         ## Convert from density (per unit Angstrom) to counts
         hist_in = data * diff_in
         
-        hist_out = np.zeros(len(edges_out) - 1)
+        hist_out = np.zeros((len(edges_out) - 1, num_fibers))
         data_right = 0
         prev_idx = -1
 
@@ -430,10 +432,10 @@ class Camera(object):
                     hist_out[idx_in_out[i] - 1] += data_left
 
         ## Check if flux is conserved
-        assert np.allclose(np.sum(hist_out), np.sum(hist_in), rtol=0.01, atol=1.0)
+        assert np.allclose(np.sum(hist_out), np.sum(hist_in), rtol=1e-4, atol=1.0)
         
         ## Convert back from counts to flux density (per Angstrom)
-        data_out = hist_out / (np.diff(10 ** edges_out))
+        data_out = hist_out / (np.diff(10 ** edges_out)[:, np.newaxis])
         
         ## Only return values within range of simulation wavelength grid
         start = idx_in_out[0]

@@ -562,6 +562,78 @@ class Simulator(object):
             # Zero our random noise realization column.
             output['random_noise_electrons'][:] = 0.
 
+        if self.instrument.name.lower() == 'eboss': 
+
+            path = '/Users/belaabolfathi/Documents/repos/specsim-for-eboss/'
+
+            shape = (self.num_fibers,)
+            column_args = dict(dtype=float, length=len(output['wavelength']), shape=shape)
+            flux_unit = u.erg / (u.cm**2 * u.s * u.Angstrom)
+            # Initialize each camera's table of results downsampled to
+            # output pixels, if requested.
+            for camera in self.instrument.cameras:
+                if camera.name == 'b':
+                    cam_idx = 0
+                    wave_out = np.load(path+'mean_eboss_wlen_blue.npy')
+                elif camera.name == 'r':
+                    cam_idx = 1
+                    wave_out = np.load(path+'mean_eboss_wlen_red.npy')
+                # Returns bin centers of downsampled wavelength grid
+                wave_in = self.camera_output[cam_idx]['wavelength']
+                downsampled_wlen = camera.downsampled_eboss_grid(wave_out, wave_in)
+                meta = dict(
+                    name=camera.name, num_fibers=self.num_fibers,
+                    pixel_size=camera.output_pixel_size)
+                table = astropy.table.Table(meta=meta)
+                column_args['length'] = len(downsampled_wlen)
+                table.add_column(astropy.table.Column(
+                    name='wavelength', data=downsampled_wlen))
+                table.add_column(astropy.table.Column(
+                    name='num_source_electrons', 
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['num_source_electrons'])))
+                table.add_column(astropy.table.Column(
+                    name='num_sky_electrons',
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['num_sky_electrons'])))
+                table.add_column(astropy.table.Column(
+                    name='num_dark_electrons', 
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['num_dark_electrons'])))
+                table.add_column(astropy.table.Column(
+                    name='read_noise_electrons', 
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['read_noise_electrons'])))
+                table.add_column(astropy.table.Column(
+                    name='random_noise_electrons', 
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['random_noise_electrons'])))
+                table.add_column(astropy.table.Column(
+                    name='variance_electrons', 
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['variance_electrons'])))
+                table.add_column(astropy.table.Column(
+                    name='flux_calibration', 
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['flux_calibration'])))
+                table.add_column(astropy.table.Column(
+                    name='observed_flux', unit=flux_unit, 
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['observed_flux'])))
+                table.add_column(astropy.table.Column(
+                    name='flux_inverse_variance', unit=flux_unit ** -2,
+                    data=camera.downsample_to_eboss(wave_out, wave_in, 
+                    self.camera_output[cam_idx]['flux_inverse_variance'])))
+                # Add bytes used in this table to our running total.
+                for name in table.colnames:
+                    d = table[name].data
+                    self.table_bytes += np.prod(d.shape) * d.dtype.itemsize
+
+                self._camera_output.append(table)
+
+            #for output, camera in zip(self.camera_output, self.instrument.cameras)
+            
+
     def generate_random_noise(self, random_state=None, use_poisson=True):
         """Generate a random noise realization for the most recent simulation.
 

@@ -333,6 +333,119 @@ class Camera(object):
         # Convert to DIA format and return.
         return R.todia()
 
+    def downsampled_eboss_grid(self, wave_out, wave_in):
+
+        ## Get nominal bin width
+        diff_in = np.diff(wave_in)
+        ## Check that nominal grid is equally spaced 
+        assert np.allclose(diff_in[0], diff_in, atol=0.0, rtol=1e-5)
+        diff_in = diff_in[0]
+        
+        ## Define nominal bin edges
+        edges_in = wave_in - (0.5 * diff_in)
+        edges_in = np.append(edges_in, edges_in[-1] + diff_in)
+        edges_in = np.log10(edges_in)
+        
+        ## Define output bin edges
+        diff_out = np.diff(wave_out)
+        diff_out = np.append(diff_out, diff_out[-1])
+        edges_out = wave_out - (0.5 * diff_out)
+        edges_out = np.append(edges_out, edges_out[-1] + diff_out[-1])
+        #edges_out = edges_out[::10]
+            
+        ## Check that both grids are strictly increasing
+        assert np.all(edges_out == np.sort(edges_out))
+        assert np.all(edges_in == np.sort(edges_in))
+        ## Check that output grid covers the range of input grid 
+        ## This is a necessary condition for flux conservation.
+        assert edges_out[0] < edges_in[0]
+        assert edges_out[-1] > edges_in[-1]
+        
+        ## Find index in out_edges where each element in in_edges 
+        ## would fall in out_edges
+        idx_in_out = np.searchsorted(edges_out, edges_in)
+        ## Only return values within range of simulation wavelength grid
+        start = idx_in_out[0]
+        stop = idx_in_out[-1]
+        
+        out_mdpt = 0.5 * (edges_out[1:] + edges_out[:-1])
+        # Update self.output_wavelength = out_mdpt[start:stop-1]?
+        return(out_mdpt[start:stop-1])
+
+    def downsample_to_eboss(self, wave_out, wave_in, data):
+    
+        ## Get nominal bin width
+        diff_in = np.diff(wave_in)
+        ## Check that nominal grid is equally spaced 
+        assert np.allclose(diff_in[0], diff_in, atol=0.0, rtol=1e-5)
+        diff_in = diff_in[0]
+        
+        ## Define nominal bin edges
+        edges_in = wave_in - (0.5 * diff_in)
+        edges_in = np.append(edges_in, edges_in[-1] + diff_in)
+        edges_in = np.log10(edges_in)
+        
+        ## Define output bin edges
+        diff_out = np.diff(wave_out)
+        diff_out = np.append(diff_out, diff_out[-1])
+        edges_out = wave_out - (0.5 * diff_out)
+        edges_out = np.append(edges_out, edges_out[-1] + diff_out[-1])
+        #edges_out = edges_out[::10]
+            
+        ## Check that both grids are strictly increasing
+        assert np.all(edges_out == np.sort(edges_out))
+        assert np.all(edges_in == np.sort(edges_in))
+        ## Check that output grid covers the range of input grid 
+        ## This is a necessary condition for flux conservation.
+        assert edges_out[0] < edges_in[0]
+        assert edges_out[-1] > edges_in[-1]
+        
+        ## Find index in out_edges where each element in in_edges 
+        ## would fall in out_edges
+        idx_in_out = np.searchsorted(edges_out, edges_in)
+
+        ## Convert from density (per unit Angstrom) to counts
+        hist_in = data * diff_in
+        
+        hist_out = np.zeros(len(edges_out) - 1)
+        data_right = 0
+        prev_idx = -1
+
+        for i in range(len(idx_in_out) - 1):
+            hist_out[idx_in_out[i] - 1] += data_right
+            if prev_idx == idx_in_out[i+1]:
+                hist_out[prev_idx - 1] += hist_in[i]
+            else:
+                diff = idx_in_out[i+1] - idx_in_out[i]
+                if diff == 0:
+                    hist_out[idx_in_out[i] - 1] += hist_in[i]
+                    data_right = 0
+                    prev_idx = idx_in_out[i]
+                elif diff > 0:
+                    left = (edges_out[idx_in_out[i]] - edges_in[i]) / (edges_in[i+1] - edges_in[i])
+                    right = 1 - left
+                    data_left = left * hist_in[i]
+                    data_right = right * hist_in[i]
+                    assert np.allclose((data_right + data_left), hist_in[i])
+                    hist_out[idx_in_out[i] - 1] += data_left
+
+        ## Check if flux is conserved
+        assert np.allclose(np.sum(hist_out), np.sum(hist_in), rtol=0.01, atol=1.0)
+        
+        ## Convert back from counts to flux density (per Angstrom)
+        data_out = hist_out / (np.diff(10 ** edges_out))
+        
+        ## Only return values within range of simulation wavelength grid
+        start = idx_in_out[0]
+        stop = idx_in_out[-1]
+        
+        out_mdpt = 0.5 * (edges_out[1:] + edges_out[:-1])
+        # need to update output wavelength at the end
+        # self.output_wavelength = out_mdpt[start:stop-1]
+        np.allclose(np.sum(data), np.sum(data_out[start:stop-1]))
+        # multiply by units at the end
+        return(data_out[start:stop-1])
+
     def downsample(self, data, method=np.sum):
         """Downsample data tabulated on the simulation grid to output pixels.
         """

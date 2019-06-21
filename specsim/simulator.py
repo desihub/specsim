@@ -564,8 +564,9 @@ class Simulator(object):
 
         if self.instrument.name.lower() == 'eboss': 
 
-            path = '/Users/belaabolfathi/Documents/repos/specsim-for-eboss/'
-
+            config = specsim.config.load_config(self.instrument.name.lower())
+            abs_base_path = config.abs_base_path
+            
             shape = (self.num_fibers,)
             column_args = dict(dtype=float, length=len(output['wavelength']), shape=shape)
             flux_unit = u.erg / (u.cm**2 * u.s * u.Angstrom)
@@ -574,10 +575,12 @@ class Simulator(object):
             for camera in self.instrument.cameras:
                 if camera.name == 'b':
                     cam_idx = 0
-                    wave_out = np.load(path+'mean_eboss_wlen_blue.npy')
+                    wave_out = np.load(os.path.join(abs_base_path, 
+                        'sdss/mean_eboss_wlen_blue.npy'))
                 elif camera.name == 'r':
                     cam_idx = 1
-                    wave_out = np.load(path+'mean_eboss_wlen_red.npy')
+                    wave_out = np.load(os.path.join(abs_base_path, 
+                        'sdss/mean_eboss_wlen_red.npy'))
                 # Returns bin centers of downsampled wavelength grid
                 wave_in = self.camera_output[cam_idx]['wavelength']
                 downsampled_wlen = camera.downsampled_eboss_grid(wave_out, wave_in)

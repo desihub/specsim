@@ -432,7 +432,7 @@ class Camera(object):
                     hist_out[idx_in_out[i] - 1] += data_left
 
         ## Check if flux is conserved
-        assert np.allclose(np.sum(hist_out), np.sum(hist_in), rtol=1e-4, atol=1.0)
+        assert np.allclose(np.sum(hist_out), np.sum(hist_in), rtol=0.01, atol=1.0)
         
         ## Convert back from counts to flux density (per Angstrom)
         data_out = hist_out / (np.diff(10 ** edges_out)[:, np.newaxis])

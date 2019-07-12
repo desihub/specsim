@@ -590,7 +590,7 @@ class Simulator(object):
                 table = astropy.table.Table(meta=meta)
                 column_args['length'] = len(downsampled_wlen)
                 table.add_column(astropy.table.Column(
-                    name='wavelength', data=downsampled_wlen))
+                    name='wavelength', data=10.**downsampled_wlen))
                 table.add_column(astropy.table.Column(
                     name='num_source_electrons', 
                     data=camera.downsample_to_eboss(wave_out, wave_in, 
@@ -632,10 +632,12 @@ class Simulator(object):
                     d = table[name].data
                     self.table_bytes += np.prod(d.shape) * d.dtype.itemsize
 
+                camera._output_wavelength = table['wavelength']
                 self._camera_output.append(table)
 
             #for output, camera in zip(self.camera_output, self.instrument.cameras)
-            
+
+            self._camera_output = self._camera_output[2:]
 
     def generate_random_noise(self, random_state=None, use_poisson=True):
         """Generate a random noise realization for the most recent simulation.

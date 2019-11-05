@@ -123,7 +123,8 @@ class GalsimFiberlossCalculator(object):
     def calculate(self, seeing_fwhm, scale, offset, blur_rms,
                   source_fraction, source_half_light_radius,
                   source_minor_major_axis_ratio, source_position_angle,
-                  saved_images_file=None):
+                  saved_images_file=None, offsetxy=False, focal_x=None,
+                  focal_y=None):
         """Calculate the acceptance fractions for a set of fibers.
 
         Parameters
@@ -132,11 +133,13 @@ class GalsimFiberlossCalculator(object):
             Array of length num_wlen giving the FWHM seeing in arcseconds
             at each wavelength.
         scale : array
-            Array of shape (num_fibers, 2) giving the x and y image scales in
-            microns / arcsec at each fiber location.
+            Array of shape (num_fibers, 2) giving the radial and azimuthal 
+            image scales in microns / arcsec at each fiber location.
         offset : array
-            Array of shape (num_fibers, num_wlen, 2) giving the x and y offsets
-            in microns at each fiber location and wavelength.
+            Array of shape (num_fibers, num_wlen, 2) giving the radial and
+            azimuthal offsets in microns at each fiber location and wavelength.
+            If offsetxy == True, then this is in focal plane x & y rather than
+            radius and azimuth.
         blur_rms : array
             Array of shape (num_fibers, num_wlen) giving the RMS instrumental
             Gaussian blur at each fiber location and wavelength.
@@ -156,6 +159,15 @@ class GalsimFiberlossCalculator(object):
             Write a multi-extension FITS file with this name containing images
             of the atmospheric and instrument PSFs as a function of wavelength,
             as well as the source profile and the anti-aliased fiber aperture.
+        offsetxy : bool
+            if True, offset is in focal plane x & y rather than radius and
+            azimuth.
+        focal_x : array or None
+            Array of shape num_fibers.  The x positions of the fibers.  Needed
+            if offsetxy is True.
+        focal_y : array or None
+            Array of shape num_fibers.  The y positions of the fibers.  Needed
+            if offsetxy is True.
 
         Returns
         -------
@@ -180,6 +192,19 @@ class GalsimFiberlossCalculator(object):
         star_fraction = 1 - source_fraction.sum(axis=1)
         assert np.all(star_fraction >= 0) and np.all(star_fraction <= 1)
 
+        if offsetxy:
+            if focal_x is None or focal_y is None:
+                raise ValueError('when using offsetxy, must set focal_x '
+                                 'and focal_y')
+            offsetnew = numpy.zeros_like(offset)
+            # num fiber, num wavelengths, 2
+            theta = numpy.arctan2(focal_y, focal_x)[:, None]
+            offsetnew[:, :, 0] = (numpy.cos(theta)*offset[:, :, 0] +
+                                  numpy.sin(theta)*offset[:, :, 1])
+            offsetnew[:, :, 1] = (numpy.sin(theta)*offset[:, :, 0] -
+                                  numpy.cos(theta)*offset[:, :, 1])
+            offset = offsetnew
+
         if saved_images_file is not None:
             import astropy.io.fits
             import astropy.wcs
@@ -187,6 +212,7 @@ class GalsimFiberlossCalculator(object):
             header = astropy.io.fits.Header()
             header['COMMENT'] = 'Fiberloss calculation images.'
             hdu_list.append(astropy.io.fits.PrimaryHDU(header=header))
+            del header['COMMENT']
             # All subsequent HDUs contain images with the same WCS.
             w = astropy.wcs.WCS(naxis=2)
             w.wcs.ctype = ['x', 'y']
@@ -199,6 +225,7 @@ class GalsimFiberlossCalculator(object):
             header['COMMENT'] = 'Fiber aperture'
             hdu_list.append(astropy.io.fits.ImageHDU(
                 data=self.aperture, header=header))
+            del header['COMMENT']
 
         scaled_offset = offset / self.image.scale
         fiberloss = np.empty((num_fibers, num_wlen))
@@ -249,17 +276,20 @@ class GalsimFiberlossCalculator(object):
                     header['COMMENT'] = 'Convolved model'
                     hdu_list.append(astropy.io.fits.ImageHDU(
                         data=self.image.array.copy(), header=header))
+                    del header['COMMENT']
                     # The component models are only rendered individually if we
                     # need to save them.
                     instrument_psf.drawImage(offset=offsets, **draw_args)
                     header['COMMENT'] = 'Instrument blur model'
                     hdu_list.append(astropy.io.fits.ImageHDU(
                         data=self.image.array.copy(), header=header))
+                    del header['COMMENT']
                     # Render the seeing without the instrumental offset.
                     atmospheric_psf.drawImage(**draw_args)
                     header['COMMENT'] = 'Atmospheric seeing model'
                     hdu_list.append(astropy.io.fits.ImageHDU(
                         data=self.image.array.copy(), header=header))
+                    del header['COMMENT']
                     if wlen == self.wlen_grid[-1]:
                         # Render the source profile without any offset after
                         # all other postage stamps for this fiber.
@@ -269,6 +299,7 @@ class GalsimFiberlossCalculator(object):
                         header['COMMENT'] = 'Source profile'
                         hdu_list.append(astropy.io.fits.ImageHDU(
                             data=self.image.array.copy(), header=header))
+                        del header['COMMENT']
 
         if saved_images_file is not None:
             hdu_list.writeto(saved_images_file, clobber=True)

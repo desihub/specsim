@@ -32,7 +32,7 @@ class GalsimFiberlossCalculator(object):
     moffat_beta : float
         Beta parameter value for the atmospheric PSF Moffat profile.
     maximum_fft_size : int
-        Maximum size of FFT allowed.
+5~        Maximum size of FFT allowed.
     fiber_placement : array
         Fiber placement position in microns. It is needed for dithering simulations.
     """
@@ -56,8 +56,8 @@ class GalsimFiberlossCalculator(object):
 
         # Prepare an anti-aliased image of the fiber aperture.
         nos = num_pixels * oversampling
-        dx = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos) - self.fiber_placement[0]/0.5/fiber_diameter
-        dy = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos) - self.fiber_placement[1]/0.5/fiber_diameter
+        dx = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos)# - self.fiber_placement[0]/0.5/fiber_diameter
+        dy = (np.arange(nos) + 0.5 - 0.5 * nos) / (0.5 * nos)# - self.fiber_placement[1]/0.5/fiber_diameter
         rsq = dx ** 2 + dy[:, np.newaxis] ** 2
         inside = (rsq <= 1).astype(float)
         s0, s1 = inside.strides
@@ -65,7 +65,7 @@ class GalsimFiberlossCalculator(object):
             inside, shape=(num_pixels, num_pixels, oversampling, oversampling),
             strides=(oversampling * s0, oversampling * s1, s0, s1))
         self.aperture = blocks.sum(axis=(2, 3)) / oversampling ** 2
-
+        
     def create_source(self, fractions, half_light_radius,
                       minor_major_axis_ratio, position_angle):
         """Create a model for the on-sky profile of a single source.
@@ -126,7 +126,7 @@ class GalsimFiberlossCalculator(object):
     def calculate(self, seeing_fwhm, scale, offset, blur_rms,
                   source_fraction, source_half_light_radius,
                   source_minor_major_axis_ratio, source_position_angle,
-                  saved_images_file=None):
+                  saved_images_file=None, verbosity=False):
         """Calculate the acceptance fractions for a set of fibers.
 
         Parameters
@@ -217,8 +217,12 @@ class GalsimFiberlossCalculator(object):
                 # this fiber location.
                 atmospheric_psf = seeing.transform(
                     scale[j, 0], 0, 0, scale[j, 1]).withFlux(1)
+                if verbosity:
+                    print("Atmoshperic PSF: ", atmospheric_psf)
                 # Create the instrument PSF for this fiber and wavelength.
                 instrument_psf = galsim.Gaussian(sigma=blur_rms[j, i])
+                if verbosity:
+                    print("Instrument PSF: ", instrument_psf)
                 if i == 0:
                     # Create the source profile for this fiber on the sky.
                     source_profile = self.create_source(
@@ -232,6 +236,8 @@ class GalsimFiberlossCalculator(object):
                 else:
                     # Lookup the source model for this fiber.
                     source_profile = source_profiles[j]
+                if verbosity:
+                    print("Source profile: ", source_profile)
                 # Convolve the source + instrument + astmosphere.
                 convolved = galsim.Convolve(
                     [instrument_psf, atmospheric_psf, source_profile],
@@ -241,10 +247,14 @@ class GalsimFiberlossCalculator(object):
                 # TODO: compare method='no_pixel' and 'auto' for
                 # accuracy and speed.
                 draw_args = dict(image=self.image, method='auto')
+                if verbosity:
+                    print("Draw args: ", draw_args)
+                    print("Offsets: ", offsets)
+                    print("GS params: ", self.gsparams)
                 convolved.drawImage(offset=offsets, **draw_args)
                 # Calculate the fiberloss fraction for this fiber and wlen.
                 fiberloss[j, i] = np.sum(self.image.array * self.aperture)
-
+                
                 if saved_images_file is not None:
                     header['FIBER'] = j
                     header['WLEN'] = wlen
@@ -464,14 +474,14 @@ def calculate_fiber_acceptance_fraction(
             wlen_grid.to(u.Angstrom).value,
             instrument.fiberloss_num_pixels,
             oversampling,
-            atmosphere.seeing_moffat_beta,
-            fiber_placement=fiber_placement)
+            atmosphere.seeing_moffat_beta)
 
         # Calculate fiberloss fractions.  Note that the calculator expects arrays
         # with implicit units.
         fiberloss_grid = calc.calculate(
             seeing_fwhm,
-            scale.to(u.um / u.arcsec).value, offset.to(u.um).value,
+            scale.to(u.um / u.arcsec).value,
+            offset.to(u.um).value + fiber_placement,
             blur.to(u.um).value,
             source_fraction, source_half_light_radius,
             source_minor_major_axis_ratio, source_position_angle,

@@ -638,7 +638,6 @@ class Simulator(object):
                 output['flux_inverse_variance'] = camera.downsample_to_eboss(output['wavelength'], wave_in, 
                     self.camera_output[cam_idx]['flux_inverse_variance'])
 
-                output.write('eboss_output_{}.fits'.format(camera), format='fits')
 
     def generate_random_noise(self, random_state=None, use_poisson=True):
         """Generate a random noise realization for the most recent simulation.

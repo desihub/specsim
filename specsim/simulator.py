@@ -193,9 +193,9 @@ class Simulator(object):
                     name='flux_inverse_variance', unit=flux_unit ** -2,
                     **column_args))
                 # Add bytes used in this table to our running total.
-                for name in table.colnames:
-                    d = table[name].data
-                    self.table_bytes += np.prod(d.shape) * d.dtype.itemsize
+                #for name in table.colnames:
+                 #   d = table[name].data
+                  #  self.table_bytes += np.prod(d.shape) * d.dtype.itemsize
 
                 self._eboss_camera_output.append(table)
 
@@ -627,8 +627,8 @@ class Simulator(object):
                     self.camera_output[cam_idx]['num_dark_electrons'])
                 output['read_noise_electrons'] = camera.downsample_to_eboss(output['wavelength'], wave_in, 
                     self.camera_output[cam_idx]['read_noise_electrons'])
-                output['random_noise_electrons'] = camera.downsample_to_eboss(output['wavelength'], wave_in, 
-                    self.camera_output[cam_idx]['random_noise_electrons'])
+                #output['random_noise_electrons'] = camera.downsample_to_eboss(output['wavelength'], wave_in, 
+                    #self.camera_output[cam_idx]['random_noise_electrons'])
                 output['variance_electrons'] = camera.downsample_to_eboss(output['wavelength'], wave_in, 
                     self.camera_output[cam_idx]['variance_electrons'])
                 output['flux_calibration'] = camera.downsample_to_eboss(output['wavelength'], wave_in, 
@@ -638,6 +638,8 @@ class Simulator(object):
                 output['flux_inverse_variance'] = camera.downsample_to_eboss(output['wavelength'], wave_in, 
                     self.camera_output[cam_idx]['flux_inverse_variance'])
 
+                # Zero our random noise realization column.
+                output['random_noise_electrons'][:] = 0.
 
     def generate_random_noise(self, random_state=None, use_poisson=True):
         """Generate a random noise realization for the most recent simulation.
@@ -684,6 +686,19 @@ class Simulator(object):
                     random_state.normal(scale=output['read_noise_electrons']))
             else :
                 output['random_noise_electrons'] = random_state.normal(scale=np.sqrt( mean_electrons + output['read_noise_electrons']**2))
+
+        if self.instrument.name.lower() == 'eboss':
+                for output in self._eboss_camera_output:
+                    mean_electrons = (
+                        output['num_source_electrons'] +
+                        output['num_sky_electrons'] + output['num_dark_electrons'])
+                    if use_poisson :
+                        output['random_noise_electrons'] = (
+                            random_state.poisson(mean_electrons) - mean_electrons +
+                            random_state.normal(scale=output['read_noise_electrons']))
+                    else :
+                        output['random_noise_electrons'] = random_state.normal(scale=np.sqrt( mean_electrons + output['read_noise_electrons']**2))
+
 
     def save(self, filename, clobber=True):
         """Save results of the last simulation to a FITS file.

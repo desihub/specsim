@@ -263,7 +263,7 @@ source:
     type: qso
     table:
         format: ascii
-        path: sdss/spec-qso.dat
+        path: sdss/spec-ABmag22.0.dat
         columns:
             wavelength: { index: 0, unit: Angstrom }
             flux:

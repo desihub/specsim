@@ -258,12 +258,12 @@ instrument:
 # The source configuration is interpreted and validated by the
 # specsim.source module.
 source:
-    name: 22nd AB magnitude reference
+    name: 22.4 mag quasar spectrum at z=1.5
     # The type is only used when instrument.fiberloss.method is 'table'.
     type: qso
     table:
         format: ascii
-        path: sdss/spec-ABmag22.0.dat
+        path: sdss/spec-qso.dat
         columns:
             wavelength: { index: 0, unit: Angstrom }
             flux:

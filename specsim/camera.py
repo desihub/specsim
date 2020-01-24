@@ -88,14 +88,14 @@ class Camera(object):
         # The arrays defining the CCD properties must all have identical
         # wavelength coverage.
         ccd_nonzero = np.where(np.logical_and(self._row_size > 0, self.throughput != 0))[0]
-        #ccd_nonzero = np.where(self._row_size > 0)[0]
+        ccd_nonzero = np.where(self._row_size > 0)[0]
         ccd_start, ccd_stop = ccd_nonzero[0], ccd_nonzero[-1] + 1 
-        #if (np.any(self._fwhm_resolution[:ccd_start] != 0) or
-         #   np.any(self._fwhm_resolution[ccd_stop:] != 0)):
-          #  raise RuntimeError('Resolution extends beyond CCD coverage.')
-        #if (np.any(self._neff_spatial[:ccd_start] != 0) or
-         #   np.any(self._neff_spatial[ccd_stop:] != 0)):
-          #  raise RuntimeError('Spatial Neff extends beyond CCD coverage.')
+        if (np.any(self._fwhm_resolution[:ccd_start] != 0) or
+            np.any(self._fwhm_resolution[ccd_stop:] != 0)):
+            raise RuntimeError('Resolution extends beyond CCD coverage.')
+        if (np.any(self._neff_spatial[:ccd_start] != 0) or
+            np.any(self._neff_spatial[ccd_stop:] != 0)):
+            raise RuntimeError('Spatial Neff extends beyond CCD coverage.')
 
         # CCD properties must be valid across the coverage.
         if np.any(self._row_size[ccd_start:ccd_stop] <= 0.):

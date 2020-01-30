@@ -102,12 +102,14 @@ instrument:
     # See DESI documents 334, 336, 347 for details.
     name: eBOSS
     constants:
-        # These values are copied from desimodel/data/desi.yaml
         primary_mirror_diameter: 2.5 m
         obscuration_diameter: 0.625 m
         support_width: 0.025 m
         fiber_diameter: 120.0 um
-        field_radius: 325.0 mm
+        # Note that the true eBOSS field radius is 325.0 mm, but is set
+        # to 414.0 mm in order to be compatible with other DESI software
+        # products. 
+        field_radius: 414.0 mm # 325.0 mm
     plate_scale:
         constants:
             value: 60.45 um / arcsec

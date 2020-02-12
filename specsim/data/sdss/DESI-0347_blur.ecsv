@@ -1,0 +1,51 @@
+# %ECSV 0.9
+# ---
+# datatype:
+# - {name: wavelength, unit: Angstrom, datatype: float64, format: '{:.1f}', description: Wavelength}
+# - {name: r=0.00 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=0.00 deg.}
+# - {name: r=0.15 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=0.15 deg.}
+# - {name: r=0.30 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=0.30 deg.}
+# - {name: r=0.45 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=0.45 deg.}
+# - {name: r=0.60 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=0.60 deg.}
+# - {name: r=0.75 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=0.75 deg.}
+# - {name: r=0.90 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=0.90 deg.}
+# - {name: r=1.05 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=1.05 deg.}
+# - {name: r=1.20 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=1.20 deg.}
+# - {name: r=1.35 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=1.35 deg.}
+# - {name: r=1.50 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=1.50 deg.}
+# - {name: r=1.60 deg, unit: micron, datatype: float64, format: '{:.4f}', description: RMS
+#     spot size at field angle r=1.60 deg.}
+# meta: !!omap
+# - {description: 'RMS spot size as a function of wavelength and field angle derived
+#     from DESI-0347-v10. Chromatic contributions are based on a text file prepared
+#     by Mike Sholl that is also plotted in the geometric_blur tab of the throughput
+#     spreadsheet in DESI-0347-v13. Achromatic contributions are taken from cells B14:B26
+#     added in quadrature.'}
+# schema: astropy-2.0
+wavelength "r=0.00 deg" "r=0.15 deg" "r=0.30 deg" "r=0.45 deg" "r=0.60 deg" "r=0.75 deg" "r=0.90 deg" "r=1.05 deg" "r=1.20 deg" "r=1.35 deg" "r=1.50 deg" "r=1.60 deg"
+3550.0 22.2382 21.1992 18.6282 15.8778 14.1541 13.3888 12.7107 11.5403 10.6502 13.7516 22.0155 18.5668
+3675.0 19.7553 18.8828 16.8174 14.8212 13.7409 13.2433 12.6088 11.5626 10.9942 14.0983 21.4343 17.3332
+3800.0 17.3294 16.6242 15.0591 13.7928 13.3336 13.0987 12.5073 11.5849 11.3495 14.4488 20.8554 16.1216
+4125.0 13.3050 13.0069 12.5862 12.7242 13.1364 13.0252 12.2314 11.3356 11.5534 14.7021 19.6593 13.9597
+4500.0 11.2597 11.3307 11.8020 12.7310 13.3735 13.0292 11.8854 10.8724 11.2734 14.4503 18.6897 12.9109
+5000.0 10.6156 10.9578 11.9609 13.1684 13.6709 12.9401 11.4253 10.2334 10.5173 13.4942 17.4685 12.5725
+5500.0 10.7381 11.1642 12.2823 13.4478 13.7510 12.8034 11.2258 10.1164 10.2231 12.6951 16.4496 12.4714
+6000.0 10.8905 11.3486 12.4935 13.5993 13.7931 12.8201 11.4525 10.6877 10.7444 12.5635 15.8727 12.5733
+6500.0 11.0196 11.4983 12.6593 13.7303 13.8818 12.9860 11.9417 11.6026 11.7224 12.9629 15.6984 12.8904
+7000.0 11.1455 11.6429 12.8228 13.8752 14.0097 13.2105 12.4778 12.5270 12.7642 13.5880 15.7620 13.3307
+7500.0 11.2951 11.8101 13.0083 14.0429 14.1526 13.4161 12.9218 13.2835 13.6560 14.2119 15.9106 13.8005
+8000.0 11.5022 12.0316 13.2406 14.2443 14.3000 13.5636 13.2120 13.8070 14.3165 14.7175 16.0466 14.2449
+8500.0 11.8079 12.3455 13.5500 14.5000 14.4602 13.6476 13.3360 14.0899 14.7320 15.0615 16.1229 14.6464
+9400.0 12.4468 12.9834 14.1555 14.9988 14.7728 13.7444 13.3212 14.1608 14.9560 15.2924 16.1664 15.1979
+9850.0 12.7747 13.3094 14.4626 15.2506 14.9301 13.7929 13.3138 14.1963 15.0685 15.4083 16.1882 15.4764

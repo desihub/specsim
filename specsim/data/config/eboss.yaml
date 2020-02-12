@@ -1,8 +1,8 @@
-name: DESI QuickSim
+name: eBOSS QuickSim
 
 # The base path is pre-pended to all non-absolute path values below.
 # {...} will be expanded using environment variables.
-base_path: '{DESIMODEL}/data'
+base_path: <PACKAGE_DATA>
 
 # Be verbose during the simulation?
 verbose: no
@@ -24,8 +24,8 @@ verbose: no
 #        CCD 3569.000 5949.000 5625.000 7741.000 7435.000 9834.000
 wavelength_grid:
     unit: Angstrom
-    min: 3550.0
-    max: 9850.0
+    min: 3000.0
+    max: 10050.0
     step: 0.1
 
 # The atmosphere configuration is interpreted and validated by the
@@ -44,9 +44,7 @@ atmosphere:
                     unit: 1e-17 erg / (Angstrom arcsec2 cm2 s)
             paths:
                 # Each path defines a possible condition.
-                dark: spectra/spec-sky.dat
-                grey: spectra/spec-sky-grey.dat
-                bright: spectra/spec-sky-bright.dat
+                dark: sdss/eboss-spec-sky.dat
         # Specify the current condition.
         condition: dark
     # Atmospheric seeing (only used when instrument.fiberloss.method = galsim)
@@ -72,7 +70,7 @@ atmosphere:
                     # not matter and old versions of speclite.filters do
                     # not interpret the actual units correctly.
                     unit: erg / (cm2 s Angstrom)
-            path: sky/solarspec.txt
+            path: sdss/solarspec.txt
             format: ascii.basic
         constants:
             # Phase of the moon from 0 (full) to 1 (new).
@@ -89,7 +87,7 @@ atmosphere:
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 extinction_coefficient: { index: 1 }
-            path: spectra/ZenithExtinction-KPNO.dat
+            path: sdss/eboss-KPNO-extinction.dat
     # Should extinction be applied to the sky emission?
     extinct_emission: yes
     # Airmass to use when the pointing is not calculated from the source
@@ -102,22 +100,19 @@ atmosphere:
 # specsim.instrument module.
 instrument:
     # See DESI documents 334, 336, 347 for details.
-    name: DESI
+    name: eBOSS
     constants:
-        # These values are copied from desimodel/data/desi.yaml
-        primary_mirror_diameter: 3.797 m
-        obscuration_diameter: 1.8 m
+        primary_mirror_diameter: 2.5 m
+        obscuration_diameter: 0.625 m
         support_width: 0.025 m
-        fiber_diameter: 107.0 um
-        field_radius: 414.0 mm
+        fiber_diameter: 120.0 um
+        # Note that the true eBOSS field radius is 325.0 mm, but is set
+        # to 414.0 mm in order to be compatible with other DESI software
+        # products. 
+        field_radius: 414.0 mm # 325.0 mm
     plate_scale:
-        table:
-            path: focalplane/platescale.txt
-            format: ascii
-            columns:
-                radius: { index: 0, unit: mm }
-                radial_scale: { index: 6, unit: um/arcsec }
-                azimuthal_scale: { index: 7, unit: um/arcsec }
+        constants:
+            value: 60.45 um / arcsec
     fiberloss:
         # Method for calculating fiberloss fractions.
         # Either galsim or table or fastsim.
@@ -134,12 +129,12 @@ instrument:
             format: ascii
             paths:
                 # Each path corresponds to a different source type.
-                qso: throughput/fiberloss-qso.dat
-                elg: throughput/fiberloss-elg.dat
-                lrg: throughput/fiberloss-lrg.dat
-                star: throughput/fiberloss-star.dat
-                sky: throughput/fiberloss-sky.dat
-                perfect: throughput/fiberloss-perfect.dat
+                qso: sdss/eboss-fiberloss-qso.dat
+                #elg: throughput/fiberloss-elg.dat
+                #lrg: throughput/fiberloss-lrg.dat
+                #star: throughput/fiberloss-star.dat
+                #sky: throughput/fiberloss-sky.dat
+                #perfect: throughput/fiberloss-perfect.dat
             columns:
                 wavelength: { index: 0, unit: Angstrom }
                 fiber_acceptance: { index: 1 }
@@ -154,14 +149,14 @@ instrument:
         # Read RMS blur values tabulated as a function of field angle and
         # wavelength, and derived from ray tracing simulations.  For details,
         # see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
-        path: throughput/DESI-0347_blur.ecsv
+        path: sdss/DESI-0347_blur.ecsv
         # The ECSV format is not auto-detected so we specify it explicitly.
         format: ascii.ecsv
     offset:
         # Read radial centroid offsets tabulated as a function of field angle
         # and wavelength, and derived from ray tracing simulations.  For
         # details, see $DESIMODEL/doc/nb/DESI-0347_Throughput.ipynb.
-        path: throughput/DESI-0347_offset.ecsv
+        path: sdss/DESI-0347_offset.ecsv
         # The ECSV format is not auto-detected so we specify it explicitly.
         format: ascii.ecsv
         #
@@ -194,20 +189,19 @@ instrument:
         b:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 3.41 electron/pixel**2
+                read_noise: 2.0 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 2.0 electron/(hour pixel**2)
-                gain: 1.0 electron/adu
+                dark_current: 2.1 electron/(hour pixel**2)
+                gain: 1.02 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
-                num_sigmas_clip: 5
+                num_sigmas_clip: 0
                 # Output pixels are used to report simulation results but are
                 # not the physical pixels.  The output pixel size must be a
                 # multiple of wavelength_grid.step.
                 output_pixel_size: 0.5 Angstrom
             ccd:
                 table:
-                    path: specpsf/psf-quicksim.fits
-                    hdu: QUICKSIM-B
+                    path: sdss/eboss-blue.fits
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
@@ -222,8 +216,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-b.fits
-                    hdu: THROUGHPUT
+                    path: sdss/eboss-thru-b.fits
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength, unit: Angstrom }
@@ -231,20 +224,19 @@ instrument:
         r:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 2.6 electron/pixel**2
+                read_noise: 2.875 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 2.4 electron/(hour pixel**2)
-                gain: 1.0 electron/adu
+                dark_current: 4.25 electron/(hour pixel**2)
+                gain: 1.66 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
-                num_sigmas_clip: 5
+                num_sigmas_clip: 0
                 # Output pixels are used to report simulation results but are
                 # not the physical pixels.  The output pixel size must be a
                 # multiple of wavelength_grid.step.
                 output_pixel_size: 0.5 Angstrom
             ccd:
                 table:
-                    path: specpsf/psf-quicksim.fits
-                    hdu: QUICKSIM-R
+                    path: sdss/eboss-red.fits
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength }
@@ -259,59 +251,21 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-r.fits
-                    hdu: THROUGHPUT
+                    path: sdss/eboss-thru-r.fits
                     extrapolated_value: 0.0
                     columns:
                         wavelength: { name: wavelength, unit: Angstrom }
                         throughput: { name: throughput }
-        z:
-            constants:
-                # These values are copied from desimodel/data/desi.yaml
-                read_noise: 2.6 electron/pixel**2
-                # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 2.4 electron/(hour pixel**2)
-                gain: 1.0 electron/adu
-                # Clip the resolution matrix at this number of sigmas.
-                num_sigmas_clip: 5
-                # Output pixels are used to report simulation results but are
-                # not the physical pixels.  The output pixel size must be a
-                # multiple of wavelength_grid.step.
-                output_pixel_size: 0.5 Angstrom
-            ccd:
-                table:
-                    path: specpsf/psf-quicksim.fits
-                    hdu: QUICKSIM-Z
-                    extrapolated_value: 0.0
-                    columns:
-                        wavelength: { name: wavelength }
-                        row_size:
-                            name: angstroms_per_row
-                            # The file uses Angstrom / row but "row" is not
-                            # recognized by astropy.units so we replace it with
-                            # the linear "pixel" unit.
-                            unit: Angstrom / pixel
-                            override_unit: yes
-                        fwhm_resolution: { name: fwhm_wave }
-                        neff_spatial: { name: neff_spatial }
-            throughput:
-                table:
-                    path: throughput/thru-z.fits
-                    hdu: THROUGHPUT
-                    extrapolated_value: 0.0
-                    columns:
-                        wavelength: { name: wavelength, unit: Angstrom }
-                        throughput: { name: throughput }
-
+        
 # The source configuration is interpreted and validated by the
 # specsim.source module.
 source:
-    name: 22nd AB magnitude reference
+    name: 22.4 mag quasar spectrum at z=1.5
     # The type is only used when instrument.fiberloss.method is 'table'.
     type: qso
     table:
         format: ascii
-        path: spectra/spec-ABmag22.0.dat
+        path: sdss/spec-qso.dat
         columns:
             wavelength: { index: 0, unit: Angstrom }
             flux:
@@ -360,7 +314,7 @@ source:
 observation:
     observatory: KPNO
     constants:
-        exposure_time: 1000.0 s
+        exposure_time: 900.84 s
         # Atmospheric pressure at the telescope (not at sea level) used
         # to calculate atmospheric refraction.  Leave commented out to use a
         # nominal value calculated for the observatory elevation.

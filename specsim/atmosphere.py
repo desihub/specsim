@@ -672,12 +672,12 @@ def plot_lunar_brightness(moon_zenith, moon_azimuth, moon_phase,
     # Add labels.
     xy, coords = (1., 0.), 'axes fraction'
     plt.annotate('$k_V$ = {0:.3f}'.format(vband_extinction),
-                 xy, xy, coords, coords,
+                 xy, xycoords=coords,
                  horizontalalignment='right', verticalalignment='top',
                  size='x-large', color='k')
     xy, coords = (0., 0.), 'axes fraction'
     plt.annotate('$\\phi$ = {0:.1f}%'.format(100. * moon_phase),
-                 xy, xy, coords, coords,
+                 xy, xycoords=coords,
                  horizontalalignment='left', verticalalignment='top',
                  size='x-large', color='k')
 

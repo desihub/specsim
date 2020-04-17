@@ -19,7 +19,7 @@ def test_ctor():
     assert src.wavelength_in.unit == u.Angstrom
     assert src.flux_in.unit == u.erg / (u.cm ** 2 * u.s * u.Angstrom)
 
-    assert np.array_equal(src.wavelength_out.value, config.wavelength)
+    assert np.array_equal(src.wavelength_out.value, config.wavelength.value)
     assert np.all(src.flux_out.value == 1e-17)
     assert src.flux_out.unit == src.flux_in.unit
 

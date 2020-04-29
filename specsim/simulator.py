@@ -200,7 +200,8 @@ class Simulator(object):
                  source_fluxes=None, source_types=None, source_fraction=None,
                  source_half_light_radius=None,
                  source_minor_major_axis_ratio=None, source_position_angle=None,
-                 calibration_surface_brightness=None, save_fiberloss=None):
+                 calibration_surface_brightness=None, sky_surface_brightness=None,
+                 save_fiberloss=None):
         """Simulate a single exposure.
 
         Simulation results are written to internal tables that are overwritten
@@ -278,6 +279,10 @@ class Simulator(object):
             set, all source parameters (those beginning with ``source_``)
             and ``fiber_acceptance_fraction`` are ignored and this is assumed
             to be a calibration exposure.
+        sky_surface_brightness : array or None
+            Array of shape (num_wlen,) or (num_fibers, num_wlen) giving the
+            sky emission surface brightness illuminating each fiber. When this is
+            set, it overrides the initial configuration default.
         save_fiberloss : str or None
             Basename for saving FITS images and tabulated fiberloss.
             Ignored unless instrument.fiberloss.method is galsim.
@@ -440,9 +445,26 @@ class Simulator(object):
                 fiberloss
                 ).to(source_fiber_flux.unit)
 
+            if sky_surface_brightness is not None:
+                # Check for a valid input.
+                if sky_surface_brightness.shape not in ((nwlen,), (self.num_fibers, nwlen)):
+                    raise ValueError('Invalid shape for sky_surface_brightness.')
+                try:
+                    sky_surface_brightness.to(self.atmosphere.surface_brightness.unit)
+                except AttributeError:
+                    raise ValueError('Missing units for sky_surface_brightness.')
+                except u.UnitConversionError:
+                    raise ValueError('Invalid units for sky_surface_brightness.')
+                if sky_surface_brightness.shape == (nwlen,):
+                    # Use the same spectrum for all fibers.
+                    sky_surface_brightness = sky_surface_brightness.reshape(-1, 1)
+            else:
+                # Use the configuration default for all fibers.
+                sky_surface_brightness = self.atmosphere.surface_brightness.reshape(-1, 1)
+
             # Calculate the sky flux entering a fiber.
             sky_fiber_flux[:] = (
-                self.atmosphere.surface_brightness[:, np.newaxis] *
+                sky_surface_brightness *
                 self.fiber_area
                 ).to(sky_fiber_flux.unit)
 
@@ -587,7 +609,7 @@ class Simulator(object):
             if None is specified.
         use_poisson : bool
             If False, use numpy.random.normal instead of numpy.random.poisson.
-            This is useful for simulations where one wants the same noise 
+            This is useful for simulations where one wants the same noise
             realization for varying average flux (numpy.random.poisson
             uses a varying number of random numbers depending on the mean).
         """

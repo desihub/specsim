@@ -739,8 +739,8 @@ def initialize(config, camera_output=True):
             not_at_origin = (angle_r > 0.)
             ux = np.ones(shape=dr.shape, dtype=float)
             uy = np.ones(shape=dr.shape, dtype=float)
-            ux[not_at_origin] = angle_x / angle_r
-            uy[not_at_origin] = angle_y / angle_r
+            ux[not_at_origin] = angle_x[not_at_origin] / angle_r[not_at_origin]
+            uy[not_at_origin] = angle_y[not_at_origin] / angle_r[not_at_origin]
             dx = dr * ux
             dy = dr * uy
             # Add interpolated offsets if any.

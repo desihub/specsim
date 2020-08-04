@@ -5,7 +5,7 @@ specsim Change Log
 0.14 (unreleased)
 -----------------
 
-- No changes yet.
+- support astropy4 in unit tests, drop py2.7 and 3.5 testing (PR #111).
 
 0.13 (2018-07-30)
 -----------------
@@ -21,7 +21,7 @@ specsim Change Log
 0.12 (2018-07-26)
 -----------------
 
-- Update centroid offset config to match desimodel 0.9.6.
+- Update centroid offset config to match desimodel 0.9.6. (PR #91).
 - Manage random state for centroid offsets (fixes #83).
 - Update jupyter notebooks (supercedes #89, fixes #76).
 - Update API docs (fixes #39).

@@ -2,7 +2,7 @@
 specsim Change Log
 ==================
 
-0.14 (unreleased)
+0.14 (2020-08-04)
 -----------------
 
 - support astropy4 in unit tests, drop py2.7 and 3.5 testing (PR #111).

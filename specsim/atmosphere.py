@@ -583,7 +583,7 @@ def krisciunas_schaefer(obs_zenith, moon_zenith, separation_angle, moon_phase,
     Istar = 10 ** (-0.4 * (m + 16.57))
     # Calculate the scattering function (eqn.21).
     rho = separation_angle.to(u.deg).value
-    f_scatter = (10 ** 5.36 * (1.06 + np.cos(separation_angle) ** 2) +
+    f_scatter = (10 ** 5.36 * (1.06 + np.cos(separation_angle * np.pi / 180.) ** 2) +
                  10 ** (6.15 - rho / 40.))
     # Calculate the scattering airmass along the lines of sight to the
     # observation and moon (eqn. 3).

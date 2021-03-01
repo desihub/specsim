@@ -27,8 +27,9 @@ import astropy.constants
 import astropy.units as u
 
 import specsim.camera
-import specsim.fastfiberacceptance
 import specsim.config
+
+import desimodel.fastfiberacceptance
 
 class Instrument(object):
     """Model the instrument response of a fiber spectrograph.
@@ -55,7 +56,7 @@ class Instrument(object):
         Dictionary of fiber acceptance fractions tabulated for different
         source models, with keys corresponding to source model names.
         Ignored when fiberloss_method is "galsim".
-    fast_fiber_acceptance : specsim.fastfiberacceptance.FastFiberAcceptance or None
+    fast_fiber_acceptance : desimodel.fastfiberacceptance.FastFiberAcceptance or None
         Initialized instance to use when fiberloss_method is "fastsim".
         Ignored for other values of fiberloss_method.
     fiberloss_num_wlen : int
@@ -678,7 +679,7 @@ def initialize(config, camera_output=True):
             raise RuntimeError(
             'Cannot find file {}. May need to update desimodel svn ?'
             .format(filename))
-        fast_fiber_acceptance = specsim.fastfiberacceptance.FastFiberAcceptance(
+        fast_fiber_acceptance = desimodel.fastfiberacceptance.FastFiberAcceptance(
             filename)
     else:
         fast_fiber_acceptance = None

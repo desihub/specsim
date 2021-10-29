@@ -43,6 +43,13 @@ import astropy.time
 import astropy.io.fits
 import astropy.wcs
 
+from astropy.utils.introspection import minversion
+ASTROPY_LT_4_3 = not minversion(astropy, '4.3')
+
+if ASTROPY_LT_4_3:
+    from astropy.utils.data import _find_pkg_data_path as get_pkg_data_path
+else:
+    from astropy.utils.data import get_pkg_data_path
 
 def is_string(x):
     """Test if x is a string type.
@@ -238,7 +245,7 @@ class Configuration(Node):
         base_path = self.base_path
         if base_path == '<PACKAGE_DATA>':
             self._assign(
-                'abs_base_path', astropy.utils.data._find_pkg_data_path('data'))
+                'abs_base_path', get_pkg_data_path('data'))
         else:
             try:
                 self._assign('abs_base_path', base_path.format(**os.environ))
@@ -686,7 +693,7 @@ def load_config(name, config_type=Configuration):
     if extension:
         file_name = name
     else:
-        file_name = astropy.utils.data._find_pkg_data_path(
+        file_name = get_pkg_data_path(
             'data/config/{0}.yaml'.format(name))
     if not os.path.isfile(file_name):
         raise ValueError('No such config file "{0}".'.format(file_name))

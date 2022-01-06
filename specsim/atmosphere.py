@@ -435,7 +435,7 @@ class Moon(object):
         # Remove any dimensionless astropy.units.Quantity wrapper since
         # np.arcsin(Quantity(1)) has u.rad added automatically, but we
         # add it explicitly below.
-        self._airmass = np.float(airmass)
+        self._airmass = float(airmass)
         # Estimate the zenith angle corresponding to this observing airmass.
         # We invert eqn.3 of KS1991 for this (instead of eqn.14).
         self._obs_zenith = np.arcsin(

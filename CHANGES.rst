@@ -6,6 +6,10 @@ specsim Change Log
 -----------------
 
 - Move fastfiberacceptance into desimodel (PR #114).
+- Fix non-catastrophic exception flagged in `issue #119`_ (`PR #120`_). 
+
+.. _`issue #119`: https://github.com/desihub/specsim/issues/119
+.. _`#120`: https://github.com/desihub/specsim/pull/120
 
 0.14 (2020-08-04)
 -----------------

@@ -69,7 +69,11 @@ class Observation(object):
         # Initialize an observing model at the middle of the exposure and
         # at the central wavelength of the simulation, i.e., ignore temporal
         # and chromatic variations (for now).
-        exposure_midpoint = self.exposure_start + 0.5 * self.exposure_time
+        
+        # This calculation can raise a non-catastrophic "overflow encountered in
+        # double_scalars" numpy error; catch it here.
+        with np.errstate(all='ignore'):
+            exposure_midpoint = self.exposure_start + 0.5 * self.exposure_time
         self.observing_model = specsim.transform.create_observing_model(
             self.location, exposure_midpoint, self.central_wavelength,
             self.temperature, self.pressure, self.relative_humidity)

@@ -2,7 +2,7 @@
 specsim Change Log
 ==================
 
-0.15 (unreleased)
+0.15 (2022-01-24)
 -----------------
 
 - Move fastfiberacceptance into desimodel (PR #114).

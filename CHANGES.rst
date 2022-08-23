@@ -5,7 +5,7 @@ specsim Change Log
 0.16 (unreleased)
 -----------------
 
-- No changes yet
+- Update values of support width, read noise and dark current to match the desi.yaml file in $DESIMODEL (PR #121)
 
 0.15 (2022-01-24)
 -----------------

@@ -107,7 +107,7 @@ instrument:
         # These values are copied from desimodel/data/desi.yaml
         primary_mirror_diameter: 3.797 m
         obscuration_diameter: 1.8 m
-        support_width: 0.025 m
+        support_width: 0.03 m
         fiber_diameter: 107.0 um
         field_radius: 414.0 mm
     plate_scale:
@@ -194,9 +194,9 @@ instrument:
         b:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 3.41 electron/pixel**2
+                read_noise: 3.29 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 2.0 electron/(hour pixel**2)
+                dark_current: 1.89 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
                 num_sigmas_clip: 5
@@ -231,9 +231,9 @@ instrument:
         r:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 2.6 electron/pixel**2
+                read_noise: 2.69 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 2.4 electron/(hour pixel**2)
+                dark_current: 1.14 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
                 num_sigmas_clip: 5
@@ -268,9 +268,9 @@ instrument:
         z:
             constants:
                 # These values are copied from desimodel/data/desi.yaml
-                read_noise: 2.6 electron/pixel**2
+                read_noise: 2.69 electron/pixel**2
                 # We treat "pixel" as a linear unit, so we need pixel**2 here.
-                dark_current: 2.4 electron/(hour pixel**2)
+                dark_current: 1.14 electron/(hour pixel**2)
                 gain: 1.0 electron/adu
                 # Clip the resolution matrix at this number of sigmas.
                 num_sigmas_clip: 5

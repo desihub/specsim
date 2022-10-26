@@ -206,7 +206,7 @@ instrument:
                 output_pixel_size: 0.5 Angstrom
             ccd:
                 table:
-                    path: specpsf/psf-quicksim.fits
+                    path: specpsf/psf-quicksim-y1.fits
                     hdu: QUICKSIM-B
                     extrapolated_value: 0.0
                     columns:
@@ -243,7 +243,7 @@ instrument:
                 output_pixel_size: 0.5 Angstrom
             ccd:
                 table:
-                    path: specpsf/psf-quicksim.fits
+                    path: specpsf/psf-quicksim-y1.fits
                     hdu: QUICKSIM-R
                     extrapolated_value: 0.0
                     columns:
@@ -280,7 +280,7 @@ instrument:
                 output_pixel_size: 0.5 Angstrom
             ccd:
                 table:
-                    path: specpsf/psf-quicksim.fits
+                    path: specpsf/psf-quicksim-y1.fits
                     hdu: QUICKSIM-Z
                     extrapolated_value: 0.0
                     columns:

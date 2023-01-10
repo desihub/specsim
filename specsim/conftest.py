@@ -11,10 +11,10 @@ if astropy_version < '3.0':
 # As of Astropy 5.1 astropy.tests.plugins.display (where PYTEST_HEADER_MODULES
 # and TESTED_VERSIONS lived) as been deprecated and removed entirely. 
 
-from astropy.tests.helper import enable_deprecations_as_exceptions
-
-## Uncomment the following line to treat all DeprecationWarnings as
+## Uncomment the following lines to treat all DeprecationWarnings as
 ## exceptions
+## Note that this is deprecated as of Astropy 5.1 and may be removed in the future
+# from astropy.tests.helper import enable_deprecations_as_exceptions
 # enable_deprecations_as_exceptions()
 
 ## Uncomment the following lines to display the version number of the

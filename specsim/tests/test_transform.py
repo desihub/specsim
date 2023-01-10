@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-from astropy.tests.helper import pytest, remote_data
+from astropy.tests.helper import pytest
 from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
     observatories, create_observing_model, sky_to_altaz, altaz_to_sky, \
     adjust_time_to_hour_angle, low_altitude_threshold
@@ -122,7 +122,7 @@ def test_invalid_frame():
         altaz_to_sky(0.5*u.rad, 1.5*u.rad, obs_model, frame='invalid')
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_alt_no_warn():
     where = observatories['APO']
     when = Time(56383, format='mjd')
@@ -136,7 +136,7 @@ def test_alt_no_warn():
     altaz_to_sky(low_altitude_threshold - 1*u.deg, 0*u.deg, obs_model)
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_alt_no_warn_pressure_array():
     where = observatories['APO']
     when = Time(56383, format='mjd')
@@ -188,7 +188,7 @@ def test_alt_warn_pressure_array():
         print(altaz_to_sky(alt[:, np.newaxis], 0*u.deg, obs_model).shape)
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_altaz_roundtrip():
     where = observatories['APO']
     when = Time(56383, format='mjd')
@@ -204,7 +204,7 @@ def test_altaz_roundtrip():
     assert np.allclose(sky_in.dec.to(u.rad).value, sky_out.dec.to(u.rad).value)
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_altaz_array_roundtrip():
     where = observatories['APO']
     when = Time(56383, format='mjd')
@@ -220,7 +220,7 @@ def test_altaz_array_roundtrip():
     assert np.all(np.abs(altaz_out.az - az_in) < 1e-5 * u.arcsec)
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_sky_to_altaz_shape():
     where = observatories['APO']
     when = Time(56383, format='mjd')
@@ -250,7 +250,7 @@ def test_sky_to_altaz_shape():
         obs_model).shape == (3, 3, 2)
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_altaz_to_sky_shape():
     where = observatories['APO']
     when = Time(56383, format='mjd')
@@ -279,7 +279,7 @@ def test_altaz_to_sky_shape():
         obs_model).shape == (3, 3, 2)
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_adjust_null():
     ra = 45 * u.deg
     when = Time(56383, format='mjd', location=observatories['APO'])
@@ -295,14 +295,14 @@ def test_adjust_missing_longitude():
         adjusted = adjust_time_to_hour_angle(when, ra, 0. * u.deg)
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_adjust_future():
     ra = 45 * u.deg
     when = Time(58000, format='mjd', location=observatories['APO'])
     adjusted = adjust_time_to_hour_angle(when, ra, 0. * u.deg)
 
 
-@remote_data
+@pytest.mark.remote_data
 def test_zero_hour_angle_adjust():
     where = observatories['KPNO']
     when = Time('2013-01-01 00:00:00', format='iso', location=where)

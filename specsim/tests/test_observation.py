@@ -2,7 +2,7 @@
 
 from __future__ import absolute_import, division, print_function
 
-from astropy.tests.helper import pytest, remote_data
+from astropy.tests.helper import pytest
 
 from ..observation import *
 from ..instrument import initialize as instrument_init

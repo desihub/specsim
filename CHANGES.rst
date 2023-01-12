@@ -6,6 +6,7 @@ specsim Change Log
 -----------------
 
 - Update values of support width, read noise and dark current to match the desi.yaml file in $DESIMODEL (PR #121)
+- Fix unit test errors on astropy >= 5.1 (PR #124)
 
 0.15 (2022-01-24)
 -----------------

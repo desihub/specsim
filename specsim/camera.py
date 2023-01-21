@@ -309,10 +309,17 @@ class Camera(object):
                 packed = slice(indptr_in[k], indptr_in[k + 1])
                 # Find the columns with data in this row.
                 expanded = indices_in[packed]
+                # But shift them to the center to prevent smearing
+                # If m is even, the center is not a grid point, so
+                # we add it twice
+                ic1_ = m // 2 - (k - i)
+                ic2_ = (m - 1) // 2 - (k - i)
                 # Count the rows contributing to each column.
-                cols_sum[expanded] += 1
+                cols_sum[expanded + ic1_] += 1
+                cols_sum[expanded + ic2_] += 1
                 # Sum the data across rows for each column.
-                data_sum[expanded] += data_in[packed]
+                data_sum[expanded + ic1_] += data_in[packed]
+                data_sum[expanded + ic2_] += data_in[packed]
             # Combine into a single output row.
             data = data_sum[output_slice].reshape(n, m).sum(axis=1) / m
             counts = cols_sum[output_slice].reshape(n, m).sum(axis=1)

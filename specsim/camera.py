@@ -247,15 +247,15 @@ class Camera(object):
         # The self._wavelength array stores the centers of fixed-width bins.
         # Calculate the edges of the downsampled output pixels. Trim
         # any partial output pixel on the high end.
-        output_min = self._wavelength_min   # output_min should match self._wavelength_min
-        output_max = self._wavelength_max   # output_max should match self._wavelength_max
+        output_min = self._wavelength_min - 0.5 * wavelength_step
+        output_max = self._wavelength_max + 0.5 * wavelength_step
         num_downsampled = int(np.floor(
             (output_max - output_min) / self._output_pixel_size))
         pixel_edges = (
             output_min +
             np.arange(num_downsampled + 1) * self._output_pixel_size)
-        # Save the centers of each output pixel.
-        self._output_wavelength = 0.5 * (pixel_edges[1:] + pixel_edges[:-1])
+        # Save the centers shifted by 0.1 of each output pixel. Shift introduced to reproduce observed wavelenght array.
+        self._output_wavelength = 0.5 * (pixel_edges[1:] + pixel_edges[:-1]) + 0.1
         # Initialize the parameters used by the downsample() method.
         self._output_slice = slice(
             self.ccd_slice.start,

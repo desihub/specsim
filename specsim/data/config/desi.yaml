@@ -206,7 +206,7 @@ instrument:
                 output_pixel_size: 0.8 Angstrom
             ccd:
                 table:
-                    path: specpsf/psf-quicksim.fits
+                    path: specpsf/psf-quicksim-y1.fits
                     hdu: QUICKSIM-B
                     extrapolated_value: 0.0
                     columns:
@@ -222,7 +222,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-b.fits
+                    path: throughput/thru-b-y1.fits
                     hdu: THROUGHPUT
                     extrapolated_value: 0.0
                     columns:
@@ -243,7 +243,7 @@ instrument:
                 output_pixel_size: 0.8 Angstrom
             ccd:
                 table:
-                    path: specpsf/psf-quicksim.fits
+                    path: specpsf/psf-quicksim-y1.fits
                     hdu: QUICKSIM-R
                     extrapolated_value: 0.0
                     columns:
@@ -259,7 +259,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-r.fits
+                    path: throughput/thru-r-y1.fits
                     hdu: THROUGHPUT
                     extrapolated_value: 0.0
                     columns:
@@ -280,7 +280,7 @@ instrument:
                 output_pixel_size: 0.8 Angstrom
             ccd:
                 table:
-                    path: specpsf/psf-quicksim.fits
+                    path: specpsf/psf-quicksim-y1.fits
                     hdu: QUICKSIM-Z
                     extrapolated_value: 0.0
                     columns:
@@ -296,7 +296,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-z.fits
+                    path: throughput/thru-z-y1.fits
                     hdu: THROUGHPUT
                     extrapolated_value: 0.0
                     columns:

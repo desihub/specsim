@@ -203,7 +203,7 @@ instrument:
                 # Output pixels are used to report simulation results but are
                 # not the physical pixels.  The output pixel size must be a
                 # multiple of wavelength_grid.step.
-                output_pixel_size: 0.5 Angstrom
+                output_pixel_size: 0.8 Angstrom
             ccd:
                 table:
                     path: specpsf/psf-quicksim.fits
@@ -240,7 +240,7 @@ instrument:
                 # Output pixels are used to report simulation results but are
                 # not the physical pixels.  The output pixel size must be a
                 # multiple of wavelength_grid.step.
-                output_pixel_size: 0.5 Angstrom
+                output_pixel_size: 0.8 Angstrom
             ccd:
                 table:
                     path: specpsf/psf-quicksim.fits
@@ -277,7 +277,7 @@ instrument:
                 # Output pixels are used to report simulation results but are
                 # not the physical pixels.  The output pixel size must be a
                 # multiple of wavelength_grid.step.
-                output_pixel_size: 0.5 Angstrom
+                output_pixel_size: 0.8 Angstrom
             ccd:
                 table:
                     path: specpsf/psf-quicksim.fits

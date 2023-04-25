@@ -24,8 +24,8 @@ verbose: no
 #        CCD 3569.000 5949.000 5625.000 7741.000 7435.000 9834.000
 wavelength_grid:
     unit: Angstrom
-    min: 3550.0
-    max: 9850.0
+    min: 3550.05
+    max: 9850.05
     step: 0.1
 
 # The atmosphere configuration is interpreted and validated by the

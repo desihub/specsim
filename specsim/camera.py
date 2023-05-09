@@ -321,7 +321,7 @@ class Camera(object):
                 data_sum[expanded + ic1_] += data_in[packed]
                 data_sum[expanded + ic2_] += data_in[packed]
             # Combine into a single output row.
-            data = data_sum[output_slice].reshape(n, m).sum(axis=1) / m
+            data = data_sum[output_slice].reshape(n, m).mean(axis=1) / 2
             counts = cols_sum[output_slice].reshape(n, m).sum(axis=1)
             indices = np.where(counts > 0)[0]
             indices_out.append(indices)

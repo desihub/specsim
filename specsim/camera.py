@@ -305,6 +305,7 @@ class Camera(object):
             cols_sum[:] = 0
             data_sum[:] = 0.
             # Loop over rows that will be combined into a single output row.
+            num_sum=0
             for k in range(i, i + m):
                 packed = slice(indptr_in[k], indptr_in[k + 1])
                 # Find the columns with data in this row.
@@ -312,16 +313,25 @@ class Camera(object):
                 # But shift them to the center to prevent smearing
                 # If m is even, the center is not a grid point, so
                 # we add it twice
-                ic1_ = m // 2 - (k - i)
-                ic2_ = (m - 1) // 2 - (k - i)
-                # Count the rows contributing to each column.
-                cols_sum[expanded + ic1_] += 1
-                cols_sum[expanded + ic2_] += 1
-                # Sum the data across rows for each column.
-                data_sum[expanded + ic1_] += data_in[packed]
-                data_sum[expanded + ic2_] += data_in[packed]
+                if m%2 == 0 :
+                    ic1_ = m // 2 - (k - i)
+                    ic2_ = (m - 1) // 2 - (k - i)
+                    # Count the rows contributing to each column.
+                    cols_sum[expanded + ic1_] += 1
+                    cols_sum[expanded + ic2_] += 1
+                    # Sum the data across rows for each column.
+                    data_sum[expanded + ic1_] += data_in[packed]
+                    data_sum[expanded + ic2_] += data_in[packed]
+                    num_sum += 2
+                else : # odd
+                    ic1_ = m // 2 - (k - i)
+                    # Count the rows contributing to each column.
+                    cols_sum[expanded + ic1_] += 1
+                    # Sum the data across rows for each column.
+                    data_sum[expanded + ic1_] += data_in[packed]
+                    num_sum += 1
             # Combine into a single output row.
-            data = data_sum[output_slice].reshape(n, m).sum(axis=1) / m
+            data = data_sum[output_slice].reshape(n, m).sum(axis=1) / num_sum
             counts = cols_sum[output_slice].reshape(n, m).sum(axis=1)
             indices = np.where(counts > 0)[0]
             indices_out.append(indices)

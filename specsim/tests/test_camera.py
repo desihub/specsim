@@ -24,23 +24,46 @@ def test_resolution():
 #
 @pytest.mark.xfail
 def test_downsampling():
+    # Expected resolution matrix rows
+    from scipy.special import erf
+    def expected_resolution_row(x, R, a):
+        sqrt2 = np.sqrt(2)
+
+        gamma_p = (x + (a / 2)) / R / sqrt2
+        gamma_m = (x - (a / 2)) / R / sqrt2
+
+        return (erf(gamma_p) - erf(gamma_m)) / 2
+
     c = specsim.config.load_config('test')
     i = specsim.instrument.initialize(c)
     camera = i.cameras[0]
 
-    # Use an intermediate dense matrix for downsampling.
-    # This is the old implementation of get_output_resolution_matrix()
-    # which uses too much memory.
     n = len(camera._output_wavelength)
     m = camera._downsampling
-    i0 = camera.ccd_slice.start - camera.response_slice.start
-    R1 = (camera._resolution_matrix[: n * m, i0 : i0 + n * m].toarray()
-         .reshape(n, m, n, m).sum(axis=3).sum(axis=1) / float(m))
+    rms_in = camera._rms_resolution[camera.ccd_slice.start]
+    bin_width_out = camera.output_pixel_size.value
 
-    # Use the new sparse implementation of get_output_resolution_matrix().
+    # The new sparse implementation of get_output_resolution_matrix().
     R2 = camera.get_output_resolution_matrix()
+    ndiags = R2.offsets.size
+    R2 = R2.toarray()
+    nrows, ncols = R2.shape
 
-    assert np.allclose(R1, R2.toarray())
+    pass_test = True
+    for jj in range(nrows):
+        i1 = max(0, jj - ndiags // 2)
+        i2 = min(ncols - 1, jj + ndiags // 2)
+        ss = np.s_[i1:i2]
+
+        wave_out = (
+            camera.output_wavelength.value[ss]
+            - camera.output_wavelength.value[jj]
+        )
+        expected_row = expected_resolution_row(wave_out, rms_in, bin_width_out)
+
+        pass_test &= np.allclose(R2[jj, ss], expected_row, rtol=0.03)
+    
+    assert pass_test
 
 
 def test_output_pixel_size():

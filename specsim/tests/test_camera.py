@@ -24,8 +24,9 @@ def test_resolution():
 #
 @pytest.mark.xfail
 def test_downsampling():
-    # Expected resolution matrix rows
     from scipy.special import erf
+
+    # Expected resolution matrix rows
     def expected_resolution_row(x, R, a):
         sqrt2 = np.sqrt(2)
 
@@ -38,8 +39,6 @@ def test_downsampling():
     i = specsim.instrument.initialize(c)
     camera = i.cameras[0]
 
-    n = len(camera._output_wavelength)
-    m = camera._downsampling
     rms_in = camera._rms_resolution[camera.ccd_slice.start]
     bin_width_out = camera.output_pixel_size.value
 

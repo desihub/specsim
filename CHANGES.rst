@@ -5,7 +5,7 @@ specsim Change Log
 0.17 (unreleased)
 -----------------
 
-- No changes yet.
+- Correct output resolution matrix (PR #128).
 
 0.16 (2023-01-13)
 -----------------

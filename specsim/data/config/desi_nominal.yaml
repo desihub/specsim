@@ -222,7 +222,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-b_y1measured.fits
+                    path: throughput/thru-b-rebin.fits
                     hdu: THROUGHPUT
                     extrapolated_value: 0.0
                     columns:
@@ -259,7 +259,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-r_y1measured.fits
+                    path: throughput/thru-r-rebin.fits
                     hdu: THROUGHPUT
                     extrapolated_value: 0.0
                     columns:
@@ -296,7 +296,7 @@ instrument:
                         neff_spatial: { name: neff_spatial }
             throughput:
                 table:
-                    path: throughput/thru-z_y1measured.fits
+                    path: throughput/thru-z-rebin.fits
                     hdu: THROUGHPUT
                     extrapolated_value: 0.0
                     columns:

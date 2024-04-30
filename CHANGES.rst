@@ -2,22 +2,27 @@
 specsim Change Log
 ==================
 
-0.17 (unreleased)
+0.17 (2024-04-30)
 -----------------
 
-- Correct output resolution matrix (PR #128).
+- Correct output resolution matrix (PR `#128`_).
+
+.. _`#128`: https://github.com/desihub/specsim/pull/128
 
 0.16 (2023-01-13)
 -----------------
 
-- Update values of support width, read noise and dark current to match the desi.yaml file in $DESIMODEL (PR #121).
-- Fix unit test errors on astropy >= 5.1 (PR #124).
+- Update values of support width, read noise and dark current to match the desi.yaml file in $DESIMODEL (PR `#121`_).
+- Fix unit test errors on astropy >= 5.1 (PR `#124`_).
+
+.. _`#121`: https://github.com/desihub/specsim/pull/121
+.. _`#124`: https://github.com/desihub/specsim/pull/124
 
 0.15 (2022-01-24)
 -----------------
 
 - Move fastfiberacceptance into desimodel (PR #114).
-- Fix non-catastrophic exception flagged in `issue #119`_ (`PR #120`_). 
+- Fix non-catastrophic exception flagged in `issue #119`_ (PR `#120`_).
 
 .. _`issue #119`: https://github.com/desihub/specsim/issues/119
 .. _`#120`: https://github.com/desihub/specsim/pull/120
@@ -25,7 +30,9 @@ specsim Change Log
 0.14 (2020-08-04)
 -----------------
 
-- support astropy4 in unit tests, drop py2.7 and 3.5 testing (PR #111).
+- support astropy4 in unit tests, drop py2.7 and 3.5 testing (PR `#111`_).
+
+.. _`#111`: https://github.com/desihub/specsim/pull/111
 
 0.13 (2018-07-30)
 -----------------

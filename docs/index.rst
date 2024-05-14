@@ -17,4 +17,5 @@ or try one of the :doc:`command-line programs <cmdline>`.
     output.rst
     fiberloss.rst
     history.rst
+    changes.rst
     api.rst

@@ -5,7 +5,10 @@ specsim Change Log
 0.18 (unreleased)
 -----------------
 
-- No changes yet.
+- Update the Read The Docs configuration (PR `#135`_).
+
+.. _`#135`: https://github.com/desihub/specsim/pull/135
+
 
 0.17 (2024-04-30)
 -----------------

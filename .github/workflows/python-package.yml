@@ -108,6 +108,7 @@ jobs:
             python -m pip install --upgrade pip wheel setuptools docutils\<0.18 Sphinx
             python -m pip install sphinx-astropy
             python -m pip install speclite
+            python -m pip install git+https://github.com/desihub/desiutil.git@3.4.2
             python -m pip install git+https://github.com/desihub/desimodel.git@0.19.1
 
         - name: Test the documentation

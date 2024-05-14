@@ -23,7 +23,7 @@ import scipy.interpolate
 def generate_fiber_positions(nfiber, seed, desi):
     """
     returns random fiber location on focal surface
-    
+
     Args:
         nfibers (int) number of fiber
         seed (int) random seed
@@ -50,17 +50,17 @@ def main(args=None):
     The method consists in first setting sigma and offset grid, and
     reverse engineering the atmospheric seeing to retrieve the correct
     effective sigma on the grid given the telescope blur.
-    
+
     For each point in the output parameter grid (source type , sigma, offset,
-    source radius), several calculations are done with random angular 
+    source radius), several calculations are done with random angular
     orientation of fiber and source to account for the fiber ellipticity
     (due to anisotropic plate scale) and source ellipticity.
 
-    The output file has to be saved in 
+    The output file has to be saved in
     $DESIMODEL/data/throughput/galsim-fiber-acceptance.fits to be used
     for fast fiber acceptance computation.
     This idea is to compute accurate and correlated values of offset, blur,
-    scale, atmospheric seeing from the fiber location and wavelength, 
+    scale, atmospheric seeing from the fiber location and wavelength,
     compute the effective sigma and read with a ND interpolation the
     fiber acceptance value from the file.
     """
@@ -78,12 +78,12 @@ def main(args=None):
     axis_ratio = 0.7 # a fixed axis ratio is used for DISK and BULGE (position angles are random)
     sources = ["POINT","DISK","BULGE"]
     ########################################################################
-    
+
     print("init simulator")
-    
+
     desi    = specsim.simulator.Simulator('desi')
     wave    = np.linspace(6000.,6001.,nsigma) # Angstrom , wavelength are not used
-    
+
     # optics with random fiber positions to get the range of scale and blur
     x,y = generate_fiber_positions(nrand, seed, desi)
     x=x.to(u.um).value
@@ -97,24 +97,24 @@ def main(args=None):
 
     offset  = np.linspace(0,max_offset,noffset)*mscale # this is the final offset array I will save, um
     sigma   = np.linspace(min_sigma,max_sigma,nsigma)*mscale # this is the final sigma array I will save, um
-    
+
     # random orientations of sources (account for source ellipticity)
     position_angle_source_deg = 360.*np.random.uniform(size=nrand)
-    
+
     # random orientations of offsets (account for plate scale asymetry)
     theta = 2*np.pi*np.random.uniform(size=nrand)
     rcos_offset = np.cos(theta)
     rsin_offset = np.sin(theta)
-    
+
     # init galsim calculator
     fiber_diameter = desi.instrument.fiber_diameter.to(u.um).value
     calc = specsim.fiberloss.GalsimFiberlossCalculator(fiber_diameter=fiber_diameter,wlen_grid=wave,
                                                        num_pixels=16,oversampling=32,moffat_beta=3.5)
 
     hdulist=None
-    
+
     for source in sources :
-        
+
         nfibers=noffset
         disk_bulge_fraction    = np.zeros((nfibers,2)) # fraction of disk and bulge
         minor_major_axis_ratio = axis_ratio*np.ones((nfibers,2)) # minor / major axis ratio , for disk and bulge component, respectively
@@ -139,21 +139,21 @@ def main(args=None):
 
             print("computing fiberloss for",source,"hlr=",half_light_radius_value,"arcsec")
             sys.stdout.flush()
-            
+
             sloss=np.zeros((noffset,nsigma)) # sum of loss values
             sloss2=np.zeros((noffset,nsigma)) # sum of loss2 values
             for r in range(nrand) :
                 blur2=np.mean(blur[r,:]**2) # scalar, mean blur
                 scale2=scale[r,0]*scale[r,1] # scalar ,sigmax*sigmay
-                
+
                 # we artificially set the seeing array to span the seeing range instead of following
                 # evolution with wavelength
                 #
                 # this is the inverse of (in fiberloss.py) :
                 # sigma[i] = np.sqrt( (seeing_fwhm/2.35482)**2*scale_um_per_arcsec[i,0]*scale_um_per_arcsec[i,1]+blur_um[i]**2 )
-                
+
                 atmospheric_seeing = np.sqrt((sigma**2 - blur2)/scale2)/fwhm_to_sigma # size nsigma , arcsec, fwhm
-                
+
                 galsim_scale  = np.zeros((noffset,2))
                 galsim_offset = np.zeros((noffset,nsigma,2))
                 galsim_blur   = np.zeros((noffset,nsigma))
@@ -163,18 +163,18 @@ def main(args=None):
                     galsim_blur[i,:]  = blur[r,:] # same blur as a function of wavelength
                     galsim_offset[i,:,0] = offset[i]*rcos_offset[r] # apply a random angle to the offset
                     galsim_offset[i,:,1] = offset[i]*rsin_offset[r] # apply a random angle to the offset
-                position_angle[:,:]  = position_angle_source_deg[r] # degrees 
-                                    
+                position_angle[:,:]  = position_angle_source_deg[r] # degrees
+
                 # calculate using galsim (that's long)
                 loss = calc.calculate(seeing_fwhm=atmospheric_seeing,scale=galsim_scale,
                                       offset=galsim_offset,blur_rms=galsim_blur,
                                       source_fraction=disk_bulge_fraction,source_half_light_radius=half_light_radius,
                                       source_minor_major_axis_ratio=minor_major_axis_ratio,
                                       source_position_angle=position_angle)
-            
+
                 sloss += loss
                 sloss2 += loss**2
-            mloss=sloss/nrand 
+            mloss=sloss/nrand
             mean_loss.append( mloss.T )
             rms_loss.append( np.sqrt(sloss2/nrand-mloss**2).T )
 
@@ -201,7 +201,7 @@ def main(args=None):
             moffat_beta=3.5
             header.add_comment("galsim Atmospheric PSF: Moffat with beta=%2.1f"%moffat_beta)
             header.add_comment("galsim Telescope blur PSF: Gaussian")
-            
+
 
         if len(mean_loss)>1 :
             mean_loss=np.array(mean_loss)

@@ -7,9 +7,9 @@ if astropy_version < '3.0':
     # With older versions of Astropy, we actually need to import the pytest
     # plugins themselves in order to make them discoverable by pytest.
     from astropy.tests.pytest_plugins import *
-    
+
 # As of Astropy 5.1 astropy.tests.plugins.display (where PYTEST_HEADER_MODULES
-# and TESTED_VERSIONS lived) as been deprecated and removed entirely. 
+# and TESTED_VERSIONS lived) as been deprecated and removed entirely.
 
 ## Uncomment the following lines to treat all DeprecationWarnings as
 ## exceptions

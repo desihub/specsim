@@ -356,7 +356,7 @@ def calculate_fiber_acceptance_fraction(
     if len(focal_y) != num_fibers:
         raise ValueError('Arrays focal_x and focal_y must have same length.')
 
-    
+
 
     # Use pre-tabulated fiberloss fractions when requested.
     if instrument.fiberloss_method == 'table':
@@ -371,7 +371,7 @@ def calculate_fiber_acceptance_fraction(
             floss[i] = instrument.fiber_acceptance_dict[type_name]
         return floss
 
-    # Otherwise, use GalSim or the fastfiberacceptance calibrated on galsim 
+    # Otherwise, use GalSim or the fastfiberacceptance calibrated on galsim
     # to calculate fiberloss fractions on the fly...
 
     # Initialize the grid of wavelengths where the fiberloss will be
@@ -380,14 +380,14 @@ def calculate_fiber_acceptance_fraction(
     wlen_unit = wavelength.unit
     wlen_grid = np.linspace(wavelength.value[0], wavelength.value[-1],
                             num_wlen) * wlen_unit
-    
+
     # Calculate the focal-plane optics at the fiber locations.
     scale, blur, offset = instrument.get_focal_plane_optics(
         focal_x, focal_y, wlen_grid)
 
     # Calculate the atmospheric seeing at each wavelength.
     seeing_fwhm = atmosphere.get_seeing_fwhm(wlen_grid).to(u.arcsec).value
-    
+
     # Replicate source parameters from the source config if they are not
     # provided via args. If they are provided, check for the expected shape.
     if source_fraction is None:
@@ -416,32 +416,32 @@ def calculate_fiber_acceptance_fraction(
             [num_fibers, 1])
     elif source_position_angle.shape != (num_fibers, 2):
         raise ValueError('Unexpected shape for source_position_angle.')
-    
+
     fiberloss_grid = None
-    
+
     # choose here how to compute things
     if instrument.fiberloss_method == 'fastsim':
         scale_um_per_arcsec = scale.to(u.um / u.arcsec).value
         blur_um             = blur.to(u.um).value
-        
+
         sigma = np.zeros((offset.shape[0],offset.shape[1]))
         disk_half_light_radius  = np.zeros(sigma.shape)
         bulge_half_light_radius = np.zeros(sigma.shape)
         disk_frac               = np.zeros(sigma.shape)
         bulge_frac              = np.zeros(sigma.shape)
-        
+
         for i in range(offset.shape[0]) :
             sigma[i] = np.sqrt( (seeing_fwhm/2.35482)**2*scale_um_per_arcsec[i,0]*scale_um_per_arcsec[i,1]+blur_um[i]**2 )
             disk_half_light_radius[i]  = source_half_light_radius[i,0]*np.ones(offset.shape[1])
             bulge_half_light_radius[i] = source_half_light_radius[i,1]*np.ones(offset.shape[1])
             disk_frac[i]               = source_fraction[i,0]*np.ones(offset.shape[1])
             bulge_frac[i]              = source_fraction[i,1]*np.ones(offset.shape[1])
-        
+
         point_frac   = 1 - disk_frac - bulge_frac
-        
+
         offset_um = offset.to(u.um).value
         delta = np.sqrt(offset_um[:,:,0]**2+offset_um[:,:,1]**2)
-        
+
         fiberloss_grid = np.zeros(sigma.shape)
         if np.sum(point_frac)>0 :
             fiberloss_grid += point_frac * instrument.fast_fiber_acceptance.value("POINT",sigma,delta)
@@ -449,9 +449,9 @@ def calculate_fiber_acceptance_fraction(
             fiberloss_grid += disk_frac  * instrument.fast_fiber_acceptance.value("DISK",sigma,delta,disk_half_light_radius)
         if np.sum(bulge_frac)>0 :
             fiberloss_grid += bulge_frac * instrument.fast_fiber_acceptance.value("BULGE",sigma,delta,bulge_half_light_radius)
-    
+
     else :
-    
+
         # Initialize a new calculator.
         calc = GalsimFiberlossCalculator(
             instrument.fiber_diameter.to(u.um).value,

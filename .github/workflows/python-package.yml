@@ -25,6 +25,7 @@ jobs:
         scipy-version: ['<1.6', '<1.7']
         speclite-version: ['==0.19']
         desiutil-version: ['3.4.2']
+        desimodel-version: ['0.19.1']
 
     steps:
       - name: Checkout code
@@ -46,7 +47,7 @@ jobs:
           python -m pip install 'numpy${{ matrix.numpy-version }}'
           python -m pip install 'speclite${{ matrix.speclite-version }}'
           python -m pip install git+https://github.com/desihub/desiutil.git@${{ matrix.desiutil-version }}
-          python -m pip install git+https://github.com/desihub/desimodel.git@0.09.1
+          python -m pip install git+https://github.com/desihub/desimodel.git@${{ matrix.desimodel-version }}
 
       - name: Run the test
         run: pytest
@@ -77,7 +78,7 @@ jobs:
           python -m pip install pytest pytest-astropy coveralls
           python -m pip install pyyaml numpy\<1.21 scipy\<1.6 astropy\<5.0 speclite==0.19
           python -m pip install git+https://github.com/desihub/desiutil.git@3.4.2
-          python -m pip install git+https://github.com/desihub/desimodel.git@0.09.1
+          python -m pip install git+https://github.com/desihub/desimodel.git@0.19.1
 
       - name: Run the test with coverage
         run: pytest --cov
@@ -141,7 +142,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip wheel setuptools flake8
 
-      - name: Test the style; failures are allowed
+      - name: Test the style; failures are not allowed
         # This is equivalent to an allowed falure.
-        continue-on-error: true
+        # continue-on-error: true
         run: flake8 specsim --count --max-line-length=100

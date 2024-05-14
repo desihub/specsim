@@ -69,7 +69,7 @@ class Observation(object):
         # Initialize an observing model at the middle of the exposure and
         # at the central wavelength of the simulation, i.e., ignore temporal
         # and chromatic variations (for now).
-        
+
         # This calculation can raise a non-catastrophic "overflow encountered in
         # double_scalars" numpy error; catch it here.
         with np.errstate(all='ignore'):

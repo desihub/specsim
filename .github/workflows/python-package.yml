@@ -106,6 +106,7 @@ jobs:
         - name: Install Python dependencies
           run: |
             python -m pip install --upgrade pip wheel setuptools docutils\<0.18 Sphinx
+            python -m pip install git+https://github.com/desihub/desiutil.git@3.4.2
             python -m pip install -e .[docs]
 
         - name: Test the documentation

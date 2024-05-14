@@ -28,6 +28,7 @@
 import datetime
 import os
 import sys
+from importlib import import_module
 
 try:
     import astropy_helpers
@@ -92,6 +93,15 @@ version = package.__version__.split('-', 1)[0]
 # The full version, including alpha/beta/rc tags.
 release = package.__version__
 
+# This value contains a list of modules to be mocked up. This is useful when
+# some external dependencies are not met at build time and break the
+# building process.
+autodoc_mock_imports = []
+for missing in ('desimodel', ):
+    try:
+        foo = import_module(missing)
+    except ImportError:
+        autodoc_mock_imports.append(missing)
 
 # -- Options for HTML output --------------------------------------------------
 

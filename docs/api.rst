@@ -41,6 +41,7 @@ repeating the initialization step, for example::
 .. _config-api:
 .. automodapi:: specsim.config
     :no-inheritance-diagram:
+    :skip: resource_filename
 
 .. _atmosphere-api:
 .. automodapi:: specsim.atmosphere
@@ -62,8 +63,24 @@ repeating the initialization step, for example::
 .. automodapi:: specsim.observation
     :no-inheritance-diagram:
 
-.. fiberloss-api:
+.. _fiberloss-api:
 .. automodapi:: specsim.fiberloss
+    :no-inheritance-diagram:
+
+.. _quickfiberloss-api:
+.. automodapi:: specsim.quickfiberloss
+    :no-inheritance-diagram:
+
+.. _quickspecsim-api:
+.. automodapi:: specsim.quickspecsim
+    :no-inheritance-diagram:
+
+.. _fastfiberacceptance-api:
+.. automodapi:: specsim.fastfiberacceptance
+    :no-inheritance-diagram:
+
+.. _fitgalsim-api:
+.. automodapi:: specsim.fitgalsim
     :no-inheritance-diagram:
 
 .. _simulator-api:

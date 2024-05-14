@@ -23,7 +23,7 @@ jobs:
         astropy-version: ['<5.0', '<5.1']
         numpy-version: ['<1.20', '<1.21', '<1.22']
         scipy-version: ['<1.6', '<1.7']
-        matplotlib-version: ['<3.4', '<3.5']
+        speclite-version: ['==0.19']
 
     steps:
       - name: Checkout code
@@ -40,11 +40,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip wheel setuptools
           python -m pip install pytest pytest-astropy pyyaml
-          # python -m pip install -r requirements.txt
           python -m pip install 'scipy${{ matrix.scipy-version }}'
-          python -m pip install 'matplotlib${{ matrix.matplotlib-version }}'
           python -m pip install 'astropy${{ matrix.astropy-version }}'
           python -m pip install 'numpy${{ matrix.numpy-version }}'
+          python -m pip install 'speclite${{ matrix.speclite-version }}'
       - name: Run the test
         run: pytest
 
@@ -72,7 +71,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip wheel setuptools
           python -m pip install pytest pytest-astropy coveralls
-          python -m pip install pyyaml numpy\<1.21 scipy\<1.6 matplotlib\<3.3 astropy\<5.0
+          python -m pip install pyyaml numpy\<1.21 scipy\<1.6 astropy\<5.0 speclite==0.19
 
       - name: Run the test with coverage
         run: pytest --cov

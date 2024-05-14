@@ -18,13 +18,18 @@ Backwards Compatibility
 The following recipes all give identical results in their output file ``ab22.dat``
 and assume that the DESIMODEL environment variable has been set.
 
-First, using the final SVN python version (revision 2134)::
+First, using the final SVN python version (revision 2134):
+
+
+.. code-block:: shell
 
     cd $DESIMODEL
     python bin/quicksim.py --infile data/spectra/spec-ABmag22.0.dat --model qso \
         --verbose --show-plot --outfile ab22.dat
 
-Next, using the first release (v0.1) after moving to a dedicated package on github::
+Next, using the first release (v0.1) after moving to a dedicated package on github:
+
+.. code-block:: shell
 
     export SPECSIM_MODEL=$DESIMODEL
     ln -s $SPECSIM_MODEL/data/throughput specsim/data/throughput

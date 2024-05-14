@@ -3,24 +3,40 @@ specsim
 
 Quick simulations of fiber spectrograph response.
 
+Citation
+--------
+
+|DOI|
+
 Status reports for developers
 -----------------------------
 
-.. image:: https://zenodo.org/badge/41930235.svg
+|Astropy| |PyPI| |License| |Coveralls Status| |Documentation Status|
+
+.. |DOI| image:: https://zenodo.org/badge/41930235.svg
    :target: https://zenodo.org/badge/latestdoi/41930235
+   :alt: DOI: zenodo.41930235
 
-.. image:: https://travis-ci.org/desihub/specsim.png?branch=master
-    :target: https://travis-ci.org/desihub/specsim
-    :alt: Test Status
+.. |Astropy| image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
+    :target: http://www.astropy.org
+    :alt: Powered by Astropy Badge
 
-.. image:: https://readthedocs.org/projects/specsim/badge/?version=latest
-    :target: https://readthedocs.org/projects/specsim/?badge=latest
+.. |License| image:: https://img.shields.io/pypi/l/specsim.svg
+    :target: https://pypi.org/project/specsim/
+    :alt: BSD License
+
+.. .. |Actions Status| image:: https://github.com/desihub/specsim/workflows/CI/badge.svg
+..     :target: https://github.com/desihub/specsim/actions
+..     :alt: GitHub Actions CI Status
+
+.. |Coveralls Status| image:: https://coveralls.io/repos/desihub/specsim/badge.svg?branch=main
+    :target: https://coveralls.io/github/desihub/specsim?branch=main
+    :alt: Test Coverage Status
+
+.. |Documentation Status| image:: https://readthedocs.org/projects/specsim/badge/?version=latest
+    :target: https://specsim.readthedocs.io/en/latest/
     :alt: Documentation Status
 
-.. image:: https://coveralls.io/repos/desihub/specsim/badge.svg?branch=master&service=github
-    :target: https://coveralls.io/github/desihub/specsim?branch=master
-    :alt: Coverage Status
-
-.. image:: https://img.shields.io/pypi/v/specsim.svg
-    :target: https://pypi.python.org/pypi/specsim
+.. |PyPI| image:: https://img.shields.io/pypi/v/specsim.svg
+    :target: https://pypi.org/pypi/specsim
     :alt: Distribution Status

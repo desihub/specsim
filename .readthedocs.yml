@@ -12,6 +12,7 @@ build:
   jobs:
     pre_install:
       - git update-index --assume-unchanged docs/conf.py docs/rtd_environment.yaml
+      - python -m pip install git+https://github.com/desihub/desiutil.git@3.4.2
 
 conda:
   environment: docs/rtd_environment.yaml

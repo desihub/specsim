@@ -6,9 +6,10 @@ specsim Change Log
 -----------------
 
 - Update the Read The Docs configuration (PR `#135`_).
+- Update the test infrastructure (PR `#136`_).
 
 .. _`#135`: https://github.com/desihub/specsim/pull/135
-
+.. _`#136`: https://github.com/desihub/specsim/pull/136
 
 0.17 (2024-04-30)
 -----------------

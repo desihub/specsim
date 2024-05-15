@@ -26,9 +26,9 @@ Status reports for developers
     :target: https://pypi.org/project/specsim/
     :alt: BSD License
 
-.. .. |Actions Status| image:: https://github.com/desihub/specsim/workflows/CI/badge.svg
-..     :target: https://github.com/desihub/specsim/actions
-..     :alt: GitHub Actions CI Status
+.. |Actions Status| image:: https://github.com/desihub/specsim/workflows/CI/badge.svg
+    :target: https://github.com/desihub/specsim/actions
+    :alt: GitHub Actions CI Status
 
 .. |Coveralls Status| image:: https://coveralls.io/repos/desihub/specsim/badge.svg?branch=main
     :target: https://coveralls.io/github/desihub/specsim?branch=main

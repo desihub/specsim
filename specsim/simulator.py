@@ -587,7 +587,7 @@ class Simulator(object):
             if None is specified.
         use_poisson : bool
             If False, use numpy.random.normal instead of numpy.random.poisson.
-            This is useful for simulations where one wants the same noise 
+            This is useful for simulations where one wants the same noise
             realization for varying average flux (numpy.random.poisson
             uses a varying number of random numbers depending on the mean).
         """

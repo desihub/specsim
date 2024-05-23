@@ -634,7 +634,7 @@ class Simulator(object):
             hdus.append(astropy.io.fits.BinTableHDU(
                 name=output.meta['name'], data=output.as_array()))
         # Write the file.
-        hdus.writeto(filename, clobber=clobber)
+        hdus.writeto(filename, overwrite=clobber)
         hdus.close()
 
     def plot(self, fiber=0, wavelength_min=None, wavelength_max=None,

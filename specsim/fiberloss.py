@@ -271,7 +271,7 @@ class GalsimFiberlossCalculator(object):
                             data=self.image.array.copy(), header=header))
 
         if saved_images_file is not None:
-            hdu_list.writeto(saved_images_file, clobber=True)
+            hdu_list.writeto(saved_images_file, overwrite=True)
 
         return fiberloss
 

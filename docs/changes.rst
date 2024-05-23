@@ -5,9 +5,11 @@ specsim Change Log
 0.18 (unreleased)
 -----------------
 
+- Fix broken resolution matrix test (PR `#132`_).
 - Update the Read The Docs configuration (PR `#135`_).
 - Update the test infrastructure (PR `#136`_).
 
+.. _`#132`: https://github.com/desihub/specsim/pull/132
 .. _`#135`: https://github.com/desihub/specsim/pull/135
 .. _`#136`: https://github.com/desihub/specsim/pull/136
 

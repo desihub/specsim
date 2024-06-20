@@ -226,7 +226,7 @@ class Configuration(Node):
         """
         # Initialize our wavelength grid.
         grid = self.wavelength_grid
-        nwave = 1 + int(math.floor(
+        nwave = 1 + int(np.round(
             (grid.max - grid.min) / grid.step))
         if nwave <= 0:
             raise ValueError('Invalid wavelength grid.')

@@ -87,8 +87,14 @@ class Camera(object):
 
         # The arrays defining the CCD properties must all have identical
         # wavelength coverage.
+        # Since these arrays are generally interpolated, we might have some
+        # very small values due to roundoff errors. Set those to zero first.
+        for data in (self._row_size, self._fwhm_resolution, self._neff_spatial):
+            data[np.abs(data) < 1e-10] = 0.
+        # Use the row size array to define the CCD coverage.
         ccd_nonzero = np.where(self._row_size > 0)[0]
         ccd_start, ccd_stop = ccd_nonzero[0], ccd_nonzero[-1] + 1
+        # Verify that the other arrays have matching coverage.
         if (np.any(self._fwhm_resolution[:ccd_start] != 0) or
             np.any(self._fwhm_resolution[ccd_stop:] != 0)):
             raise RuntimeError('Resolution extends beyond CCD coverage.')

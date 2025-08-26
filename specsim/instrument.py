@@ -138,7 +138,7 @@ class Instrument(object):
             0., self.field_radius.to(self._radius_unit).value, 1000)
         dradius_dangle = self.radial_scale(radius * self._radius_unit).to(
             self._radius_unit / self._angle_unit).value
-        angle = scipy.integrate.cumtrapz(
+        angle = scipy.integrate.cumulative_trapezoid(
             1. / dradius_dangle, radius, initial=0.)
 
         # Record the maximum field angle corresponding to our field radius.

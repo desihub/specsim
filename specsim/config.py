@@ -42,7 +42,7 @@ import astropy.time
 import astropy.io.fits
 import astropy.wcs
 
-from pkg_resources import resource_filename
+from importlib.resources import files
 
 def is_string(x):
     """Test if x is a string type.
@@ -238,7 +238,7 @@ class Configuration(Node):
         base_path = self.base_path
         if base_path == '<PACKAGE_DATA>':
             self._assign(
-                'abs_base_path', resource_filename('specsim','data'))
+                'abs_base_path', str(files('specsim').joinpath('data')))
         else:
             try:
                 self._assign('abs_base_path', base_path.format(**os.environ))
@@ -686,8 +686,7 @@ def load_config(name, config_type=Configuration):
     if extension:
         file_name = name
     else:
-        file_name  = resource_filename('specsim',
-                                       'data/config/{0}.yaml'.format(name))
+        file_name = str(files('specsim').joinpath('data', 'config', f'{name}.yaml'))
     if not os.path.isfile(file_name):
         raise ValueError('No such config file "{0}".'.format(file_name))
 

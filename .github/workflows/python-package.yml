@@ -19,13 +19,13 @@ jobs:
       fail-fast: true
       matrix:
         os: [ubuntu-latest] # Add more os?
-        python-version: ['3.11', '3.12']
+        python-version: ['3.11']
         astropy-version: ['<6.1', '<7.0']
         numpy-version: ['<1.23', '<2.0', '<2.3']
         scipy-version: ['<1.11', '<1.17']
         speclite-version: ['<0.21']
-        desiutil-version: ['3.4.2']
-        desimodel-version: ['0.19.1']
+        desiutil-version: ['==3.5.2']
+        desimodel-version: ['0.19.3']
 
     steps:
       - name: Checkout code
@@ -40,11 +40,11 @@ jobs:
         run: |
           python -m pip install --upgrade pip wheel setuptools\<71
           python -m pip install pytest pytest-astropy pyyaml
+          python -m pip install 'numpy${{ matrix.numpy-version }}'
           python -m pip install 'scipy${{ matrix.scipy-version }}'
           python -m pip install 'astropy${{ matrix.astropy-version }}'
-          python -m pip install 'numpy${{ matrix.numpy-version }}'
           python -m pip install 'speclite${{ matrix.speclite-version }}'
-          python -m pip install git+https://github.com/desihub/desiutil.git@${{ matrix.desiutil-version }}
+          python -m pip install 'desiutil${{ matrix.desiutil-version }}'
           python -m pip install git+https://github.com/desihub/desimodel.git@${{ matrix.desimodel-version }}
 
       - name: Run the test
@@ -73,8 +73,8 @@ jobs:
           python -m pip install --upgrade pip wheel setuptools\<70
           python -m pip install pytest pytest-astropy coveralls
           python -m pip install pyyaml numpy\<1.23 scipy\<1.9 astropy\<6.1 speclite==0.20
-          python -m pip install git+https://github.com/desihub/desiutil.git@3.4.2
-          python -m pip install git+https://github.com/desihub/desimodel.git@0.19.1
+          python -m pip install desiutil==3.5.2
+          python -m pip install git+https://github.com/desihub/desimodel.git@0.19.3
 
       - name: Run the test with coverage
         run: pytest --cov

@@ -55,7 +55,7 @@ Full API
 .. _config-api:
 .. automodapi:: specsim.config
     :no-inheritance-diagram:
-    :skip: resource_filename
+    :skip: files
 
 .. _fastfiberacceptance-api:
 .. automodapi:: specsim.fastfiberacceptance

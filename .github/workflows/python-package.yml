@@ -71,7 +71,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools\<71
+          python -m pip install --upgrade pip wheel setuptools
           python -m pip install pytest pytest-astropy pyyaml
           python -m pip install 'numpy${{ matrix.numpy-version }}'
           python -m pip install 'scipy${{ matrix.scipy-version }}'
@@ -105,8 +105,8 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip wheel setuptools
-          python -m pip install pytest pytest-astropy coveralls
-          python -m pip install pyyaml numpy\<1.23 scipy\<1.9 astropy\<6.1 matplotlib\<3.9 speclite==0.20
+          python -m pip install pytest pytest-astropy pyyaml coveralls
+          python -m pip install numpy\<1.23 scipy\<1.9 matplotlib\<3.9 astropy\<6.1 speclite==0.20
           python -m pip install desiutil==3.5.2
           python -m pip install git+https://github.com/desihub/desimodel.git@0.19.3
 
@@ -138,10 +138,7 @@ jobs:
             python-version: ${{ matrix.python-version }}
 
         - name: Install Python dependencies
-          run: |
-            python -m pip install --upgrade pip wheel setuptools\<70 docutils Sphinx
-            python -m pip install git+https://github.com/desihub/desiutil.git@3.4.2
-            python -m pip install -e .[docs]
+          run: python -m pip install --upgrade pip wheel setuptools sphinx-astropy
 
         - name: Test the documentation
           run: sphinx-build -W --keep-going -b html docs docs/_build/html
@@ -165,8 +162,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip wheel setuptools\<70 flake8
+        run: python -m pip install --upgrade pip wheel setuptools flake8
 
       - name: Test the style; failures are not allowed
         # This is equivalent to an allowed falure.

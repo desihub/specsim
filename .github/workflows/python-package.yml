@@ -104,7 +104,7 @@ jobs:
 
       - name: Install Python dependencies
         run: |
-          python -m pip install --upgrade pip wheel setuptools\<70
+          python -m pip install --upgrade pip wheel setuptools
           python -m pip install pytest pytest-astropy coveralls
           python -m pip install pyyaml numpy\<1.23 scipy\<1.9 astropy\<6.1 matplotlib\<3.9 speclite==0.20
           python -m pip install desiutil==3.5.2

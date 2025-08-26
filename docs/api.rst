@@ -1,6 +1,9 @@
+=============
 API Reference
 =============
 
+Overview
+--------
 The simplest possible simulation involves initializing a simulator and
 simulating one exposure, for example::
 
@@ -38,33 +41,39 @@ repeating the initialization step, for example::
     simulator.source.update_out(filter_name='sdss2010-r', ab_magnitude_out=21.0)
     simulator.simulate()
 
-.. _config-api:
-.. automodapi:: specsim.config
-    :no-inheritance-diagram:
-    :skip: resource_filename
+Full API
+--------
 
 .. _atmosphere-api:
 .. automodapi:: specsim.atmosphere
-    :no-inheritance-diagram:
-
-.. _instrument-api:
-.. automodapi:: specsim.instrument
     :no-inheritance-diagram:
 
 .. _camera-api:
 .. automodapi:: specsim.camera
     :no-inheritance-diagram:
 
-.. _source-api:
-.. automodapi:: specsim.source
+.. _config-api:
+.. automodapi:: specsim.config
     :no-inheritance-diagram:
 
-.. _observation-api:
-.. automodapi:: specsim.observation
+.. _fastfiberacceptance-api:
+.. automodapi:: specsim.fastfiberacceptance
     :no-inheritance-diagram:
 
 .. _fiberloss-api:
 .. automodapi:: specsim.fiberloss
+    :no-inheritance-diagram:
+
+.. _fitgalsim-api:
+.. automodapi:: specsim.fitgalsim
+    :no-inheritance-diagram:
+
+.. _instrument-api:
+.. automodapi:: specsim.instrument
+    :no-inheritance-diagram:
+
+.. _observation-api:
+.. automodapi:: specsim.observation
     :no-inheritance-diagram:
 
 .. _quickfiberloss-api:
@@ -75,16 +84,12 @@ repeating the initialization step, for example::
 .. automodapi:: specsim.quickspecsim
     :no-inheritance-diagram:
 
-.. _fastfiberacceptance-api:
-.. automodapi:: specsim.fastfiberacceptance
-    :no-inheritance-diagram:
-
-.. _fitgalsim-api:
-.. automodapi:: specsim.fitgalsim
-    :no-inheritance-diagram:
-
 .. _simulator-api:
 .. automodapi:: specsim.simulator
+    :no-inheritance-diagram:
+
+.. _source-api:
+.. automodapi:: specsim.source
     :no-inheritance-diagram:
 
 .. _transform-api:

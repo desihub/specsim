@@ -510,12 +510,12 @@ class Instrument(object):
             will give reasonably intuitive results.
         """
         import matplotlib.pyplot as plt
-        import matplotlib.cm as cm
+        import matplotlib
 
         fig, (ax1, ax2) = plt.subplots(2, sharex=True, figsize=(8, 8))
         ax1_rhs = ax1.twinx()
         ax2_rhs = ax2.twinx()
-        cmap = cm.get_cmap(cmap)
+        cmap = matplotlib.colormaps.get_cmap(cmap)
 
         wave = self._wavelength.value
         wave_unit = self._wavelength.unit

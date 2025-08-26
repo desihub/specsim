@@ -18,15 +18,47 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest] # Add more os?
-        python-version: ['3.11']
-        astropy-version: ['<6.1', '<7.0']
-        numpy-version: ['<1.23', '<2.0', '<2.3']
-        scipy-version: ['<1.11', '<1.17']
-        matplotlib-version: ['<3.9', '<4.0']
-        speclite-version: ['<0.21']
-        desiutil-version: ['==3.5.2']
-        desimodel-version: ['0.19.3']
+        include:
+
+          - os: ubuntu-latest
+            python-version: '3.13'
+            numpy-version: '<2.3'
+            scipy-version: '<1.17'
+            astropy-version: '<8.0'
+            matplotlib-version: '<4.0'
+            speclite-version: '==0.20'
+            desiutil-version: '==3.5.2'
+            desimodel-version: '0.19.3'
+
+          - os: ubuntu-latest
+            python-version: '3.12'
+            numpy-version: '<2.2'
+            scipy-version: '<1.16'
+            astropy-version: '<7.0'
+            matplotlib-version: '<3.10'
+            speclite-version: '==0.20'
+            desiutil-version: '==3.5.2'
+            desimodel-version: '0.19.3'
+
+          - os: ubuntu-latest
+            python-version: '3.11'
+            numpy-version: '<2.1'
+            scipy-version: '<1.15'
+            astropy-version: '<6.1'
+            matplotlib-version: '<3.9'
+            speclite-version: '==0.20'
+            desiutil-version: '==3.5.2'
+            desimodel-version: '0.19.3'
+
+          - os: ubuntu-latest
+            python-version: '3.10'
+            numpy-version: '<2.0'
+            scipy-version: '<1.12'
+            astropy-version: '<6.1'
+            matplotlib-version: '<3.9'
+            speclite-version: '==0.20'
+            desiutil-version: '==3.5.2'
+            desimodel-version: '0.19.3'
 
     steps:
       - name: Checkout code

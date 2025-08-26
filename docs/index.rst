@@ -8,7 +8,7 @@ response.  For a quick introduction, browse the `examples notebook
 or try one of the :doc:`command-line programs <cmdline>`.
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 2
 
     install.rst
     guide.rst
@@ -17,6 +17,5 @@ or try one of the :doc:`command-line programs <cmdline>`.
     output.rst
     fiberloss.rst
     history.rst
-    api.rst
     changes.rst
-
+    api.rst

@@ -43,6 +43,7 @@ jobs:
           python -m pip install pytest pytest-astropy pyyaml
           python -m pip install 'numpy${{ matrix.numpy-version }}'
           python -m pip install 'scipy${{ matrix.scipy-version }}'
+          python -m pip install 'matplotlib${{ matrix.matplotlib-version }}'
           python -m pip install 'astropy${{ matrix.astropy-version }}'
           python -m pip install 'speclite${{ matrix.speclite-version }}'
           python -m pip install 'desiutil${{ matrix.desiutil-version }}'

@@ -44,7 +44,7 @@ jobs:
             python-version: '3.11'
             numpy-version: '<2.1'
             scipy-version: '<1.15'
-            astropy-version: '<6.1'
+            astropy-version: '<7.0'
             matplotlib-version: '<3.9'
             speclite-version: '==0.20'
             desiutil-version: '==3.5.2'

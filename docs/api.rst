@@ -41,7 +41,7 @@ repeating the initialization step, for example::
 .. _config-api:
 .. automodapi:: specsim.config
     :no-inheritance-diagram:
-    :skip: resource_filename
+    :skip: files
 
 .. _atmosphere-api:
 .. automodapi:: specsim.atmosphere

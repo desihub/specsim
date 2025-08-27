@@ -138,7 +138,7 @@ class Instrument(object):
             0., self.field_radius.to(self._radius_unit).value, 1000)
         dradius_dangle = self.radial_scale(radius * self._radius_unit).to(
             self._radius_unit / self._angle_unit).value
-        angle = scipy.integrate.cumtrapz(
+        angle = scipy.integrate.cumulative_trapezoid(
             1. / dradius_dangle, radius, initial=0.)
 
         # Record the maximum field angle corresponding to our field radius.
@@ -510,12 +510,12 @@ class Instrument(object):
             will give reasonably intuitive results.
         """
         import matplotlib.pyplot as plt
-        import matplotlib.cm as cm
+        import matplotlib
 
         fig, (ax1, ax2) = plt.subplots(2, sharex=True, figsize=(8, 8))
         ax1_rhs = ax1.twinx()
         ax2_rhs = ax2.twinx()
-        cmap = cm.get_cmap(cmap)
+        cmap = matplotlib.colormaps.get_cmap(cmap)
 
         wave = self._wavelength.value
         wave_unit = self._wavelength.unit

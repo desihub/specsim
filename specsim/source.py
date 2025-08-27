@@ -155,7 +155,7 @@ class Source(object):
         self._type_name = type_name
 
         if z_in is not None:
-            z_in = np.float(z_in)
+            z_in = np.float64(z_in)
             if z_in <= -1.0:
                 raise ValueError('Invalid z_in <= -1.')
         self._z_in = z_in

@@ -139,7 +139,7 @@ jobs:
 
         - name: Install Python dependencies
           run: |
-            python -m pip install --upgrade pip wheel setuptools docutils Sphinx sphinx-astropy
+            python -m pip install --upgrade pip wheel setuptools Sphinx sphinx-astropy
             python -m pip install -e .[docs]
 
         - name: Test the documentation

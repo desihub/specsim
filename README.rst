@@ -41,3 +41,10 @@ Status reports for developers
 .. |PyPI| image:: https://img.shields.io/pypi/v/specsim.svg
     :target: https://pypi.org/pypi/specsim
     :alt: Distribution Status
+
+License
+-------
+
+specsim is free software licensed under a 3-clause BSD-style license. For details see
+the ``LICENSE.rst`` file.
+

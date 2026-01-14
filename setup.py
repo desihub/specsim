@@ -73,5 +73,5 @@ except Exception:
     version = '{version}'
 """.lstrip()
 
-setup(use_scm_version={'write_to': os.path.join('speclite', 'version.py'),
+setup(use_scm_version={'write_to': os.path.join('specsim', 'version.py'),
                        'write_to_template': VERSION_TEMPLATE})

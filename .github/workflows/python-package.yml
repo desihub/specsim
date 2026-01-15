@@ -160,4 +160,4 @@ jobs:
       - name: Test the style; failures are not allowed
         # This is equivalent to an allowed falure.
         # continue-on-error: true
-        run: flake8 specsim --count --max-line-length=100
+        run: flake8 specsim --count

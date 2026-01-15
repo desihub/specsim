@@ -17,5 +17,5 @@ def pytest_configure(config):
         PYTEST_HEADER_MODULES['Astropy'] = 'astropy'
         PYTEST_HEADER_MODULES['speclite'] = 'speclite'
 
-        from speclite import __version__
-        TESTED_VERSIONS['speclite'] = __version__
+        from specsim import __version__
+        TESTED_VERSIONS['specsim'] = __version__

@@ -41,3 +41,24 @@ Status reports for developers
 .. |PyPI| image:: https://img.shields.io/pypi/v/specsim.svg
     :target: https://pypi.org/pypi/specsim
     :alt: Distribution Status
+
+Contributing to the specsim Package
+-----------------------------------
+
+This package is maintained and developed under the GitHub
+`desihub organization`_ but, unlike most packages
+there, is designed to be a general purpose tool that can be configured to
+simulate any fiber spectrograph.  As such, it uses a package template
+based on `Astropy Affiliated Packages`_
+rather than the `DESI software template`_.
+
+.. _`desihub organization`: https://github.com/desihub
+.. _`Astropy Affiliated Packages`: https://www.astropy.org/affiliated/index.html
+.. _`DESI software template`: https://github.com/desihub/desitemplate
+
+License
+-------
+
+specsim is free software licensed under a 3-clause BSD-style license. For details see
+the ``LICENSE.rst`` file.
+

@@ -1,8 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Command-line script for calculating fiberloss fractions.
 """
-from __future__ import print_function, division
-
 import argparse
 import time
 

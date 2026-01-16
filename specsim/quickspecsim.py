@@ -1,8 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Command-line script for simulating a fiber spectrograph.
 """
-from __future__ import print_function, division
-
 import warnings
 import argparse
 

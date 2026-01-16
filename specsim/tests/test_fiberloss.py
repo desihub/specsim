@@ -1,14 +1,20 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from __future__ import print_function, division
-
-from astropy.tests.helper import pytest
-
+"""
+Test specsim.fiberloss.
+"""
+import pytest
 import numpy as np
 import astropy.units as u
-import astropy.utils
 import specsim.simulator
 
 from ..fiberloss import *
+
+galsim_installed = True
+try:
+    import galsim
+except ImportError:
+    galsim_installed = False
+
 
 def test_fiberloss():
     sim = specsim.simulator.Simulator('test', num_fibers=1)
@@ -18,11 +24,9 @@ def test_fiberloss():
         xy, xy, wlen, sim.source, sim.atmosphere, sim.instrument)
     assert(np.allclose(np.mean(floss[0]), 0.5500))
 
+
+@pytest.mark.skipif(not galsim_installed, reason="The galsim package is not installed.")
 def test_galsim():
-    try:
-        import galsim
-    except ImportError:
-        return
     sim = specsim.simulator.Simulator('test', num_fibers=1)
     sim.instrument.fiberloss_method = 'galsim'
     xy = np.array([0.,]) * u.mm

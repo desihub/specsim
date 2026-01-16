@@ -16,8 +16,6 @@ been created.  File a github issue if you would like to change this.
 An :class:`Instrument` includes one or more
 :class:`Cameras <specsim.camera.Camera>`.
 """
-from __future__ import print_function, division
-
 import numpy as np
 import os.path
 import scipy.interpolate

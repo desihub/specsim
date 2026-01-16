@@ -1,10 +1,11 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-from __future__ import print_function, division
-
+"""
+Test specsim.source.
+"""
+import pytest
 import numpy as np
 
 import astropy.units as u
-from astropy.tests.helper import pytest
 
 from ..source import *
 from ..config import load_config

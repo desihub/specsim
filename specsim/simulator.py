@@ -22,9 +22,6 @@ The positions and properties of individual sources in an exposure can be
 specified using optional array arguments to the :meth:`simulate method
 <Simulator.simulate>`.
 """
-from __future__ import print_function, division
-
-import math
 import os.path
 
 import numpy as np
@@ -65,7 +62,7 @@ class Simulator(object):
     """
     def __init__(self, config, num_fibers=2, camera_output=True, verbose=False):
 
-        if specsim.config.is_string(config):
+        if isinstance(config, str):
             config = specsim.config.load_config(config)
         config.verbose = verbose
         self.verbose = verbose

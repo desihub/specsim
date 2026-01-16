@@ -39,8 +39,6 @@ low_altitude_threshold : :class:`astropy.coordinates.Angle`
     will issue a `UserWarning` if they encounter a lower value, unless
     refraction has been disabled by specifying zero pressure.
 """
-from __future__ import print_function, division
-
 import warnings
 
 import numpy as np
@@ -50,21 +48,22 @@ import astropy.coordinates
 import astropy.constants
 from astropy import units as u
 
-try:
-    basestring          #- exists in py2
-except NameError:
-    basestring = str    #- for py3
 
 observatories = {
+    # https://www.sdss3.org/instruments/telescope.php
     'APO': astropy.coordinates.EarthLocation.from_geodetic(
-        lat='32d46m49s', lon='-105d49m13s', height=2788.*u.m),
+        lat='32d46m49.30s', lon='-105d49m13.50s', height=2788.*u.m),
+    # https://noirlab.edu/science/programs/kpno/telescopes/nicholas-mayall-4m-telescope/basic-parameters
     'KPNO': astropy.coordinates.EarthLocation.from_geodetic(
-        lat='31d57m48s', lon='-111d36m0s', height=2120.*u.m),
-    # http://www.ctio.noao.edu/noao/content/coordinates-observatories-cerro-tololo-and-cerro-pachon
+        lat='31d57m50.5s', lon='-111d35m59.6s', height=2123.2*u.m),
+    # https://rubinobservatory.org/for-scientists/rubin-101/key-numbers
     'LSST': astropy.coordinates.EarthLocation.from_geodetic(
         lat='-30d14m40.68s', lon='-70d44m57.90s', height=2647.*u.m),
 }
-
+observatories['SDSS'] = observatories['APO']
+observatories['Mayall'] = observatories['KPNO']
+observatories['DESI'] = observatories['KPNO']
+observatories['Rubin'] = observatories['LSST']
 
 low_altitude_threshold = 5 * u.deg
 
@@ -349,7 +348,7 @@ def sky_to_altaz(sky_coords, observing_model):
     >>> altaz = sky_to_altaz(polaris, obs_model)
     >>> print('alt = %.3f deg, az = %.3f deg' %
     ... (altaz.alt.to(u.deg).value, altaz.az.to(u.deg).value))
-    alt = 32.465 deg, az = 0.667 deg
+    alt = 32.466 deg, az = 0.667 deg
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
@@ -414,7 +413,7 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
     >>> radec = altaz_to_sky(60*u.deg, 0.*u.deg, obs_model)
     >>> print('ra = %.3f deg, dec = %.3f deg' %
     ... (radec.ra.to(u.deg).value, radec.dec.to(u.deg).value))
-    ra = 349.106 deg, dec = 61.962 deg
+    ra = 349.106 deg, dec = 61.963 deg
 
     Setting a pressure value of zero disables the atmospheric refraction model,
     so that returned coordinates are topocentric.  The atmospheric refraction
@@ -466,7 +465,7 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
 
     # If the frame is specified as a string, try to convert it to
     # a BaseCoordinateFrame instance.
-    if isinstance(frame, basestring):
+    if isinstance(frame, str):
         if frame not in astropy.coordinates.frame_transform_graph.get_names():
             raise ValueError('Invalid frame name: {0}.'.format(frame))
         frame = astropy.coordinates.frame_transform_graph.lookup_name(frame)()

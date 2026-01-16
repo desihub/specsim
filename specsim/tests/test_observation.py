@@ -1,9 +1,7 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-
-from __future__ import absolute_import, division, print_function
-
-from astropy.tests.helper import pytest
-
+"""
+Test specsim.observation.
+"""
 from ..observation import *
 from ..instrument import initialize as instrument_init
 from ..config import load_config

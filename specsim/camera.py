@@ -15,8 +15,6 @@ See :doc:`/api` for examples of changing model parameters defined in the
 configuration. No attributes can be changed after a simulator has
 been created.  File a github issue if you would like to change this.
 """
-from __future__ import print_function, division
-
 import numpy as np
 import scipy.sparse
 

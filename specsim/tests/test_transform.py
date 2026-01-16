@@ -1,8 +1,8 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
-
-from __future__ import absolute_import, division, print_function
-
-from astropy.tests.helper import pytest
+"""
+Test specsim.transform.
+"""
+import pytest
 from ..transform import altaz_to_focalplane, focalplane_to_altaz, \
     observatories, create_observing_model, sky_to_altaz, altaz_to_sky, \
     adjust_time_to_hour_angle, low_altitude_threshold

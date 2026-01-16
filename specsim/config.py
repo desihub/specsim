@@ -22,11 +22,7 @@ sequence of keys:
 Use :meth:`Configuration.get_constants` to parse values with dimensions and
 :meth:`Configuration.load_table` to load and interpolate tabular data.
 """
-from __future__ import print_function, division
-
 import os
-import os.path
-import math
 import re
 import warnings
 
@@ -44,37 +40,9 @@ import astropy.wcs
 
 from importlib.resources import files
 
-def is_string(x):
-    """Test if x is a string type.
-
-    This function is un-necessary when this package is installed
-    via setup.py (which uses 2to3). However, we include it here to
-    support using the package directly from a git clone.
-    Note that we avoid the usual trick of defining basestring at
-    module scope since this causes problems with sphinx.
-
-    Parameters
-    ----------
-    x : any
-        Variable to be tested.
-
-    Returns
-    -------
-    bool
-        Returns true if x is a string type.
-    """
-    try:
-        # python 2
-        return isinstance(x, basestring)
-    except NameError:
-        # python 3
-        return isinstance(x, str)
-
-
 # Extract a number from a string with optional leading and
 # trailing whitespace.
-_float_pattern = re.compile(
-    r'\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
+_float_pattern = re.compile(r'\s*([-+]?[0-9]*\.?[0-9]+([eE][-+]?[0-9]+)?)\s*')
 
 
 def parse_quantity(quantity, dimensions=None):
@@ -349,7 +317,7 @@ class Configuration(Node):
         for name in names:
             value = getattr(node, name)
             try:
-                if is_string(value):
+                if isinstance(value, str):
                     constants[name] = parse_quantity(value)
                 else:
                     constants[name] = astropy.units.Quantity(float(value))
@@ -370,7 +338,7 @@ class Configuration(Node):
         node = parent.table
 
         # Check that the required column names are present.
-        if is_string(column_names):
+        if isinstance(column_names, str):
             return_scalar = True
             column_names = [column_names]
         else:

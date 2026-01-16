@@ -13,6 +13,9 @@ from setuptools import setup
 # for tests or docs.
 
 TEST_HELP = """
+WARNING: specsim is not set up to use tox yet, use caution when reading the
+instructions below!
+
 Note: running tests is no longer done using 'python setup.py test'. Instead
 you will need to run:
 
@@ -38,6 +41,9 @@ if 'test' in sys.argv:
     sys.exit(1)
 
 DOCS_HELP = """
+WARNING: specsim is not set up to use tox yet, use caution when reading the
+instructions below!
+
 Note: building the documentation is no longer done using
 'python setup.py build_docs'. Instead you will need to run:
 

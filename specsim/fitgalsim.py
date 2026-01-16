@@ -1,7 +1,6 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 """Command-line script for simulating a fiber spectrograph.
 """
-from __future__ import print_function, division
 
 # script that runs galsim with all possible conditions
 # and save fiber acceptance fraction as a function

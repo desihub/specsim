@@ -9,10 +9,12 @@ specsim Change Log
 - Update the Read The Docs configuration (PR `#135`_).
 - Update the test infrastructure (PR `#136`_).
 - Add desi-2 configuration file (PR `#145`_).
+- Update package infrastructure to remove ``astropy_helpers`` (PR `#144`_).
 
 .. _`#132`: https://github.com/desihub/specsim/pull/132
 .. _`#135`: https://github.com/desihub/specsim/pull/135
 .. _`#136`: https://github.com/desihub/specsim/pull/136
+.. _`#144`: https://github.com/desihub/specsim/pull/144
 .. _`#145`: https://github.com/desihub/specsim/pull/145
 
 0.17 (2024-04-30)

@@ -348,7 +348,7 @@ def sky_to_altaz(sky_coords, observing_model):
     >>> altaz = sky_to_altaz(polaris, obs_model)
     >>> print('alt = %.3f deg, az = %.3f deg' %
     ... (altaz.alt.to(u.deg).value, altaz.az.to(u.deg).value))
-    alt = 32.465 deg, az = 0.667 deg
+    alt = 32.466 deg, az = 0.667 deg
 
     The output shape is determined by the usual `numpy broadcasting rules
     <http://docs.scipy.org/doc/numpy/user/basics.broadcasting.html>`__ applied
@@ -413,7 +413,7 @@ def altaz_to_sky(alt, az, observing_model, frame='icrs'):
     >>> radec = altaz_to_sky(60*u.deg, 0.*u.deg, obs_model)
     >>> print('ra = %.3f deg, dec = %.3f deg' %
     ... (radec.ra.to(u.deg).value, radec.dec.to(u.deg).value))
-    ra = 349.106 deg, dec = 61.962 deg
+    ra = 349.106 deg, dec = 61.963 deg
 
     Setting a pressure value of zero disables the atmospheric refraction model,
     so that returned coordinates are topocentric.  The atmospheric refraction

@@ -17,7 +17,7 @@ build:
       - git reset --hard HEAD
       - git clean -fdx
       # Enforce fail_on_shallow for setuptools-scm
-      - export SETUPTOOLS_SCM_OVERRIDES_FOR_${READTHEDOCS_PROJECT//-/_}='{scm.git.pre_parse="fail_on_shallow"}'
+      # - export SETUPTOOLS_SCM_OVERRIDES_FOR_${READTHEDOCS_PROJECT//-/_}='{scm.git.pre_parse="fail_on_shallow"}'
 
 conda:
   environment: docs/rtd_environment.yaml

@@ -2,8 +2,8 @@
 specsim Change Log
 ==================
 
-0.18 (unreleased)
------------------
+1.0.0 (2026-03-16)
+------------------
 
 - Fix broken resolution matrix test (PR `#132`_).
 - Update the Read The Docs configuration (PR `#135`_).

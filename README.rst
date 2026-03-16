@@ -9,6 +9,13 @@ Citation
 
 |DOI|
 
+Please cite as:
+
+David Kirkby, *et al.*. (2026).
+desihub/specsim: Title (v1.0.0). Zenodo. https://doi.org/10.5281/zenodo.xxxxxxxx
+
+See also the file ``CITATION.cff``.
+
 Status reports for developers
 -----------------------------
 

@@ -12,6 +12,12 @@ build:
   jobs:
     pre_install:
       - git update-index --assume-unchanged docs/conf.py docs/rtd_environment.yaml
+    post_checkout:
+      # Avoid setuptools-scm dirty Git index issues
+      - git reset --hard HEAD
+      - git clean -fdx
+      # Enforce fail_on_shallow for setuptools-scm
+      - export SETUPTOOLS_SCM_OVERRIDES_FOR_${READTHEDOCS_PROJECT//-/_}='{scm.git.pre_parse="fail_on_shallow"}'
 
 conda:
   environment: docs/rtd_environment.yaml

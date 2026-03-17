@@ -11,8 +11,8 @@ Citation
 
 Please cite as:
 
-David Kirkby, *et al.*. (2026).
-desihub/specsim: Title (v1.0.0). Zenodo. https://doi.org/10.5281/zenodo.xxxxxxxx
+David Kirkby, *et al.*. (2021).
+desihub/specsim: August 2020 Release (v0.14). Zenodo. https://doi.org/10.5281/zenodo.4566008
 
 See also the file ``CITATION.cff``.
 
@@ -21,9 +21,9 @@ Status reports for developers
 
 |Astropy| |PyPI| |License| |Coveralls Status| |Documentation Status|
 
-.. |DOI| image:: https://zenodo.org/badge/41930235.svg
-   :target: https://zenodo.org/badge/latestdoi/41930235
-   :alt: DOI: zenodo.41930235
+.. |DOI| image:: https://zenodo.org/badge/4566008.svg
+   :target: https://zenodo.org/badge/latestdoi/4566008
+   :alt: DOI: zenodo.4566008
 
 .. |Astropy| image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
     :target: http://www.astropy.org

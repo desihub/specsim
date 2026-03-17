@@ -52,9 +52,9 @@ highlight_language = 'python3'
 #needs_sphinx = '1.2'
 
 # Extend astropy intersphinx_mapping with packages we use here
-intersphinx_mapping.update({'speclite': ('https://speclite.readthedocs.io/', None),
-                            'desiutil': ('https://desiutil.readthedocs.io/', None),
-                            'desimodel': ('https://desimodel.readthedocs.io/', None)})
+intersphinx_mapping.update({'speclite': ('https://speclite.readthedocs.io/en/stable/', None),
+                            'desiutil': ('https://desiutil.readthedocs.io/en/stable/', None),
+                            'desimodel': ('https://desimodel.readthedocs.io/en/stable/', None)})
 
 # Exclude astropy intersphinx_mapping for unused packages
 del intersphinx_mapping['h5py']  # noqa: F405

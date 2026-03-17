@@ -5,5 +5,5 @@ dependencies:
   - python=3.11
   - pip
   - graphviz
-  - setuptools_scm
+  - setuptools-scm
     #  - sphinx-astropy
